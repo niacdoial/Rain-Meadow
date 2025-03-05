@@ -2,17 +2,19 @@
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
-using System.Net;
+using Menu;
 
 namespace RainMeadow
 {
 
+    // Contemplating on renaming this class as it has a lot more responcibilities than just matchmaking
     public abstract class MatchmakingManager
     {
         public class MatchMakingDomain: ExtEnum<MatchMakingDomain> {
             public MatchMakingDomain(string name, bool register) : base(name, register) { }
 
             public static MatchMakingDomain LAN = new MatchMakingDomain("Local", true);
+            // public static MatchMakingDomain Router = new MatchMakingDomain("Router", true);
             public static MatchMakingDomain Steam = new MatchMakingDomain("Steam", true);
 
 
@@ -56,15 +58,25 @@ namespace RainMeadow
             supported_matchmakers.Clear();
             instances.Clear();
 
-            if (OnlineManager.netIO is SteamNetIO) {
+            if (NetIOPlatform.isLANAvailable) {
+                supported_matchmakers.Add(MatchMakingDomain.LAN); 
+                instances.Add(MatchMakingDomain.LAN, new LANMatchmakingManager());
+                currentDomain = MatchMakingDomain.LAN;
+            }
+                
+            // if (NetIOPlatform.isRouterAvailable) {
+            //     supported_matchmakers.Add(MatchMakingDomain.Router);
+            //     instances.Add(MatchMakingDomain.Router, new RouterMatchmakingManager());
+            //     currentDomain = MatchMakingDomain.Router;
+            // }
+
+            if (NetIOPlatform.isSteamAvailable) {
                 instances.Add(MatchMakingDomain.Steam, new SteamMatchmakingManager());
                 supported_matchmakers.Add(MatchMakingDomain.Steam);
+                currentDomain = MatchMakingDomain.Steam;
             }
+      
 
-            supported_matchmakers.Add(MatchMakingDomain.LAN); 
-            instances.Add(MatchMakingDomain.LAN, new LANMatchmakingManager());
-            currentDomain = supported_matchmakers[0];
-                
             OnlineManager.LeaveLobby();
             changedMatchMaker += (last, current) => {
                 OnlineManager.LeaveLobby();
@@ -197,7 +209,7 @@ namespace RainMeadow
             }
             RainMeadow.Debug($"Actually removing player:{player}");
             OnlineManager.players.Remove(player);
-            OnlineManager.netIO.ForgetPlayer(player);
+            NetIO.currentInstance?.ForgetPlayer(player);
 
             ChatLogManager.LogSystemMessage((player.id.GetPersonaName()) + " " + Utils.Translate("left the game."));
         }
@@ -205,6 +217,10 @@ namespace RainMeadow
         public abstract MeadowPlayerId GetEmptyId();
 
         public abstract string GetLobbyID();
-        public abstract void OpenInvitationOverlay();
+
+        public abstract bool canOpenInvitations { get; } 
+        public virtual void OpenInvitationOverlay() {
+            OnlineManager.instance.manager.ShowDialog(new DialogNotify("You cannot use this feature here.", OnlineManager.instance.manager, null));
+        }
     }
 }

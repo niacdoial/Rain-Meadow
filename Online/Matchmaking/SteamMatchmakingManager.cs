@@ -476,6 +476,7 @@ namespace RainMeadow
             return lobbyID.ToString();
         }
 
+        public override bool canOpenInvitations => true;
         public override void OpenInvitationOverlay() {
             SteamFriends.ActivateGameOverlayInviteDialog(lobbyID);
         }

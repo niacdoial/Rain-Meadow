@@ -54,9 +54,13 @@ namespace RainMeadow
         public override void Process()
         {
             if (MatchmakingManager.currentDomain != MatchmakingManager.MatchMakingDomain.LAN) return;
-            RainMeadow.DebugMe();
-            var lobbyinfo = MakeLobbyInfo();
-            (MatchmakingManager.instances[MatchmakingManager.MatchMakingDomain.LAN] as LANMatchmakingManager).addLobby(lobbyinfo);
+            if (OnlineManager.instance != null && OnlineManager.lobby != null) {
+                if (OnlineManager.lobby.isOwner) {
+                    RainMeadow.DebugMe();
+                    var lobbyinfo = MakeLobbyInfo();
+                    (MatchmakingManager.instances[MatchmakingManager.MatchMakingDomain.LAN] as LANMatchmakingManager).addLobby(lobbyinfo);
+                }
+            }
         }
 
         public LANMatchmakingManager.LANLobbyInfo MakeLobbyInfo() {

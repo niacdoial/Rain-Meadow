@@ -19,8 +19,10 @@ namespace RainMeadow
             if (OnlineManager.lobby != null && MatchmakingManager.currentDomain == MatchmakingManager.MatchMakingDomain.LAN)
             {
                 var matchmaker = (LANMatchmakingManager)MatchmakingManager.instances[MatchmakingManager.MatchMakingDomain.LAN];
+                var netIO = (LANNetIO)NetIO.instances[MatchmakingManager.MatchMakingDomain.LAN];
 
-                if (LanUserName.Length > 0) {
+                if (LanUserName.Length > 0)
+                {
                     processingPlayer.id.name = LanUserName;
                 }
 
@@ -29,7 +31,7 @@ namespace RainMeadow
                 matchmaker.AcknoledgeLANPlayer(processingPlayer);
 
                 // Tell them they are in
-                OnlineManager.netIO.SendP2P(processingPlayer, new JoinLobbyPacket(
+                netIO.SendP2P(processingPlayer, new JoinLobbyPacket(
                     matchmaker.maxplayercount,
                     "LAN Lobby",
                     OnlineManager.lobby.hasPassword,

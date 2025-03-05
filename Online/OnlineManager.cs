@@ -12,7 +12,6 @@ namespace RainMeadow
     // is a mainloopprocess so update bound to game update? worth it? idk
     public class OnlineManager : MainLoopProcess
     {
-        public static NetIO netIO;
         public static OnlineManager instance;
         public static Serializer serializer = new Serializer(65536);
         public static List<ResourceSubscription> subscriptions;
@@ -29,15 +28,7 @@ namespace RainMeadow
 
         public OnlineManager(ProcessManager manager) : base(manager, RainMeadow.Ext_ProcessID.OnlineManager)
         {
-            // if steam installed 
-            if (SteamManager.Instance.m_bInitialized && SteamUser.BLoggedOn()) {
-                netIO = new SteamNetIO();
-            }
-            
-            if (netIO == null) {
-                netIO = new LANNetIO();
-            }
-
+            NetIO.InitializesNetIO();
             instance = this;
             framesPerSecond = 20; // alternatively, run as fast as we can for the receiving stuff, but send on a lower tickrate?
             milisecondsPerFrame = 1000 / framesPerSecond;
@@ -72,7 +63,7 @@ namespace RainMeadow
         {
             ChatLogManager.ResetPlayerColors();
             MatchmakingManager.currentInstance.LeaveLobby();
-            netIO?.ForgetEverything();
+            NetIO.currentInstance?.ForgetEverything();
             lobby = null;
 
             subscriptions = new();
@@ -96,7 +87,7 @@ namespace RainMeadow
         public override void RawUpdate(float dt)
         {
             myTimeStacker += dt * (float)framesPerSecond;
-            netIO?.Update(); // incoming data
+            NetIO.currentInstance?.Update(); // incoming data
             lastReceive = UnityEngine.Time.realtimeSinceStartup;
 
             if (myTimeStacker >= 1f)
@@ -113,7 +104,7 @@ namespace RainMeadow
         // from a force-load situation
         public static void ForceLoadUpdate()
         {
-            netIO?.Update();
+            NetIO.currentInstance?.Update();
             lastReceive = UnityEngine.Time.realtimeSinceStartup;
 
             if (UnityEngine.Time.realtimeSinceStartup > lastSend + 1f / instance.framesPerSecond)
@@ -174,7 +165,7 @@ namespace RainMeadow
 
             if (toPlayer.needsAck || toPlayer.OutgoingEvents.Count > 0 || toPlayer.OutgoingStates.Count > 0)
             {
-                netIO?.SendSessionData(toPlayer);
+                NetIO.currentInstance?.SendSessionData(toPlayer);
             }
         }
 

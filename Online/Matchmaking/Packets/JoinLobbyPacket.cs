@@ -1,3 +1,4 @@
+using RainMeadow.Shared;
 namespace RainMeadow
 {
     public class JoinLobbyPacket : InformLobbyPacket
@@ -12,11 +13,14 @@ namespace RainMeadow
             var newLobbyInfo = MakeLobbyInfo();
 
             // If we don't have a lobby and we a currently joining a lobby
-            if (OnlineManager.lobby is null && OnlineManager.currentlyJoiningLobby is not null) {
+            if (OnlineManager.lobby is null && OnlineManager.currentlyJoiningLobby is not null)
+            {
                 // If the lobby we want to join is a lan lobby
-                if (OnlineManager.currentlyJoiningLobby is LANMatchmakingManager.LANLobbyInfo oldLobbyInfo) {
+                if (OnlineManager.currentlyJoiningLobby is LANMatchmakingManager.LANLobbyInfo oldLobbyInfo)
+                {
                     // If the lobby we want to join is the lobby that allowed us to join.
-                    if (UDPPeerManager.CompareIPEndpoints(oldLobbyInfo.endPoint, newLobbyInfo.endPoint)) {
+                    if (UDPPeerManager.CompareIPEndpoints(oldLobbyInfo.endPoint, newLobbyInfo.endPoint))
+                    {
                         OnlineManager.currentlyJoiningLobby = newLobbyInfo;
                         (MatchmakingManager.instances[MatchmakingManager.MatchMakingDomain.LAN] as LANMatchmakingManager).maxplayercount = newLobbyInfo.maxPlayerCount;
                         (MatchmakingManager.instances[MatchmakingManager.MatchMakingDomain.LAN] as LANMatchmakingManager).LobbyAcknoledgedUs(processingPlayer);
