@@ -29,7 +29,7 @@ namespace RainMeadow
                 matchmaker.AcknoledgeLANPlayer(processingPlayer);
 
                 // Tell them they are in
-                OnlineManager.netIO.SendP2P(processingPlayer, new JoinLobbyPacket(
+                ((LANNetIO)NetIO.currentInstance).SendP2P(processingPlayer, new JoinLobbyPacket(
                     matchmaker.maxplayercount,
                     "LAN Lobby",
                     OnlineManager.lobby.hasPassword,

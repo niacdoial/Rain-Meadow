@@ -583,6 +583,7 @@ namespace RainMeadow
                     throw new Exception("Failed to claim a socket port");
                 }
 
+
                 socket.Bind(new IPEndPoint(IPAddress.Any, port));
             } catch (SocketException except) {
                 RainMeadow.Error(except.SocketErrorCode);
@@ -689,6 +690,7 @@ namespace RainMeadow
                 parts[1] = "8720"; //default port
             }
 
+
             IPAddress? address = null;
             try {
                 address = IPAddress.Parse(parts[0]);
@@ -756,6 +758,8 @@ namespace RainMeadow
             }
         }
 
+
+
         Stopwatch stopWatch = new Stopwatch();
         public void Update() {
             long elapsedTime = stopWatch.ElapsedMilliseconds;
@@ -769,7 +773,6 @@ namespace RainMeadow
                     peersToRemove.Add(peer);
                     continue;
                 }
-
                 ulong heartbeatTime = (ulong)RainMeadow.rainMeadowOptions.UdpHeartbeat.Value;
 
                 peer.OutgoingPacketAcummulator += (ulong)elapsedTime;
@@ -789,6 +792,7 @@ namespace RainMeadow
                             );
                         }
                     }
+
 
                 }
 
@@ -839,7 +843,6 @@ namespace RainMeadow
 
                 byte[] buffer;
                 int len = 0;
-
                 try {
                     buffer = new byte[socket.Available];
                     len = socket.ReceiveFrom(buffer, ref sender);
@@ -853,6 +856,12 @@ namespace RainMeadow
                 if (ipsender == null) return null;
 
                 RemotePeer? peer = GetRemotePeer(ipsender);
+
+
+
+
+
+
 
                 using (MemoryStream stream = new(buffer, 0, len, false))
                 using (BinaryReader reader = new(stream)) {
@@ -875,6 +884,8 @@ namespace RainMeadow
                         }
 
                         if (peer != null) peer.TicksSinceLastIncomingPacket = 0;
+
+
 
                         switch (type) {
                             case PacketType.UnreliableBroadcast:
@@ -901,7 +912,6 @@ namespace RainMeadow
                                     PacketType.HeartBeat
                                 );
                                 return new_data;
-
                             case PacketType.HeartBeat:
                                 if (peer == null) return null;
                                 peer.need_begin_conversation_ack = false;
@@ -927,7 +937,6 @@ namespace RainMeadow
                                         peer,
                                         PacketType.HeartBeat
                                     );
-
                                 return null;
 
                             default:
@@ -942,6 +951,10 @@ namespace RainMeadow
             }
             return null;
         }
+
+
+
+
 
         void IDisposable.Dispose() {
             socket.Dispose();

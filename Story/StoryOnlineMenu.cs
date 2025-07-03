@@ -26,7 +26,7 @@ namespace RainMeadow
         private StoryGameMode storyGameMode;
         private MenuLabel onlineDifficultyLabel;
         private Vector2 restartCheckboxPos;
-        
+
         //Chat constants
         private const int maxVisibleMessages = 13;
         //Chat variables
@@ -86,7 +86,7 @@ namespace RainMeadow
             storyGameMode = (StoryGameMode)OnlineManager.lobby.gameMode;
             storyGameMode.Sanitize();
             storyGameMode.currentCampaign = slugcatPages[slugcatPageIndex].slugcatNumber;
-            restartCheckboxPos = restartCheckbox.pos;       
+            restartCheckboxPos = restartCheckbox.pos;
             RemoveExcessStoryObjects();
             ModifyExistingMenuItems();
 
@@ -125,7 +125,7 @@ namespace RainMeadow
                 }
                 selectableSlugcats = SelectableSlugcatsEnumerable.ToArray();
             }
-        }   
+        }
 
         public new void StartGame(SlugcatStats.Name storyGameCharacter)
         {
@@ -370,7 +370,11 @@ namespace RainMeadow
             pages[0].subObjects.Add(lobbyLabel);
 
             var invite = new SimplerButton(this, pages[0], Translate("Invite Friends"), new(nextButton.pos.x + 80f, 50f), new(110, 35));
-            invite.OnClick += (_) => MatchmakingManager.currentInstance.OpenInvitationOverlay();
+            if (MatchmakingManager.currentInstance.canOpenInvitations) {
+                invite.OnClick += (_) => MatchmakingManager.currentInstance.OpenInvitationOverlay();
+            } else {
+                invite.GetButtonBehavior.greyedOut = true;
+            }
             pages[0].subObjects.Add(invite);
 
             this.chatTextBoxPos = new Vector2(this.manager.rainWorld.options.ScreenSize.x * 0.001f + (1366f - this.manager.rainWorld.options.ScreenSize.x) / 2f, 0);

@@ -74,7 +74,7 @@ namespace RainMeadow
                 buttonScroll.UpdateAlpha(buttonScroll.Alpha);
             }
         }
-        void SlugcatSelectMenu_AddColorButtons(On.Menu.SlugcatSelectMenu.orig_AddColorButtons orig, SlugcatSelectMenu self) 
+        void SlugcatSelectMenu_AddColorButtons(On.Menu.SlugcatSelectMenu.orig_AddColorButtons orig, SlugcatSelectMenu self)
         {
             if (self is StoryOnlineMenu sOM)
             {
@@ -86,7 +86,7 @@ namespace RainMeadow
                     self.pages[0].subObjects.Add(self.colorInterface);
                     //return; removed return due to the orig making a new the color interface if it is null, so unnecessary
                 }
-            }       
+            }
             orig(self);
         }
 
@@ -387,7 +387,7 @@ namespace RainMeadow
                 try
                 {
                     var args = System.Environment.GetCommandLineArgs();
-                    
+
                     MatchmakingManager.JoinLobbyUsingCode(string.Join(" ", args));
                 }
                 catch (Exception ex)
@@ -416,10 +416,10 @@ namespace RainMeadow
             var meadowButton = new SimpleButton(self, self.pages[0], self.Translate("MEADOW"), "MEADOW", Vector2.zero, new Vector2(Menu.MainMenu.GetButtonWidth(self.CurrLang), 30f));
             self.AddMainMenuButton(meadowButton, () =>
             {
-                if (!(OnlineManager.netIO is SteamNetIO) && !showed_no_steam_warning)
+                if (!(NetIO.currentInstance is SteamNetIO) && !showed_no_steam_warning)
                 {
                     showed_no_steam_warning = true;
-                    self.manager.ShowDialog(new DialogNotify(self.Translate("Steam is not currently available. Some features of Rain Meadow have been disabled."), self.manager, 
+                    self.manager.ShowDialog(new DialogNotify(self.Translate("Steam is not currently available. Some features of Rain Meadow have been disabled."), self.manager,
                         () => self.manager.RequestMainProcessSwitch(Ext_ProcessID.LobbySelectMenu)));
                     return;
                 }
