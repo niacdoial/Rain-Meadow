@@ -38,6 +38,8 @@ public class RainMeadowOptions : OptionInterface
     public readonly Configurable<int> ShowPingLocation;
 
     public readonly Configurable<string> LanUserName;
+    public readonly Configurable<string> MatchmakingRouter;
+    public readonly Configurable<ulong> PlayerRoutingId;  // TODO: UI?
     public readonly Configurable<int> UdpTimeout;
     public readonly Configurable<int> UdpHeartbeat;
     public readonly Configurable<bool> DisableMeadowPauseAnimation;
@@ -94,7 +96,9 @@ public class RainMeadowOptions : OptionInterface
 
 
         PickedIntroRoll = config.Bind("PickedIntroRoll", IntroRoll.Meadow);
+        MatchmakingRouter = config.Bind("MatchmakingRouter", "253.253.253.253:999");  // dummy for now
         LanUserName = config.Bind("LanUserName", "");
+        PlayerRoutingId = config.Bind("PlayerRoutingId", (ulong)0);
         UdpTimeout = config.Bind("UdpTimeout", 3000);
         UdpHeartbeat = config.Bind("UdpHeartbeat", 500);
 

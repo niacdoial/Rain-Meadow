@@ -63,8 +63,6 @@ namespace RainMeadow
                 RequestLobby(password);
             }
 
-
-
         }
 
         public void RequestLobby(string? key)

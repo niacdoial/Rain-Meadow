@@ -65,7 +65,7 @@ namespace RainMeadow
 
         public INetLobbyInfo MakeLobbyInfo() {
             return new INetLobbyInfo(
-                (processingPlayer.id as LANMatchmakingManager.LANPlayerId).endPoint, name, mode, currentplayercount, passwordprotected, maxplayers, mods, bannedMods);
+                (processingPlayer.id as LANPlayerId).endPoint, name, mode, currentplayercount, passwordprotected, maxplayers, mods, bannedMods);
         }
 
     }

@@ -7,7 +7,7 @@ using System.Net;
 using System.Net.NetworkInformation;
 using System.Net.Sockets;
 using System.Runtime.InteropServices;
-using Kittehface.Framework20;
+//using Kittehface.Framework20;
 
 namespace RainMeadow
 {
@@ -18,15 +18,16 @@ namespace RainMeadow
     }
 
     public class LANNetIO : NetIO {
+        static MatchmakingManager.MatchMakingDomain MMDomain = MatchmakingManager.MatchMakingDomain.LAN;
         public LANNetIO() {
             if (NetIOPlatform.PlatformUDPManager is null) return;
             NetIOPlatform.PlatformUDPManager.OnPeerForgotten += (peer) => {
-                if (MatchmakingManager.currentDomain != MatchmakingManager.MatchMakingDomain.LAN) {
+                if (MatchmakingManager.currentDomain != MMDomain) {
                     return;
                 }
                 List<OnlinePlayer> playerstoRemove = new();
                 foreach (OnlinePlayer player in OnlineManager.players) {
-                    if (player.id is LANMatchmakingManager.LANPlayerId lanid) {
+                    if (player.id is LANPlayerId lanid) {
                         if (lanid.endPoint is null) continue;
                         if (UDPPeerManager.CompareIPEndpoints(lanid.endPoint, peer)) {
                             if ((OnlineManager.lobby?.owner is OnlinePlayer owner && owner == player) ||
@@ -35,11 +36,15 @@ namespace RainMeadow
                                 playerstoRemove.Add(player);
 
                             }
+                            break;  // only one player matches that if block
                         }
                     }
                 }
 
-                foreach (var player in playerstoRemove) ((LANMatchmakingManager)MatchmakingManager.instances[MatchmakingManager.MatchMakingDomain.LAN]).RemoveLANPlayer(player);
+                foreach (var player in playerstoRemove)
+                    // this has a built-in test (checking if the player is in OnlineManager)
+                    // to determine if the current closure is being called from a timeout or from a voluntary disconnect
+                    ((LANMatchmakingManager)MatchmakingManager.instances[MatchmakingManager.MatchMakingDomain.LAN]).RemoveLANPlayer(player);
             };
         }
         public override void SendSessionData(OnlinePlayer toPlayer)
@@ -75,7 +80,7 @@ namespace RainMeadow
                 if (player == null)
                 {
                     RainMeadow.Debug("Player not found! Instantiating new at: " + point);
-                    var playerid = new LANMatchmakingManager.LANPlayerId(point);
+                    var playerid = new LANPlayerId(point);
                     player = new OnlinePlayer(playerid);
                 }
 
@@ -86,7 +91,7 @@ namespace RainMeadow
                     for (int i = 0; i < 4; i++)
                         NetIOPlatform.PlatformUDPManager.Send(
                             memory.GetBuffer(),
-                            ((LANMatchmakingManager.LANPlayerId)player.id).endPoint,
+                            ((LANPlayerId)player.id).endPoint,
                             UDPPeerManager.PacketType.UnreliableBroadcast,
                             true
                         );
@@ -101,7 +106,7 @@ namespace RainMeadow
             if (MatchmakingManager.currentDomain != MatchmakingManager.MatchMakingDomain.LAN) {
                 return;
             }
-            if (player.id is LANMatchmakingManager.LANPlayerId lanid) {
+            if (player.id is LANPlayerId lanid) {
                 using (MemoryStream memory = new MemoryStream(128))
                 using (BinaryWriter writer = new BinaryWriter(memory)) {
                     Packet.Encode(packet, writer, player);
@@ -126,7 +131,7 @@ namespace RainMeadow
                 return;
             }
 
-            if (player.id is LANMatchmakingManager.LANPlayerId lanid) {
+            if (player.id is LANPlayerId lanid) {
                 NetIOPlatform.PlatformUDPManager.Send(Array.Empty<byte>(), lanid.endPoint,
                     UDPPeerManager.PacketType.Reliable, true);
             }
@@ -138,7 +143,7 @@ namespace RainMeadow
             }
             if (NetIOPlatform.PlatformUDPManager is null) return;
 
-            if (player.id is LANMatchmakingManager.LANPlayerId lanid) {
+            if (player.id is LANPlayerId lanid) {
                 NetIOPlatform.PlatformUDPManager.ForgetPeer(lanid.endPoint);
             }
         }
@@ -183,7 +188,7 @@ namespace RainMeadow
                         if (player is null)
                         {
                             RainMeadow.Debug("Player not found! Instantiating new at: " + iPEndPoint.Port);
-                            var playerid = new LANMatchmakingManager.LANPlayerId(iPEndPoint);
+                            var playerid = new LANPlayerId(iPEndPoint);
                             player = new OnlinePlayer(playerid);
                         }
                         Packet.Decode(netReader, player);
