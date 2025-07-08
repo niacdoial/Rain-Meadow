@@ -262,7 +262,7 @@ namespace RainMeadow
 
 
             if (care_about_lobby_size) {
-                MatchmakingManager.MAX_LOBBY = lobbyInfo.maxPlayerCount;
+                MatchmakingManager.currentInstance.MAX_LOBBY = lobbyInfo.maxPlayerCount; // TODO does this break?
                 if (lobbyInfo.playerCount >= lobbyInfo.maxPlayerCount)
                 {
                     ShowErrorDialog("Failed to join lobby.<LINE> Lobby is full");
@@ -462,7 +462,11 @@ namespace RainMeadow
                     var dialogue = popupDialog as DirectConnectionDialogue;
                     var endpoint = UDPPeerManager.GetEndPointByName(dialogue?.IPBox?.value ?? "");
                     if (endpoint != null) {
-                        var fakelobbyinfo = new INetLobbyInfo(endpoint, "Direct Connection", "Meadow", 0, true, 2);
+                        var fakelobbyinfo = new INetLobbyInfo(
+                            new LANPlayerId(endpoint),
+                            "Direct Connection",
+                            "Meadow", 0, true, 2
+                        );
                         Action join = () => {
                             GreyOutLobbyCards(true);
                             StartJoiningLobby(fakelobbyinfo,

@@ -857,12 +857,6 @@ namespace RainMeadow
 
                 RemotePeer? peer = GetRemotePeer(ipsender);
 
-
-
-
-
-
-
                 using (MemoryStream stream = new(buffer, 0, len, false))
                 using (BinaryReader reader = new(stream)) {
                     try {

@@ -5,7 +5,7 @@ using System.Linq;
 using System.Diagnostics;
 
 namespace RainMeadow {
-    class RouterPlayerId : MeadowPlayerId {
+    public class RouterPlayerId : MeadowPlayerId {
         static readonly IPEndPoint BlackHole = new IPEndPoint(IPAddress.Parse("253.253.253.253"), 999);
 
         public ulong RoutingId = 0;
@@ -60,30 +60,51 @@ namespace RainMeadow {
 
 
         public override void RequestLobbyList() {
-            var packet = new RequestLobbyListPacket(
-                CLIENT_VAL,
-                OnlineManager.mePlayer.id
-            );
+            var packet = new RouterRequestLobbyPacket(CLIENT_VAL);
             ((RouterNetIO)NetIO.currentInstance).SendToServer(packet, NetIO.SendType.Reliable, true);
         }
 
-        private void LobbyListReceived(INetLobbyInfo[] lobbies, bool bIOFailure)
-        {
-            try {
-                OnLobbyListReceivedEvent(!bIOFailure, lobbies);
-            } catch (System.Exception e) {
-                RainMeadow.Error(e);
-                throw;
+        static List<INetLobbyInfo> lobbyinfo = new();
+        public void addLobby(INetLobbyInfo lobby) {
+            var updating_lobby = lobbyinfo.FirstOrDefault(x => x.host == lobby.host);
+            if (updating_lobby is not null) {
+                lobbyinfo.Remove(updating_lobby);
             }
+
+            lobbyinfo.Add(lobby);
+            OnLobbyListReceivedEvent(true, lobbyinfo.ToArray());
         }
 
-        public OnlinePlayer GetPlayerRouter(IPEndPoint other) {
-            return OnlineManager.players.FirstOrDefault(p => {
+        // private void LobbyListReceived(INetLobbyInfo[] lobbies, bool bIOFailure)
+        // {
+        //     try {
+        //         OnLobbyListReceivedEvent(!bIOFailure, lobbies);
+        //     } catch (System.Exception e) {
+        //         RainMeadow.Error(e);
+        //         throw;
+        //     }
+        // }
+
+        public OnlinePlayer GetPlayerRouter(RouterPlayerId playerId) {
+            OnlinePlayer candidate = OnlineManager.players.FirstOrDefault(p => {
                 if (p.id is RouterPlayerId routid)
-                    if (routid.endPoint != null)
-                        return UDPPeerManager.CompareIPEndpoints(routid.endPoint, other);
+                    return (routid == playerId);
                 return false;
             });
+            RouterPlayerId candId = (RouterPlayerId)candidate.id;
+            if (!UDPPeerManager.CompareIPEndpoints(candId.endPoint, playerId.endPoint)) {
+                RainMeadow.Error("player IDs don't agree on endpoint: " + candId.endPoint.ToString() + " vs " + playerId.endPoint.ToString());
+                throw new Exception("WHY");
+            }
+            return candidate;
+        }
+        public OnlinePlayer GetPlayerRouter(IPEndPoint endPoint) {
+            OnlinePlayer candidate = OnlineManager.players.FirstOrDefault(p => {
+                if (p.id is RouterPlayerId routid && routid.endPoint != null)
+                    return UDPPeerManager.CompareIPEndpoints(routid.endPoint, endPoint);
+                return false;
+            });
+            return candidate;
         }
 
         public override bool canSendChatMessages => true;
@@ -98,14 +119,26 @@ namespace RainMeadow {
 
         LobbyVisibility visibility;
         int? maxPlayerCount;
+        public ulong lobbyId = 0;
         public override void CreateLobby(LobbyVisibility visibility, string gameMode, string? password, int? maxPlayerCount) {
             maxPlayerCount = maxPlayerCount ?? 4;
             OnlineManager.lobby = new Lobby(new OnlineGameMode.OnlineGameModeType(gameMode), OnlineManager.mePlayer, password);
             ((RouterNetIO)NetIO.currentInstance).SendToServer(
-                new PublishLobbyPacket(OnlineManager.lobby),
+                new RouterPublishLobbyPacket(
+                    maxPlayerCount ?? 4,
+                    OnlineManager.mePlayer.id.name,
+                    password != null,
+                    gameMode, 1,
+                    RainMeadowModManager.ModArrayToString(OnlineManager.lobby.requiredmods),
+                    RainMeadowModManager.ModArrayToString(OnlineManager.lobby.bannedmods)
+                ),
                 NetIO.SendType.Reliable,
                 true
             );
+        }
+
+        public void OnLobbyPublished(ulong lobbyId) {
+            this.lobbyId = lobbyId;
             MatchmakingManager.OnLobbyJoinedEvent(true, "");
         }
 
@@ -113,8 +146,8 @@ namespace RainMeadow {
         {
             RainMeadow.DebugMe();
             RainMeadow.Debug("Lobby has ack'd us, adding player list...");
-            foreach (RouterPlayerId playerId in lobbyPlayerIds) {
-                OnlineManager.players.Add(new OnlinePlayer(playerId));
+            foreach (OnlinePlayer player in lobbyPlayers) {
+                AcknoledgeRouterPlayer(player);
             }
 
             if (OnlineManager.lobby is null) {
@@ -142,6 +175,7 @@ namespace RainMeadow {
             if (OnlineManager.players.Contains(joiningPlayer)) { return; }
             OnlineManager.players.Add(joiningPlayer);
             HandleJoin(joiningPlayer);
+            // NAT piercing happens here (players are expected to send unprompted acks to each other)
             (NetIO.currentInstance as RouterNetIO)?.SendAcknoledgement(joiningPlayer);
             RainMeadow.Debug($"Added {joiningPlayer} to the lobby matchmaking player list");
 
@@ -154,16 +188,19 @@ namespace RainMeadow {
                     if (player.isMe || player == joiningPlayer)
                         continue;
 
-                    ((RouterNetIO)NetIO.currentInstance).SendP2P(player, new ModifyPlayerListPacket(ModifyPlayerListPacket.Operation.Add, new OnlinePlayer[] { joiningPlayer }),
-                        NetIO.SendType.Reliable);
+                    ((RouterNetIO)NetIO.currentInstance).SendP2P(
+                        player,
+                        new RouterModifyPlayerListPacket(ModifyPlayerListPacketOperation.Add, new OnlinePlayer[] { joiningPlayer }),
+                        NetIO.SendType.Reliable
+                    );
                 }
 
                 // Tell joining peer to create everyone in the server
                 // (safety precaution in case the server has out-of-date info or something)
                 ((RouterNetIO)NetIO.currentInstance).SendP2P(
                     joiningPlayer,
-                    new ModifyPlayerListPacket(
-                        ModifyPlayerListPacket.Operation.Add,
+                    new RouterModifyPlayerListPacket(
+                        ModifyPlayerListPacketOperation.Add,
                         OnlineManager.players.Append(OnlineManager.mePlayer).ToArray()
                     ),
                     NetIO.SendType.Reliable
@@ -177,15 +214,14 @@ namespace RainMeadow {
             StackTrace stackTrace = new();
             RainMeadow.Debug(stackTrace.ToString());
 
-
             if (leavingPlayer.isMe) return;
             if (!OnlineManager.players.Contains(leavingPlayer)) { return; }
             HandleDisconnect(leavingPlayer);
             if (OnlineManager.lobby is not null)
             if (OnlineManager.lobby.isOwner)
             {
-                var packet = new ModifyPlayerListPacket(
-                    ModifyPlayerListPacket.Operation.Remove,
+                var packet = new RouterModifyPlayerListPacket(
+                    ModifyPlayerListPacketOperation.Remove,
                     new OnlinePlayer[] { leavingPlayer }
                 );
 
@@ -207,27 +243,20 @@ namespace RainMeadow {
         string lobbyPassword = "";
         public override void RequestJoinLobby(LobbyInfo lobby, string? password) {
             RainMeadow.DebugMe();
-            if (lobby is INetLobbyInfo lobbyinfo) {
+            if (lobby is INetLobbyInfo lobbyInfo) {
                 lobbyPassword = password ?? "";
                 OnlineManager.currentlyJoiningLobby = lobby;
-                if (lobbyinfo.endPoint == null) {
+                if (lobbyInfo.host == null) { // TODO redo this line
                     RainMeadow.Error("Failed to join routed game (lobby doesn't list endpoint)...");
                     return;
                 }
-
-                //var host = OnlineManager.mePlayer = new OnlinePlayer( new RouterPlayerId());
-                //host.id.endPoint = lobbyInfo.endPoint;
-                // routingId and name will be set when we receive a SelfAnnouncementPacket from them
+                this.lobbyId = lobbyInfo.lobbyId;
 
                 RainMeadow.Debug("Sending Request to join lobby...");
                 // NOTE: inform server to get a list of players,
                 // then inform the host (doesn't need any info?)
                 ((RouterNetIO)NetIO.currentInstance).SendToServer(
-                    new RequestJoinToServerPacket(
-                        lobbyinfo.name,
-                        lobbyinfo.endPoint,
-                        OnlineManager.mePlayer.id
-                    ),
+                    new RouterRequestJoinToServerPacket(lobbyInfo.lobbyId),
                     NetIO.SendType.Reliable,
                     true
                 );
@@ -237,25 +266,24 @@ namespace RainMeadow {
         }
 
         // phase 2 of joining a lobby: ask the host for permission
-        RouterPlayerId[] lobbyPlayerIds;
-        private void OnLobbyInfoSubmitted(RouterPlayerId[] players, bool success) {
+        OnlinePlayer[] lobbyPlayers;
+        private void OnLobbyInfoSubmitted(OnlinePlayer[] players, bool success) {
             if (!success){
                 RainMeadow.Error("Could not ask the server for the lobby");
                 return;
             }
-            lobbyPlayerIds = players;
+            lobbyPlayers = players;
             //OnPlayerListReceivedEvent(players);
-            var lobbyinfo = (INetLobbyInfo)OnlineManager.currentlyJoiningLobby;
-            if (lobbyinfo.endPoint == null) {
+            var lobbyInfo = (INetLobbyInfo)OnlineManager.currentlyJoiningLobby;
+            if (lobbyInfo.host == null) {
                 RainMeadow.Debug("Failed to join routed game (this should have been checked already)...");
                 return;
             }
 
             OnlinePlayer host = null;
-            foreach (RouterPlayerId playerId in players) {
-                if (playerId.endPoint is null) continue;
-                if (UDPPeerManager.CompareIPEndpoints(playerId.endPoint, lobbyinfo.endPoint)) {
-                    host = new OnlinePlayer(playerId);
+            foreach (OnlinePlayer player in players) {
+                if (((RouterPlayerId)player.id) == lobbyInfo.host) {
+                    host = player;
                     break;
                 }
             }
@@ -267,14 +295,14 @@ namespace RainMeadow {
             RainMeadow.Debug("Sending Request to join lobby...");
             ((RouterNetIO)NetIO.currentInstance).SendP2P(
                 host,
-                new RequestJoinPacket(OnlineManager.mePlayer.id.name),
+                new RouterRequestJoinPacket(OnlineManager.mePlayer.id, lobbyId),
                 NetIO.SendType.Reliable,
                 true
             );
         }
 
         // note: called not from the Matchmaking/NetIO layer but from the Lobby Event layer.
-        // ...WHY is password checking this late in the process?
+        // ...TODO: WHY is password checking this late in the process?
         public override void JoinLobby(bool success) {
             if (success)
             {
@@ -303,16 +331,16 @@ namespace RainMeadow {
 
             if (OnlineManager.players is not null) {
                 if (OnlineManager.players.Count > 1) {
-                    foreach (OnlinePlayer p in  OnlineManager.players) {
+                    foreach (OnlinePlayer p in OnlineManager.players) {
                         ((RouterNetIO)NetIO.currentInstance).SendP2P(p,
                             new SessionEndPacket(),
                                 NetIO.SendType.Reliable);
                     }
                 }
             }
-            if (OnlineManager.lobby.isOwner) {
-                var packet = new ModifyPlayerListPacket(
-                    ModifyPlayerListPacket.Operation.Remove,
+            if (OnlineManager.lobby != null && OnlineManager.lobby.isOwner) {
+                var packet = new RouterModifyPlayerListPacket(
+                    ModifyPlayerListPacketOperation.Remove,
                     new OnlinePlayer[] { OnlineManager.mePlayer }
                 );
 

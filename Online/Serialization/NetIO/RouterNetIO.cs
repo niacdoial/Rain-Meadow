@@ -54,6 +54,7 @@ namespace RainMeadow
             );
             var serverId = new RouterPlayerId(0xffff_ffff_ffff_ffff);
             serverId.endPoint = serverEndPoint;
+            serverId.name = "SERVER";
             serverPlayer = new OnlinePlayer(serverId);
         }
         bool BasicChecks() {

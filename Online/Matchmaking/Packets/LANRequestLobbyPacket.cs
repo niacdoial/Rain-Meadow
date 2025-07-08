@@ -1,8 +1,8 @@
 namespace RainMeadow
 {
-    public class RequestLobbyPacket : Packet
+    public class LANRequestLobbyPacket : Packet
     {
-        public override Type type => Type.RequestLobby;
+        public override Type type => Type.LANRequestLobby;
 
         public override void Process() {
             if (MatchmakingManager.currentDomain != MatchmakingManager.MatchMakingDomain.LAN) return;

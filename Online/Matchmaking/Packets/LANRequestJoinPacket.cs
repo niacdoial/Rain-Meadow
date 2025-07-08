@@ -3,14 +3,15 @@ using MonoMod.Utils;
 
 namespace RainMeadow
 {
-    public class RequestJoinPacket : Packet
+    public class LANRequestJoinPacket : Packet
     {
-        public string LanUserName = "";
-        public override Type type => Type.RequestJoin;
+        public override Type type => Type.LANRequestJoin;
 
-        public RequestJoinPacket() {}
-        public RequestJoinPacket(string name) {
-            LanUserName = name;
+        public string LanUserName = "";
+
+        public LANRequestJoinPacket() {}
+        public LANRequestJoinPacket(LANPlayerId player) {
+            LanUserName = player.name;
         }
 
         public override void Process()
@@ -29,7 +30,7 @@ namespace RainMeadow
                 matchmaker.AcknoledgeLANPlayer(processingPlayer);
 
                 // Tell them they are in
-                ((LANNetIO)NetIO.currentInstance).SendP2P(processingPlayer, new JoinLobbyPacket(
+                ((LANNetIO)NetIO.currentInstance).SendP2P(processingPlayer, new LANAcceptJoinPacket(
                     matchmaker.maxplayercount,
                     "LAN Lobby",
                     OnlineManager.lobby.hasPassword,

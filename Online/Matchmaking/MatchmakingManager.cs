@@ -50,7 +50,7 @@ namespace RainMeadow
         public static string MODS_KEY = "mods";
         public static string BANNED_MODS_KEY = "banned_mods";
         public static string PASSWORD_KEY = "password";
-        public static int MAX_LOBBY = 4;
+        public int MAX_LOBBY = 4;  // ??? what is this *supposed* to be? I know how it's used but...
 
         static public readonly List<MatchMakingDomain> supported_matchmakers = new();
 

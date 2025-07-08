@@ -14,16 +14,25 @@ using System.Diagnostics.PerformanceData;
 namespace RainMeadow {
 
     public class INetLobbyInfo : LobbyInfo {
-        public IPEndPoint endPoint;
-        public INetLobbyInfo(IPEndPoint endPoint, string name, string mode, int playerCount, bool hasPassword, int maxPlayerCount, string highImpactMods = "", string bannedMods = "") :
+        public MeadowPlayerId host;
+        public ulong lobbyId = 0;  // TODO: maybe more separation than that?
+        public INetLobbyInfo(MeadowPlayerId host, string name, string mode, int playerCount, bool hasPassword, int maxPlayerCount, string highImpactMods = "", string bannedMods = "") :
             base(name, mode, playerCount, hasPassword, maxPlayerCount, highImpactMods, bannedMods) {
-            this.endPoint = endPoint;
+            this.host = host;
         }
         public override string GetLobbyJoinCode(string? password = null)
         {
-            if (password != null)
-                return $"+connect_lan_lobby {endPoint.Address.Address} {endPoint.Port} +lobby_password {password}";
-            return $"+connect_lan_lobby {endPoint.Address.Address} {endPoint.Port}";
+            if (host is LANPlayerId pHost) {
+                if (password != null)
+                    return $"+connect_lan_lobby {pHost.endPoint.Address.Address} {pHost.endPoint.Port} +lobby_password {password}";
+                return $"+connect_lan_lobby {pHost.endPoint.Address.Address} {pHost.endPoint.Port}";
+            } else if (host is RouterPlayerId rHost) {
+                if (password != null)
+                    return $"+connect_router_lobby {this.lobbyId} {rHost.RoutingId} +lobby_password {password}";
+                return $"+connect_router_lobby {this.lobbyId} {rHost.RoutingId}";
+            } else {
+                throw new Exception("wrong lobby type");
+            }
         }
     }
 
@@ -31,7 +40,7 @@ namespace RainMeadow {
     {
         // Blackhole Endpoint
         // https://superuser.com/questions/698244/ip-address-that-is-the-equivalent-of-dev-null
-        static readonly IPEndPoint BlackHole = new IPEndPoint(IPAddress.Parse("253.253.253.253"), 999);
+        public static readonly IPEndPoint BlackHole = new IPEndPoint(IPAddress.Parse("253.253.253.253"), 999);
         public IPEndPoint endPoint;
         public LANPlayerId(IPEndPoint? endPoint) : base(
                 UsernameGenerator.GenerateRandomUsername(endPoint?.GetHashCode() ?? 0))
@@ -127,7 +136,7 @@ namespace RainMeadow {
                 if (NetIO.currentInstance is LANNetIO lanentio) {
                     using (MemoryStream memoryStream = new())
                     using (BinaryWriter writer = new(memoryStream)) {
-                        lanentio.SendBroadcast(new RequestLobbyPacket());
+                        lanentio.SendBroadcast(new LANRequestLobbyPacket());
                     }
                 }
 
@@ -135,7 +144,7 @@ namespace RainMeadow {
         }
 
         public void addLobby(INetLobbyInfo lobby) {
-            var updating_lobby = lobbyinfo.FirstOrDefault(x => UDPPeerManager.CompareIPEndpoints(x.endPoint, lobby.endPoint));
+            var updating_lobby = lobbyinfo.FirstOrDefault(x => x.host == lobby.host);
             if (updating_lobby is not null) {
                 lobbyinfo.Remove(updating_lobby);
             }
@@ -148,7 +157,7 @@ namespace RainMeadow {
         public void SendLobbyInfo(OnlinePlayer other) {
             if (OnlineManager.lobby != null && OnlineManager.lobby.isOwner) {
                 if (NetIO.currentInstance is LANNetIO lannetio) {
-                    var packet = new InformLobbyPacket(
+                    var packet = new LANInformLobbyPacket(
                         maxplayercount, Utils.Translate("LAN Lobby"), OnlineManager.lobby.hasPassword,
                         OnlineManager.lobby.gameModeType.value, OnlineManager.players.Count,
                         RainMeadowModManager.ModArrayToString(RainMeadowModManager.GetRequiredMods()),
@@ -220,15 +229,15 @@ namespace RainMeadow {
                     if (player.isMe || player == joiningPlayer)
                         continue;
 
-                    ((LANNetIO)NetIO.currentInstance).SendP2P(player, new ModifyPlayerListPacket(ModifyPlayerListPacket.Operation.Add, new OnlinePlayer[] { joiningPlayer }),
+                    ((LANNetIO)NetIO.currentInstance).SendP2P(player, new LANModifyPlayerListPacket(ModifyPlayerListPacketOperation.Add, new OnlinePlayer[] { joiningPlayer }),
                         NetIO.SendType.Reliable);
                 }
 
                 // Tell joining peer to create everyone in the server
                 ((LANNetIO)NetIO.currentInstance).SendP2P(
                     joiningPlayer,
-                    new ModifyPlayerListPacket(
-                        ModifyPlayerListPacket.Operation.Add,
+                    new LANModifyPlayerListPacket(
+                        ModifyPlayerListPacketOperation.Add,
                         OnlineManager.players.Append(OnlineManager.mePlayer).ToArray()
                     ),
                     NetIO.SendType.Reliable
@@ -248,8 +257,8 @@ namespace RainMeadow {
             if (OnlineManager.lobby is not null)
             if (OnlineManager.lobby.isOwner)
             {
-                var packet = new ModifyPlayerListPacket(
-                    ModifyPlayerListPacket.Operation.Remove,
+                var packet = new LANModifyPlayerListPacket(
+                    ModifyPlayerListPacketOperation.Remove,
                     new OnlinePlayer[] { leavingPlayer }
                 );
                 // Tell the other players to remove this player
@@ -267,18 +276,26 @@ namespace RainMeadow {
         string lobbyPassword = "";
         public override void RequestJoinLobby(LobbyInfo lobby, string? password) {
             RainMeadow.DebugMe();
-            if (lobby is INetLobbyInfo lobbyinfo) {
+            if (lobby is INetLobbyInfo lobbyInfo) {
                 lobbyPassword = password ?? "";
                 OnlineManager.currentlyJoiningLobby = lobby;
-                if (lobbyinfo.endPoint == null)
-                {
-                    RainMeadow.Debug("Failed to join local game...");
+                if (lobbyInfo.host is LANPlayerId lHost) {
+                    if (lHost.endPoint == null) {
+                        RainMeadow.Debug("Failed to join local game (host has no endpoint)...");
+                        return;
+                    }
+                } else {
+                    RainMeadow.Debug("Failed to join local game (bad host in lobby object)...");
                     return;
                 }
 
                 RainMeadow.Debug("Sending Request to join lobby...");
-                ((LANNetIO)NetIO.currentInstance).SendP2P(new OnlinePlayer(new LANPlayerId(lobbyinfo.endPoint)),
-                    new RequestJoinPacket(OnlineManager.mePlayer.id.name), NetIO.SendType.Reliable, true);
+                ((LANNetIO)NetIO.currentInstance).SendP2P(
+                    new OnlinePlayer(lobbyInfo.host),
+                    new LANRequestJoinPacket((LANPlayerId)OnlineManager.mePlayer.id),
+                    NetIO.SendType.Reliable,
+                    true
+                );
             } else {
                 RainMeadow.Error("Invalid lobby type");
             }
@@ -303,7 +320,13 @@ namespace RainMeadow {
             if (args.Length >= 2 && long.TryParse(args[0], out var address) && int.TryParse(args[1], out var port))
             {
                 RainMeadow.Debug($"joining lobby with address {address} and port {port} from the command line");
-                RequestJoinLobby(new INetLobbyInfo(new IPEndPoint(address, port), "", "", 0, false, 4), args.Length > 2 ? args[2] : null);
+                RequestJoinLobby(
+                    new INetLobbyInfo(
+                        new LANPlayerId(new IPEndPoint(address, port)),
+                        "", "", 0, false, 4
+                    ),
+                    args.Length > 2 ? args[2] : null
+                );
             }
             else
                 RainMeadow.Error($"invalid address and port: {string.Join(" ", args)}");

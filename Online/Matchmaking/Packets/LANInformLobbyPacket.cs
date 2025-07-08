@@ -2,8 +2,10 @@ using System.IO;
 
 namespace RainMeadow
 {
-    public class InformLobbyPacket : Packet
+    public class LANInformLobbyPacket : Packet
     {
+        public override Type type => Type.LANInformLobby;
+
         public int currentplayercount = default;
         public int maxplayers = default;
         public bool passwordprotected = default;
@@ -12,8 +14,8 @@ namespace RainMeadow
         public string mods = "";
         public string bannedMods = "";
 
-        public InformLobbyPacket(): base() {}
-        public InformLobbyPacket(int maxplayers, string name, bool passwordprotected, string mode, int currentplayercount, string highImpactMods = "", string bannedMods = "")
+        public LANInformLobbyPacket(): base() {}
+        public LANInformLobbyPacket(int maxplayers, string name, bool passwordprotected, string mode, int currentplayercount, string highImpactMods = "", string bannedMods = "")
         {
             this.currentplayercount = currentplayercount;
             this.mode = mode;
@@ -48,9 +50,6 @@ namespace RainMeadow
             bannedMods = reader.ReadString();
         }
 
-
-        public override Type type => Type.InformLobby;
-
         public override void Process()
         {
             if (MatchmakingManager.currentDomain != MatchmakingManager.MatchMakingDomain.LAN) return;
@@ -65,7 +64,12 @@ namespace RainMeadow
 
         public INetLobbyInfo MakeLobbyInfo() {
             return new INetLobbyInfo(
-                (processingPlayer.id as LANPlayerId).endPoint, name, mode, currentplayercount, passwordprotected, maxplayers, mods, bannedMods);
+                processingPlayer.id,
+                name, mode,
+                currentplayercount, passwordprotected,
+                maxplayers,
+                mods, bannedMods
+            );
         }
 
     }
