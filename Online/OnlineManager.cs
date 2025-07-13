@@ -7,6 +7,13 @@ using UnityEngine;
 
 namespace RainMeadow
 {
+#if IS_SERVER
+    public class OnlineManager
+    {
+        public static OnlinePlayer mePlayer;
+        public static List<OnlinePlayer> players;
+    }
+#else
     // Static/singleton class for online features and callbacks
     // is a mainloopprocess so update bound to game update? worth it? idk
     public class OnlineManager : MainLoopProcess
@@ -376,4 +383,5 @@ namespace RainMeadow
             }
         }
     }
+#endif
 }

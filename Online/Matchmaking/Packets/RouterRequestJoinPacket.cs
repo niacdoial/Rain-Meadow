@@ -13,15 +13,19 @@ namespace RainMeadow
         public ulong lobbyId = 0;
 
         public RouterRequestJoinPacket() {}
+#if !IS_SERVER
         public RouterRequestJoinPacket(MeadowPlayerId player, ulong lobbyId) {
             if (player is RouterPlayerId rPlayer) {
                 senderUserName = rPlayer.name;
                 this.lobbyId = lobbyId;
             }
         }
-
+#endif
         public override void Process()
         {
+#if IS_SERVER
+            throw new Exception("This function must only be called player-side");
+#else
             RainMeadow.DebugMe();
             if (OnlineManager.lobby != null && MatchmakingManager.currentDomain == MatchmakingManager.MatchMakingDomain.Router)
             {
@@ -50,8 +54,8 @@ namespace RainMeadow
                     RainMeadowModManager.ModArrayToString(RainMeadowModManager.GetRequiredMods()),
                     RainMeadowModManager.ModArrayToString(RainMeadowModManager.GetBannedMods())
                 ), NetIO.SendType.Reliable);
-
             }
+#endif
         }
 
         public override void Serialize(BinaryWriter writer)

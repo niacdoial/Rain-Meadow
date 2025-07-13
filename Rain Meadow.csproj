@@ -44,9 +44,14 @@
     </None>
   </ItemGroup>
 
+  <ItemGroup>
+    <Compile Remove="RainMeadow.LobbyServer.cs"/>
+    <Compile Remove="Serialization/NetIO/RouterServerSideNetIO.cs"/>
+  </ItemGroup>
+
   <Target Name="PostBuild" AfterTargets="PostBuildEvent">
     <ItemGroup>
-      <BuildFiles Include="$(Outdir)\*" />
+      <BuildFiles Include="$(Outdir)\Rain Meadow.*" />
     </ItemGroup>
     <Copy SourceFiles="@(BuildFiles)" DestinationFolder="$(ProjectDir)Mod\plugins" />
   </Target>

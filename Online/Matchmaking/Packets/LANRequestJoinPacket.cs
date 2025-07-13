@@ -1,3 +1,4 @@
+using System;
 using System.IO;
 using MonoMod.Utils;
 
@@ -10,12 +11,16 @@ namespace RainMeadow
         public string LanUserName = "";
 
         public LANRequestJoinPacket() {}
+#if !IS_SERVER
         public LANRequestJoinPacket(LANPlayerId player) {
             LanUserName = player.name;
         }
-
+#endif
         public override void Process()
         {
+#if IS_SERVER
+            throw new Exception("This function must only be called player-side");
+#else
             RainMeadow.DebugMe();
             if (OnlineManager.lobby != null && MatchmakingManager.currentDomain == MatchmakingManager.MatchMakingDomain.LAN)
             {
@@ -41,6 +46,7 @@ namespace RainMeadow
                 ), NetIO.SendType.Reliable);
 
             }
+#endif
         }
 
         public override void Serialize(BinaryWriter writer)

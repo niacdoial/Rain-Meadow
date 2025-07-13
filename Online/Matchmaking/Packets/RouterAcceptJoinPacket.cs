@@ -1,3 +1,5 @@
+using System;
+
 namespace RainMeadow
 {
     public class RouterAcceptJoinPacket : RouterInformLobbyPacket
@@ -6,11 +8,15 @@ namespace RainMeadow
         // roles: H->P
 
         public RouterAcceptJoinPacket() : base() { }
+#if !IS_SERVER
         public RouterAcceptJoinPacket(ulong lobbyId, int maxplayers, string name, bool passwordprotected, string mode, int currentplayercount, string highImpactMods = "", string bannedMods = "") :
             base(lobbyId, maxplayers, name, passwordprotected, mode, currentplayercount, highImpactMods, bannedMods) { }
-
+#endif
         public override void Process()
         {
+#if IS_SERVER
+            throw new Exception("This function must only be called player-side");
+#else
             if (MatchmakingManager.currentDomain != MatchmakingManager.MatchMakingDomain.Router) return;
             var newLobbyInfo = MakeLobbyInfo();
 
@@ -27,6 +33,7 @@ namespace RainMeadow
                     }
                 }
             }
+#endif
         }
     }
 }

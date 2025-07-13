@@ -5,6 +5,30 @@ using System.Linq;
 using System.Diagnostics;
 
 namespace RainMeadow {
+    public class INetLobbyInfo : LobbyInfo {
+        public MeadowPlayerId host;
+        public ulong lobbyId = 0;  // TODO: maybe more separation than that?
+        public INetLobbyInfo(MeadowPlayerId host, string name, string mode, int playerCount, bool hasPassword, int maxPlayerCount, string highImpactMods = "", string bannedMods = "") :
+            base(name, mode, playerCount, hasPassword, maxPlayerCount, highImpactMods, bannedMods) {
+            this.host = host;
+        }
+
+        public override string GetLobbyJoinCode(string? password = null)
+        {
+            if (host is LANPlayerId pHost) {
+                if (password != null)
+                    return $"+connect_lan_lobby {pHost.endPoint.Address.Address} {pHost.endPoint.Port} +lobby_password {password}";
+                return $"+connect_lan_lobby {pHost.endPoint.Address.Address} {pHost.endPoint.Port}";
+            } else if (host is RouterPlayerId rHost) {
+                if (password != null)
+                    return $"+connect_router_lobby {this.lobbyId} {rHost.RoutingId} +lobby_password {password}";
+                return $"+connect_router_lobby {this.lobbyId} {rHost.RoutingId}";
+            } else {
+                throw new Exception("wrong lobby type");
+            }
+        }
+    }
+
     public class RouterPlayerId : MeadowPlayerId {
         static readonly IPEndPoint BlackHole = new IPEndPoint(IPAddress.Parse("253.253.253.253"), 999);
 
@@ -15,9 +39,11 @@ namespace RainMeadow {
         public RouterPlayerId(ulong id = 0) { RoutingId = id; endPoint = BlackHole; }
 
         override public int GetHashCode() { unchecked { return (int)RoutingId; } }
+#if !IS_SERVER // let's not bring serialisation in the server's code
         override public void CustomSerialize(Serializer serializer) {
             serializer.Serialize(ref RoutingId);
         }
+#endif
 
         public bool isLoopback() {
             if (OnlineManager.mePlayer.id is RouterPlayerId mePlayerId)
@@ -36,7 +62,7 @@ namespace RainMeadow {
     }
 
 
-
+#if !IS_SERVER
     public class RouterMatchmakingManager : MatchmakingManager {
 
         public override void initializeMePlayer() {
@@ -120,6 +146,7 @@ namespace RainMeadow {
         LobbyVisibility visibility;
         int? maxPlayerCount;
         public ulong lobbyId = 0;
+
         public override void CreateLobby(LobbyVisibility visibility, string gameMode, string? password, int? maxPlayerCount) {
             maxPlayerCount = maxPlayerCount ?? 4;
             OnlineManager.lobby = new Lobby(new OnlineGameMode.OnlineGameModeType(gameMode), OnlineManager.mePlayer, password);
@@ -378,4 +405,5 @@ namespace RainMeadow {
 
         public override bool canOpenInvitations => false;
     }
+#endif  // !IS_SERVER
 }

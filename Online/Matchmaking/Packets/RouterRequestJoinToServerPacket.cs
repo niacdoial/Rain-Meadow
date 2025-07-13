@@ -1,5 +1,6 @@
-using System.IO;
 using System;
+using System.IO;
+using System.Collections.Generic;
 using MonoMod.Utils;
 
 namespace RainMeadow
@@ -12,13 +13,26 @@ namespace RainMeadow
         public ulong lobbyId = 0;
 
         public RouterRequestJoinToServerPacket() {}
+#if !IS_SERVER
         public RouterRequestJoinToServerPacket(ulong lobbyId) {
             this.lobbyId = lobbyId;
         }
+#endif
 
         public override void Process()
         {
-            throw new Exception("TODO: make sure only the server");
+#if IS_SERVER
+            LobbyServer.netIo.SendP2P(
+                processingPlayer,
+                new RouterModifyPlayerListPacket(
+                    ModifyPlayerListPacketOperation.Add,
+                    LobbyServer.players.ToArray()
+                ),
+                NetIO.SendType.Reliable
+            );
+#else
+            throw new Exception("This function must only be called server-side");
+#endif
         }
 
         public override void Serialize(BinaryWriter writer)

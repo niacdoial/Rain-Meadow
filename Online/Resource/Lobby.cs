@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 
 namespace RainMeadow
 {
+#if !IS_SERVER
     // Lobby is tightly bound to a SteamMatchmaking Lobby, also the top-level resource
     public class Lobby : OnlineResource
     {
@@ -314,4 +315,5 @@ namespace RainMeadow
             gameMode.PlayerLeftLobby(player);
         }
     }
+#endif  // !IS_SERVER
 }

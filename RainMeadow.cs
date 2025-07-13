@@ -1,11 +1,26 @@
 ﻿using BepInEx;
-using Menu;
-using RainMeadow.Game;
 using System;
 using System.Diagnostics;
 using System.Reflection;
 using System.Security.Permissions;
+
+#if IS_SERVER
+// heavily simplified baseclass to remove all dependencies
+namespace RainMeadow
+{
+    public partial class RainMeadow
+    {
+        public const string MeadowVersionStr = "0.1.5.1";
+        //public static RainMeadowOptions rainMeadowOptions; // TODO add configurability to the server
+        //public static RainMeadow instance;
+    }
+}
+#else
+
+
 using UnityEngine;
+using Menu;
+using RainMeadow.Game;
 
 [assembly: AssemblyVersion(RainMeadow.RainMeadow.MeadowVersionStr)]
 #pragma warning disable CS0618
@@ -235,3 +250,4 @@ namespace RainMeadow
         }
     }
 }
+#endif

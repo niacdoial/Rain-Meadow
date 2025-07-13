@@ -20,12 +20,13 @@ namespace RainMeadow
         private OnlinePlayer[] players;
 
         public LANModifyPlayerListPacket() : base() { }
+#if !IS_SERVER
         public LANModifyPlayerListPacket(ModifyPlayerListPacketOperation modifyOperation, OnlinePlayer[] players) : base()
         {
             this.modifyOperation = modifyOperation;
             this.players = players;
         }
-
+#endif
         public override void Serialize(BinaryWriter writer)
         {
             writer.Write((byte)modifyOperation);
@@ -50,6 +51,9 @@ namespace RainMeadow
 
         public override void Deserialize(BinaryReader reader)
         {
+#if IS_SERVER
+            throw new Exception("This function must only be called player-side");
+#else
             modifyOperation = (ModifyPlayerListPacketOperation)reader.ReadByte();
             var endpoints = UDPPeerManager.DeserializeEndPoints(reader, (processingPlayer.id as LANPlayerId).endPoint);
 
@@ -65,11 +69,14 @@ namespace RainMeadow
 
             else if (modifyOperation == ModifyPlayerListPacketOperation.Remove)
                 players = endpoints.Select(x => lanmatchmaker.GetPlayerLAN(x)).ToArray();
-
+#endif
         }
 
         public override void Process()
         {
+#if IS_SERVER
+            throw new Exception("This function must only be called player-side");
+#else
             switch (modifyOperation)
             {
                 case ModifyPlayerListPacketOperation.Add:
@@ -96,6 +103,7 @@ namespace RainMeadow
                     }
                     break;
             }
+#endif
         }
     }
 }

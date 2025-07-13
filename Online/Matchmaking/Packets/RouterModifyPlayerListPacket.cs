@@ -11,6 +11,7 @@ namespace RainMeadow
     public class RouterModifyPlayerListPacket : Packet
     {
         public override Type type => Type.RouterModifyPlayerList;
+        // Roles: any
 
         private ModifyPlayerListPacketOperation modifyOperation;
         private OnlinePlayer[] players;
@@ -56,8 +57,9 @@ namespace RainMeadow
             modifyOperation = (ModifyPlayerListPacketOperation)reader.ReadByte();
             var endpoints = UDPPeerManager.DeserializeEndPoints(reader, (processingPlayer.id as RouterPlayerId).endPoint);
 
-
+#if !IS_SERVER
             var matchmaker = (MatchmakingManager.instances[MatchmakingManager.MatchMakingDomain.Router] as RouterMatchmakingManager);
+#endif
 
             List<RouterPlayerId> routids = default;
             foreach (IPEndPoint end in endpoints) {
@@ -74,9 +76,13 @@ namespace RainMeadow
                 }
             }
 
-            else if (modifyOperation == ModifyPlayerListPacketOperation.Remove)
+            else if (modifyOperation == ModifyPlayerListPacketOperation.Remove) {
+#if IS_SERVER
+                players = routids.Select(x => LobbyServer.GetPlayer(x)).ToArray();
+#else
                 players = routids.Select(x => matchmaker.GetPlayerRouter(x)).ToArray();
-
+#endif
+            }
         }
 
         public override void Process()
@@ -87,6 +93,9 @@ namespace RainMeadow
                     RainMeadow.Debug("Adding players...\n\t" + string.Join<OnlinePlayer>("\n\t", players));
                     for (int i = 0; i < players.Length; i++)
                     {
+#if IS_SERVER
+                        LobbyServer.players.Add((OnlinePlayer) players[i]);
+#else
                         if (((RouterPlayerId)players[i].id).isLoopback()) {
                             // That's me
                             // Put me where I belong. (...at the end of the player list?)
@@ -96,6 +105,7 @@ namespace RainMeadow
                         }
 
                         (MatchmakingManager.instances[MatchmakingManager.MatchMakingDomain.Router] as RouterMatchmakingManager).AcknoledgeRouterPlayer(players[i]);
+#endif
                     }
                     break;
 
@@ -103,7 +113,11 @@ namespace RainMeadow
                     RainMeadow.Debug("Removing players...\n\t" + string.Join<OnlinePlayer>("\n\t", players));
                     for (int i = 0; i < players.Length; i++)
                     {
+#if IS_SERVER
+                        LobbyServer.players.Remove((OnlinePlayer)players[i]);
+#else
                         (MatchmakingManager.instances[MatchmakingManager.MatchMakingDomain.Router] as RouterMatchmakingManager).RemoveRouterPlayer(players[i]);
+#endif
                     }
                     break;
             }

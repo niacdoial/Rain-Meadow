@@ -1,3 +1,4 @@
+using System;
 using System.IO;
 
 namespace RainMeadow
@@ -7,10 +8,12 @@ namespace RainMeadow
         public string message = "";
 
         public ChatMessagePacket(): base() {}
+#if !IS_SERVER
         public ChatMessagePacket(string message)
         {
             this.message = message;
         }
+#endif
 
         public override void Serialize(BinaryWriter writer)
         {
@@ -28,7 +31,11 @@ namespace RainMeadow
         public override Type type => Type.ChatMessage;
 
         public override void Process() {
+#if IS_SERVER
+            throw new Exception("This function must only be called player-side");
+#else
             MatchmakingManager.currentInstance.RecieveChatMessage(processingPlayer, message);
+#endif
         }
     }
 }

@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 
+
 namespace RainMeadow
 {
     public class RouterRequestLobbyPacket : Packet
@@ -11,9 +12,11 @@ namespace RainMeadow
         public string meadowVersion = "";
 
         public RouterRequestLobbyPacket() {}
+#if !IS_SERVER
         public RouterRequestLobbyPacket(string version) {
             meadowVersion = version;
         }
+#endif
 
         public override void Serialize(BinaryWriter writer)
         {
@@ -27,8 +30,30 @@ namespace RainMeadow
             meadowVersion = reader.ReadString();
         }
 
+        // // NOTE: these two functions MUST be kept in sync
+        // // with ModManager/RainMeadowModManager.cs
+        // static string ModArrayToString(string[] requiredMods) {
+        //     return string.Join("\n", requiredMods);
+        // }
+        // static string[] ModStringToArray(string requiredMods) {
+        //     return requiredMods.Split('\n');
+        // }
+
         public override void Process() {
-            throw new Exception("TODO: make server-side code");
+#if IS_SERVER
+            LobbyServer.netIo.SendP2P(processingPlayer, new RouterInformLobbyPacket(
+                (ulong)1,
+                LobbyServer.maxPlayers,
+                ((RouterPlayerId)LobbyServer.lobby.host).name,
+                LobbyServer.lobby.hasPassword,
+                LobbyServer.lobby.mode,
+                LobbyServer.players.Count,
+                LobbyServer.lobby.requiredMods,
+                LobbyServer.lobby.bannedMods
+            ), NetIO.SendType.Reliable);
+#else
+            throw new Exception("This function must only be called server-side");
+#endif
         }
     }
 }

@@ -4,15 +4,25 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.IO;
+#if !IS_SERVER
 using RWCustom;
 using UnityEngine;
+#endif
 
 namespace RainMeadow
 {
     internal static class Utils
     {
-        public static InGameTranslator Translator => Custom.rainWorld.inGameTranslator;
+        #if IS_SERVER
+        public static string Translate(string text) {
+            return text;
+        }
+        public static string GetTranslatedLobbyName(string username) {
+            return username + "'s Lobby";
+        }
+        #else
 
+        public static InGameTranslator Translator => Custom.rainWorld.inGameTranslator;
         public static string Translate(string text)
         {
             return Translator.Translate(text);
@@ -72,6 +82,7 @@ namespace RainMeadow
             Process.Start(processStartInfo);
             Application.Quit();
         }
+        #endif
 
         /// <summary>
         /// Adds a range of items to a list, excluding items which are already in the list.

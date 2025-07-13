@@ -13,29 +13,6 @@ using System.Diagnostics.PerformanceData;
 
 namespace RainMeadow {
 
-    public class INetLobbyInfo : LobbyInfo {
-        public MeadowPlayerId host;
-        public ulong lobbyId = 0;  // TODO: maybe more separation than that?
-        public INetLobbyInfo(MeadowPlayerId host, string name, string mode, int playerCount, bool hasPassword, int maxPlayerCount, string highImpactMods = "", string bannedMods = "") :
-            base(name, mode, playerCount, hasPassword, maxPlayerCount, highImpactMods, bannedMods) {
-            this.host = host;
-        }
-        public override string GetLobbyJoinCode(string? password = null)
-        {
-            if (host is LANPlayerId pHost) {
-                if (password != null)
-                    return $"+connect_lan_lobby {pHost.endPoint.Address.Address} {pHost.endPoint.Port} +lobby_password {password}";
-                return $"+connect_lan_lobby {pHost.endPoint.Address.Address} {pHost.endPoint.Port}";
-            } else if (host is RouterPlayerId rHost) {
-                if (password != null)
-                    return $"+connect_router_lobby {this.lobbyId} {rHost.RoutingId} +lobby_password {password}";
-                return $"+connect_router_lobby {this.lobbyId} {rHost.RoutingId}";
-            } else {
-                throw new Exception("wrong lobby type");
-            }
-        }
-    }
-
     public class LANPlayerId : MeadowPlayerId
     {
         // Blackhole Endpoint
@@ -48,6 +25,7 @@ namespace RainMeadow {
             this.endPoint = endPoint ?? BlackHole;
         }
 
+#if !IS_SERVER
         public override void OpenProfileLink() {
             string dialogue = "";
             bool isMe = isLoopback();
@@ -65,6 +43,7 @@ namespace RainMeadow {
                 new DialogNotify(dialogue, new Vector2(478.1f, 115.200005f*(1 + 0.2f*UDPPeerManager.getInterfaceAddresses().Length)),
                     OnlineManager.instance.manager, null));
         }
+#endif
 
         public void reset()
         {
@@ -75,6 +54,7 @@ namespace RainMeadow {
             return this.endPoint?.GetHashCode() ?? 0;
         }
 
+#if !IS_SERVER // let's not bring serialisation in the server's code
         public override void CustomSerialize(Serializer serializer)
         {
             if (serializer.IsWriting) {
@@ -97,13 +77,18 @@ namespace RainMeadow {
                 }
             }
         }
+#endif
 
         public bool isLoopback() {
+#if IS_SERVER
+            throw new Exception("this should only be called player-side");
+#else
             if (NetIO.currentInstance is LANNetIO netio) {
                 if (NetIOPlatform.PlatformUDPManager.port != endPoint?.Port) return false;
             }
 
             return UDPPeerManager.isLoopback(endPoint.Address);
+#endif
         }
 
         public override bool Equals(MeadowPlayerId other)
@@ -115,7 +100,7 @@ namespace RainMeadow {
             return false;
         }
     }
-
+#if !IS_SERVER
     public class LANMatchmakingManager : MatchmakingManager {
         public override void initializeMePlayer() {
             OnlineManager.mePlayer = new OnlinePlayer(new LANPlayerId(new IPEndPoint(
@@ -376,4 +361,5 @@ namespace RainMeadow {
 
         public override bool canOpenInvitations => false;
     }
+#endif  // !IS_SERVER
 }

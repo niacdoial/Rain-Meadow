@@ -12,10 +12,10 @@ namespace RainMeadow
         public ulong lobbyId;
 
         public RouterInformLobbyPacket(): base() {}
+// note: no static removal of constructors because types inherit this
         public RouterInformLobbyPacket(ulong lobbyId, int maxplayers, string name, bool passwordprotected, string mode, int currentplayercount, string highImpactMods = "", string bannedMods = "") :
             base(maxplayers, name, passwordprotected, mode, currentplayercount, highImpactMods, bannedMods)
         {
-            throw new Exception("TODO: server-side code");
             this.lobbyId = lobbyId;
         }
 
@@ -24,7 +24,6 @@ namespace RainMeadow
             throw new Exception("TODO: server-side code");
             this.lobbyId = lobbyInfo.lobbyId;
         }
-
         public override void Serialize(BinaryWriter writer)
         {
             base.Serialize(writer);
@@ -39,6 +38,9 @@ namespace RainMeadow
 
         public override void Process()
         {
+#if IS_SERVER
+            throw new Exception("This function must only be called player-side");
+#else
             if (MatchmakingManager.currentDomain != MatchmakingManager.MatchMakingDomain.Router) return;
             if (OnlineManager.instance != null && OnlineManager.lobby != null) {
                 if (OnlineManager.lobby.isOwner) {
@@ -47,6 +49,7 @@ namespace RainMeadow
                     (MatchmakingManager.instances[MatchmakingManager.MatchMakingDomain.Router] as RouterMatchmakingManager).addLobby(lobbyinfo);
                 }
             }
+#endif
         }
 
     }

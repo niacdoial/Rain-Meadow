@@ -1,3 +1,5 @@
+using System;
+
 namespace RainMeadow
 {
     public class LANAcceptJoinPacket : LANInformLobbyPacket
@@ -5,10 +7,14 @@ namespace RainMeadow
         public override Type type => Type.LANAcceptJoin;
 
         public LANAcceptJoinPacket() : base() { }
+#if !IS_SERVER
         public LANAcceptJoinPacket(int maxplayers, string name, bool passwordprotected, string mode, int currentplayercount, string highImpactMods = "", string bannedMods = "") : base(maxplayers, name, passwordprotected, mode, currentplayercount, highImpactMods, bannedMods) { }
-
+#endif
         public override void Process()
         {
+#if IS_SERVER
+            throw new Exception("This function must only be called player-side");
+#else
             if (MatchmakingManager.currentDomain != MatchmakingManager.MatchMakingDomain.LAN) return;
             var newLobbyInfo = MakeLobbyInfo();
 
@@ -26,6 +32,7 @@ namespace RainMeadow
                         }
                 }
             }
+#endif
         }
     }
 }

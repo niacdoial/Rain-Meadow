@@ -1,0 +1,99 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net48</TargetFramework>
+    <Version>2.0.8</Version>
+		<LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+    <Configurations>Debug;Release</Configurations>
+    <RootNamespace>RainMeadow</RootNamespace>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
+    <DefineConstants>$(DefineConstants);TRACE</DefineConstants>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
+    <DefineConstants>$(DefineConstants);TRACE</DefineConstants>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <PathMap>$(MSBuildThisFileDirectory.Replace(',', ',,').Replace('=', '=='))=/</PathMap>
+    <DefineConstants>$(DefineConstants);IS_SERVER</DefineConstants>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Remove="**/*.cs"/>
+    <Compile Include="RainMeadow.LobbyServer.cs"/>
+    <Compile Include="RainMeadow.cs"/>
+    <Compile Include="RainMeadow.Logging.cs"/>
+    <Compile Include="Online/Matchmaking/Packets/*.cs"/>
+    <Compile Include="Online/Matchmaking/MeadowPlayerId.cs"/>
+    <Compile Include="Online/Matchmaking/MatchmakingManager.cs"/>
+    <Compile Include="Online/Matchmaking/RouterMatchmakingManager.cs"/>
+    <Compile Include="Online/Matchmaking/LANMatchmakingManager.cs"/>
+    <Compile Include="Online/Matchmaking/UsernameGenerator.cs"/>
+    <Compile Include="Online/Serialization/NetIO/*.cs"/>
+    <Compile Include="Online/Serialization/EventMath.cs"/>
+    <Compile Include="Online/OnlinePlayer.cs"/>
+    <Compile Include="Online/OnlineManager.cs"/>
+    <Compile Include="Menu/*Info.cs"/>
+    <Compile Include="Utils/Utils.cs"/>
+    <Compile Include="Utils/ShallowJsonDump.cs"/>
+    <!-- <Compile Include="Game/MeadowRemixOptions.cs"/> TODO: make so that the server can read config -->
+  <!--
+    <Compile Remove="*.cs"/>
+    <Compile Remove="Meadow/**"/>
+    <Compile Remove="Game/**"/>
+    <Compile Remove="GameModes/**"/>
+    <Compile Remove="Arena/**"/>
+    <Compile Remove="Story/**"/>
+    <Compile Remove="OnlineUIComponents/**"/>
+    <Compile Remove="Menu/**"/>
+    <Compile Remove="Utils/**"/>
+    <Compile Remove="Online/Resource/**"/>
+    <Compile Remove="Online/Entity/**"/>
+    <Compile Remove="Online/State/**"/>
+    <Compile Remove="Online/*.cs"/>
+
+    <Compile Include="RainMeadowLobbyServer.cs"/>
+    <Compile Include="Menu/*Info.cs"/>
+    <Compile Include="Utils/zlib/**.cs"/>
+    <Compile Include="Online/State/OnlineState.cs"/>
+    <Compile Include="Online/State/RootDeltaState.cs"/>
+    <Compile Include="Online/Entity/OnlineEntity*.cs"/>
+    <Compile Include="Online/Resource/OnlineResource*.cs"/> -->
+  </ItemGroup>
+
+
+  <ItemGroup>
+    <Reference Include="lib\*.dll" Private="False" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Remove=".gitattributes" />
+    <None Remove=".gitignore" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Update="Properties\Settings.Designer.cs">
+      <DesignTimeSharedInput>True</DesignTimeSharedInput>
+      <AutoGen>True</AutoGen>
+      <DependentUpon>Settings.settings</DependentUpon>
+    </Compile>
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Update="Properties\Settings.settings">
+      <Generator>SettingsSingleFileGenerator</Generator>
+      <LastGenOutput>Settings.Designer.cs</LastGenOutput>
+    </None>
+  </ItemGroup>
+
+  <Target Name="PostBuild" AfterTargets="PostBuildEvent">
+    <ItemGroup>
+      <BuildFiles Include="$(Outdir)\Rain Meadow Server.*" />
+    </ItemGroup>
+    <Copy SourceFiles="@(BuildFiles)" DestinationFolder="$(ProjectDir)MatchmakingServer" />
+  </Target>
+</Project>

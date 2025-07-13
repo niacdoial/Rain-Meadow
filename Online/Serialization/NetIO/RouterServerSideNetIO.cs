@@ -7,54 +7,27 @@ using System.Net;
 using System.Net.NetworkInformation;
 using System.Net.Sockets;
 using System.Runtime.InteropServices;
-//using Kittehface.Framework20;
+using System.Threading;
+using RainMeadow;
 
-namespace RainMeadow
-{
+namespace RainMeadow {
     partial class NetIOPlatform {
-        static partial void PlatformRouterAvailable(ref bool val) {
+        static partial void PlatformRouterServerSideAvailable(ref bool val) {
             val = NetIOPlatform.PlatformUDPManager is not null;
         }
     }
 
-#if !IS_SERVER
-    public class RouterNetIO : NetIO {
-        static MatchmakingManager.MatchMakingDomain MMDomain = MatchmakingManager.MatchMakingDomain.Router;
+    public class RouterServerSideNetIO : NetIO {
 
-        IPEndPoint serverEndPoint;  // TODO implement a way to update that without powercycling the game
-        OnlinePlayer serverPlayer;
-        public RouterNetIO() {
+        public OnlinePlayer serverPlayer;
+        public RouterServerSideNetIO() {
             if (NetIOPlatform.PlatformUDPManager is null) return;
             NetIOPlatform.PlatformUDPManager.OnPeerForgotten += (peer) => {
-                if (MatchmakingManager.currentDomain != MMDomain) {
-                    return;
-                }
-                List<OnlinePlayer> playerstoRemove = new();
-                foreach (OnlinePlayer player in OnlineManager.players) {
-                    if (player.id is RouterPlayerId routid) {
-                        if (routid.RoutingId is 0) continue;
-                        if (UDPPeerManager.CompareIPEndpoints(routid.endPoint, peer)) {
-                            if ((OnlineManager.lobby?.owner is OnlinePlayer owner && owner == player) ||
-                                (OnlineManager.lobby?.isOwner ?? true)
-                            ) {
-                                playerstoRemove.Add(player);
 
-                            }
-                            break;  // only one player matches that if block
-                        }
-                    }
-                }
-
-                foreach (var player in playerstoRemove)
-                    // this has a built-in test (checking if the player is in OnlineManager)
-                    // to determine if the current closure is being called from a timeout or from a voluntary disconnect
-                    ((RouterMatchmakingManager)MatchmakingManager.instances[MatchmakingManager.MatchMakingDomain.Router]).RemoveRouterPlayer(player);
             };
-            serverEndPoint = UDPPeerManager.GetEndPointByName(
-                RainMeadow.rainMeadowOptions.MatchmakingRouter.Value
-            );
+
             RouterPlayerId serverId = new RouterPlayerId(0xffff_ffff_ffff_ffff);
-            serverId.endPoint = serverEndPoint;
+            serverId.endPoint = LANPlayerId.BlackHole;  // by definition we don't know our public IP
             serverId.name = "SERVER";
             serverPlayer = new OnlinePlayer(serverId);
         }
@@ -63,28 +36,16 @@ namespace RainMeadow
                 RainMeadow.Error("Cannot perform action without a functionning UDPPeerManager");
                 return false;
             }
-            if (MatchmakingManager.currentDomain != MatchmakingManager.MatchMakingDomain.Router) {
-                RainMeadow.Error("Action performed on the wrong type of MatchMakingDomain");
-                return false;
-            }
+            // if (MatchmakingManager.currentDomain != MatchmakingManager.MatchMakingDomain.Router) {
+            //     RainMeadow.Error("Action performed on the wrong type of MatchMakingDomain");
+            //     return false;
+            // }
             return true;
         }
 
         public override void SendSessionData(OnlinePlayer toPlayer)
         {
-            if (NetIOPlatform.PlatformUDPManager is null) return;
-            try
-            {
-                OnlineManager.serializer.WriteData(toPlayer);
-                SendP2P(toPlayer, new SessionPacket(OnlineManager.serializer.buffer, (ushort)OnlineManager.serializer.Position), SendType.Unreliable);
-                OnlineManager.serializer.EndWrite();
-            }
-            catch (Exception e)
-            {
-                RainMeadow.Error(e);
-                OnlineManager.serializer.EndWrite();
-                throw;
-            }
+            throw new NotImplementedException(); // server-side NetIO has no session data to send
         }
 
         public void SendBroadcast(Packet packet) {
@@ -114,27 +75,6 @@ namespace RainMeadow
             }
         }
 
-        public void SendToServer(Packet packet, SendType sendType, bool start_conversation = false) {
-            if (!BasicChecks()) return;
-
-            // TODO add code to make sure this peer is known by the UDPPeerManager as the server
-            using (MemoryStream memory = new MemoryStream(128))
-            using (BinaryWriter writer = new BinaryWriter(memory)) {
-                Packet.Encode(packet, writer, this.serverPlayer);
-                NetIOPlatform.PlatformUDPManager.Send(
-                    memory.GetBuffer(),
-                    this.serverEndPoint,
-                    sendType switch {
-                        NetIO.SendType.Reliable => UDPPeerManager.PacketType.Reliable,
-                        NetIO.SendType.Unreliable => UDPPeerManager.PacketType.Unreliable,
-                        _ => UDPPeerManager.PacketType.Unreliable,
-                    },
-                    start_conversation
-                );
-            }
-        }
-
-
         public void SendAcknoledgement(OnlinePlayer player) {
             if (!BasicChecks()) return;
 
@@ -146,16 +86,6 @@ namespace RainMeadow
                     true
                 );
             }
-        }
-        public void SendServerAcknoledgement() {
-            if (!BasicChecks()) return;
-
-            NetIOPlatform.PlatformUDPManager.Send(
-                Array.Empty<byte>(),
-                this.serverEndPoint,
-                UDPPeerManager.PacketType.Reliable,
-                true
-            );
         }
 
         public override void ForgetPlayer(OnlinePlayer player) {
@@ -195,7 +125,11 @@ namespace RainMeadow
                     using (MemoryStream netStream = new MemoryStream(data))
                     using (BinaryReader netReader = new BinaryReader(netStream)) {
                         if (netReader.BaseStream.Position == ((MemoryStream)netReader.BaseStream).Length) continue; // nothing to read somehow?
-                        var player = ((RouterMatchmakingManager)MatchmakingManager.instances[MatchmakingManager.MatchMakingDomain.Router]).GetPlayerRouter(iPEndPoint);
+#if IS_SERVER
+                        OnlinePlayer player = LobbyServer.GetPlayer(iPEndPoint);
+#else
+                        OnlinePlayer player = ((RouterMatchmakingManager)MatchmakingManager.instances[MatchmakingManager.MatchMakingDomain.Router]).GetPlayerRouter(iPEndPoint);
+#endif
                         if (player is null)
                         {
                             RainMeadow.Error("Routed player not found! Cannot instantiate new one without heads-up");
@@ -207,10 +141,16 @@ namespace RainMeadow
                 catch (Exception e)
                 {
                     RainMeadow.Error(e);
-                    OnlineManager.serializer.EndRead();
                 }
             }
         }
+
+        public void Mainloop() {
+            while (true) {
+                RecieveData();
+                Thread.Sleep(20);
+            }
+        }
+
     }
-#endif  // !IS_SERVER
 }

@@ -20,6 +20,7 @@ namespace RainMeadow
         public string bannedMods = "";
 
         public RouterPublishLobbyPacket(): base() {}
+// note: no static removal of constructors because types inherit this
         public RouterPublishLobbyPacket(int maxplayers, string name, bool passwordprotected, string mode, int currentplayercount, string highImpactMods = "", string bannedMods = "")
         {
             this.currentplayercount = currentplayercount;
@@ -73,8 +74,16 @@ namespace RainMeadow
 
         public override void Process()
         {
-            throw new Exception("TODO server-side");
-            // send RouterAcceptPublishPacket back
+#if IS_SERVER
+            LobbyServer.maxPlayers = this.maxplayers;
+            LobbyServer.netIo.SendP2P(
+                processingPlayer,
+                new RouterAcceptPublishPacket((ulong)1),
+                NetIO.SendType.Reliable
+            );
+#else
+            throw new Exception("This function must only be called server-side");
+#endif
         }
 
         public INetLobbyInfo MakeLobbyInfo() {

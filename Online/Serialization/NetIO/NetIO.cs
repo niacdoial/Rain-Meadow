@@ -6,20 +6,23 @@ namespace RainMeadow
         static partial void PlatformSteamAvailable(ref bool val);
         static partial void PlatformLanAvailable(ref bool val);
         static partial void PlatformRouterAvailable(ref bool val);
+        static partial void PlatformRouterServerSideAvailable(ref bool val);
 
 
         public static bool isSteamAvailable { get { bool val = false; PlatformSteamAvailable(ref val); return val; } }
         public static bool isLANAvailable { get { bool val = false; PlatformLanAvailable(ref val); return val; } }
         public static bool isRouterAvailable { get { bool val = false; PlatformRouterAvailable(ref val); return val; } }
+        public static bool isRouterServerSideAvailable { get { bool val = false; PlatformRouterServerSideAvailable(ref val); return val; } }
 
 
         public static UDPPeerManager? PlatformUDPManager { get; } = new();
     }
     public abstract class NetIO
     {
+#if !IS_SERVER
         public static NetIO? currentInstance { get => instances[MatchmakingManager.currentDomain]; }
         public static Dictionary<MatchmakingManager.MatchMakingDomain, NetIO> instances = new();
-
+#endif
         public enum SendType : byte
         {
             Reliable,
@@ -27,9 +30,13 @@ namespace RainMeadow
         }
 
         public static void InitializesNetIO() {
+#if IS_SERVER
+            //if (NetIOPlatform.isRouterServerSideAvailable) instances.Add(MatchmakingManager.MatchMakingDomain.Router, new RouterServerSideNetIO());
+#else
             if (NetIOPlatform.isLANAvailable) instances.Add(MatchmakingManager.MatchMakingDomain.LAN, new LANNetIO());
             if (NetIOPlatform.isRouterAvailable) instances.Add(MatchmakingManager.MatchMakingDomain.Router, new RouterNetIO());
             if (NetIOPlatform.isSteamAvailable) instances.Add(MatchmakingManager.MatchMakingDomain.Steam, new SteamNetIO());
+#endif
         }
 
         public virtual void SendSessionData(OnlinePlayer toPlayer) {}

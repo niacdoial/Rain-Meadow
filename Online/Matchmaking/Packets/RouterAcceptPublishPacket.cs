@@ -11,11 +11,12 @@ namespace RainMeadow
         public ulong lobbyId;
 
         public RouterAcceptPublishPacket(): base() {}
+#if IS_SERVER
         public RouterAcceptPublishPacket(ulong lobbyId)
         {
-            throw new Exception("TODO: server-side code");
             this.lobbyId = lobbyId;
         }
+#endif
 
         public override void Serialize(BinaryWriter writer)
         {
@@ -30,6 +31,9 @@ namespace RainMeadow
         }
 
         public override void Process() {
+#if IS_SERVER
+            throw new Exception("This function must only be called player-side");
+#else
             if (MatchmakingManager.currentDomain != MatchmakingManager.MatchMakingDomain.Router) return;
             if (OnlineManager.lobby != null) {
                 if (OnlineManager.lobby.isOwner) {
@@ -38,7 +42,7 @@ namespace RainMeadow
                     matchmaker.OnLobbyPublished(lobbyId);
                 }
             }
-
+#endif
         }
     }
 }

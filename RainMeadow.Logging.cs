@@ -4,7 +4,10 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Runtime.CompilerServices;
+
+#if !IS_SERVER  // only the client needs to depend on unity
 using UnityEngine;
+#endif
 
 namespace RainMeadow
 {
@@ -15,8 +18,36 @@ namespace RainMeadow
 
     public partial class RainMeadow
     {
-        private static string TrimCaller(string callerFile) { return (callerFile = callerFile.Substring(Mathf.Max(callerFile.LastIndexOf(Path.DirectorySeparatorChar), callerFile.LastIndexOf(Path.AltDirectorySeparatorChar)) + 1)).Substring(0, callerFile.LastIndexOf('.')); }
-        private static string LogTime() { return ((int)(Time.time * 1000)).ToString(); }
+#if IS_SERVER
+        class LoggerClass {
+
+            public void LogInfo(string msg) {
+                Console.WriteLine("INFO : " + msg);
+            }
+            public void LogError(string msg) {
+                Console.WriteLine("ERROR: " + msg);
+            }
+        }
+        LoggerClass Logger;
+        RainMeadow() {Logger = new LoggerClass();}
+        static RainMeadow instance = new RainMeadow();
+
+        static Stopwatch stopwatch = Stopwatch.StartNew();
+#endif
+        private static string TrimCaller(string callerFile) {
+            string cFile = callerFile.Substring(Math.Max(
+                callerFile.LastIndexOf(Path.DirectorySeparatorChar),
+                callerFile.LastIndexOf(Path.AltDirectorySeparatorChar)
+            ) + 1);
+            return cFile.Substring(0, cFile.LastIndexOf('.'));
+        }
+        private static string LogTime() {
+#if IS_SERVER
+            return Convert.ToUInt64(stopwatch.Elapsed.TotalMilliseconds).ToString();
+#else
+            return ((int)(Time.time * 1000)).ToString();
+#endif
+        }
         private static string LogDOT() { return DateTime.Now.ToUniversalTime().TimeOfDay.ToString().Substring(0, 8); }
         public static void Debug(object data, [CallerFilePath] string callerFile = "", [CallerMemberName] string callerName = "")
         {
@@ -60,7 +91,7 @@ namespace RainMeadow
         {
             if (tracing)
             {
-                instance.Logger.LogInfo($"{LogDOT()}|{LogTime()}|{TrimCaller(callerFile)}.{new StackFrame(1, false).GetMethod()}:{data}");
+            instance.Logger.LogInfo($"{LogDOT()}|{LogTime()}|{TrimCaller(callerFile)}.{new StackFrame(1, false).GetMethod()}:{data}");
             }
         }
     }

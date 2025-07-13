@@ -769,11 +769,20 @@ namespace RainMeadow
             for (int i = peers.Count - 1; i >= 0; i--) {
                 RemotePeer peer = peers[i];
                 peer.TicksSinceLastIncomingPacket += (ulong)elapsedTime;
-                if (peer.TicksSinceLastIncomingPacket >= (ulong)RainMeadow.rainMeadowOptions.UdpTimeout.Value) {
+
+#if IS_SERVER // for now the server can't read a config file
+                ulong heartbeatTime = 30_000;
+                ulong timeoutTime = 120_000;
+#else
+                // TODO: separate heartbeat freq between player/player and player/server
+                ulong heartbeatTime = (ulong)RainMeadow.rainMeadowOptions.UdpHeartbeat.Value;
+                ulong timeoutTime = (ulong)RainMeadow.rainMeadowOptions.UdpTimeout.Value;
+#endif
+
+                if (peer.TicksSinceLastIncomingPacket >= timeoutTime) {
                     peersToRemove.Add(peer);
                     continue;
                 }
-                ulong heartbeatTime = (ulong)RainMeadow.rainMeadowOptions.UdpHeartbeat.Value;
 
                 peer.OutgoingPacketAcummulator += (ulong)elapsedTime;
                 ulong sendAmount; sendAmount = peer.OutgoingPacketAcummulator / heartbeatTime;

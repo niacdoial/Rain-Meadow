@@ -43,7 +43,11 @@ namespace RainMeadow
         {
             processingPlayer = toPlayer;
 
+#if IS_SERVER
+            if (true) {
+#else
             if (MatchmakingManager.currentDomain == MatchmakingManager.MatchMakingDomain.Router) {
+#endif
                 if (OnlineManager.mePlayer.id is RouterPlayerId meId && toPlayer.id is RouterPlayerId toId) {
                     packet.routingFrom = meId.RoutingId;
                     packet.routingTo = toId.RoutingId;
@@ -75,10 +79,20 @@ namespace RainMeadow
 
             ulong routingTo = 0;
             ulong routingFrom = 0;
+#if IS_SERVER
+            if (true) {
+#else
             if (MatchmakingManager.currentDomain == MatchmakingManager.MatchMakingDomain.Router) {
+#endif
                 routingTo = reader.ReadUInt64();
                 routingFrom = reader.ReadUInt64();
-                if (routingTo != ((RouterPlayerId)OnlineManager.mePlayer.id).RoutingId) {
+#if IS_SERVER
+                RouterServerSideNetIO netIo = LobbyServer.netIo;
+                RouterPlayerId toId = ((RouterPlayerId)netIo.serverPlayer.id);
+#else
+                RouterPlayerId toId = ((RouterPlayerId)OnlineManager.mePlayer.id);
+#endif
+                if (routingTo != toId.RoutingId) {
                     RainMeadow.Error("BAD ROUTING: received a packet of type " + type.ToString() + " destined to user " + routingTo.ToString());
                     return;
                 }

@@ -17,6 +17,7 @@ namespace RainMeadow
         }
     }
 
+#if !IS_SERVER
     public class LANNetIO : NetIO {
         static MatchmakingManager.MatchMakingDomain MMDomain = MatchmakingManager.MatchMakingDomain.LAN;
         public LANNetIO() {
@@ -201,6 +202,6 @@ namespace RainMeadow
                 }
             }
         }
-
     }
+#endif  // !IS_SERVER
 }

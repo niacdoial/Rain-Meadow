@@ -7,7 +7,6 @@ using Menu;
 
 namespace RainMeadow
 {
-
     // Contemplating on renaming this class as it has a lot more responcibilities than just matchmaking
     public abstract class MatchmakingManager
     {
@@ -21,7 +20,7 @@ namespace RainMeadow
 
         };
 
-
+#if !IS_SERVER
         public static event LobbyListReceived_t OnLobbyListReceived = delegate {};
         public static event PlayerListReceived_t OnPlayerListReceived = delegate {};
         public static event LobbyJoined_t OnLobbyJoined = delegate {};
@@ -107,6 +106,7 @@ namespace RainMeadow
         public abstract void JoinLobby(bool success);
 
         public abstract void JoinLobbyUsingArgs(params string?[] args);
+
         public static void JoinLobbyUsingCode(string code) {
             RainMeadow.Debug($"Attempting to join lobby with code: {code}");
 
@@ -161,6 +161,7 @@ namespace RainMeadow
                     RainMeadow.Error("found +connect_lan_lobby but no valid lobby address and port in the command line");
             }
             RainMeadow.Debug("No lobby found in that code.");
+
         }
 
         public abstract void LeaveLobby();
@@ -223,5 +224,6 @@ namespace RainMeadow
         public virtual void OpenInvitationOverlay() {
             OnlineManager.instance.manager.ShowDialog(new DialogNotify(Utils.Translate("You cannot use this feature here."), OnlineManager.instance.manager, null));
         }
+#endif  // !IS_SERVER
     }
 }

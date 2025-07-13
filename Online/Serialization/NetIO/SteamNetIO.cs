@@ -15,9 +15,14 @@ namespace RainMeadow
     }
 
     class SteamNetIO : NetIO {
+#if IS_SERVER
+        override public void RecieveData() {
+            throw new Exception("this should only be called player-side");
+        }
+#else
         // public override void SendP2P(OnlinePlayer player, Packet packet, SendType sendType, bool start_conversation = false) {
         //     // base.SendP2P(player, packet, sendType, start_conversation);
-            
+
         //     // RainMeadow.Error("UNIMPLEMENTED");
         // }
 
@@ -43,7 +48,7 @@ namespace RainMeadow
                 OnlineManager.serializer.EndWrite();
                 throw;
             }
-                
+
         }
 
         override public void RecieveData() {
@@ -100,6 +105,7 @@ namespace RainMeadow
                 while (n > 0);
             }
         }
+#endif  // !IS_SERVER
     }
 
 }
