@@ -57,10 +57,6 @@ namespace RainMeadow
             modifyOperation = (ModifyPlayerListPacketOperation)reader.ReadByte();
             var endpoints = UDPPeerManager.DeserializeEndPoints(reader, (processingPlayer.id as RouterPlayerId).endPoint);
 
-#if !IS_SERVER
-            var matchmaker = (MatchmakingManager.instances[MatchmakingManager.MatchMakingDomain.Router] as RouterMatchmakingManager);
-#endif
-
             List<RouterPlayerId> routids = default;
             foreach (IPEndPoint end in endpoints) {
                 RouterPlayerId id = new RouterPlayerId();
@@ -80,6 +76,7 @@ namespace RainMeadow
 #if IS_SERVER
                 players = routids.Select(x => LobbyServer.GetPlayer(x)).ToArray();
 #else
+                RouterMatchmakingManager matchmaker = MatchmakingManager.routerInstance;
                 players = routids.Select(x => matchmaker.GetPlayerRouter(x)).ToArray();
 #endif
             }
@@ -87,40 +84,79 @@ namespace RainMeadow
 
         public override void Process()
         {
+            // uses: for ModifyPlayerListPacketOperation.Add
+            // Host -> Server: normal meaning: keeping track of the player list
+            // Server -> Host: inform of an incoming player
+            // Host -> Player: normal meaning
+            // Server -> Player: normal meaning plus ack to ask the host
+            // Player -> Host: invalid use
+            // Player -> Server: invalid use for both Add and Remove
+
+#if IS_SERVER
+            if ((RouterPlayerId)processingPlayer.id != (RouterPlayerId)LobbyServer.lobby.host) {
+                RainMeadow.Error("received RouterModifyPlayerListPacket from wrong source...");
+                return;
+            }
             switch (modifyOperation)
             {
                 case ModifyPlayerListPacketOperation.Add:
                     RainMeadow.Debug("Adding players...\n\t" + string.Join<OnlinePlayer>("\n\t", players));
-                    for (int i = 0; i < players.Length; i++)
-                    {
-#if IS_SERVER
+                    for (int i = 0; i < players.Length; i++) {
                         LobbyServer.players.Add((OnlinePlayer) players[i]);
-#else
-                        if (((RouterPlayerId)players[i].id).isLoopback()) {
-                            // That's me
-                            // Put me where I belong. (...at the end of the player list?)
-                            OnlineManager.players.Remove(OnlineManager.mePlayer);
-                            OnlineManager.players.Add(OnlineManager.mePlayer);
-                            continue;
-                        }
-
-                        (MatchmakingManager.instances[MatchmakingManager.MatchMakingDomain.Router] as RouterMatchmakingManager).AcknoledgeRouterPlayer(players[i]);
-#endif
                     }
                     break;
 
                 case ModifyPlayerListPacketOperation.Remove:
                     RainMeadow.Debug("Removing players...\n\t" + string.Join<OnlinePlayer>("\n\t", players));
-                    for (int i = 0; i < players.Length; i++)
-                    {
-#if IS_SERVER
-                        LobbyServer.players.Remove((OnlinePlayer)players[i]);
-#else
-                        (MatchmakingManager.instances[MatchmakingManager.MatchMakingDomain.Router] as RouterMatchmakingManager).RemoveRouterPlayer(players[i]);
-#endif
+                    for (int i = 0; i < players.Length; i++) {
+                        LobbyServer.players.Remove((OnlinePlayer)players[i]);  // TODO: manage owner rotation
                     }
                     break;
             }
+#else
+            switch (modifyOperation)
+            {
+                case ModifyPlayerListPacketOperation.Add:
+                    if (((RouterPlayerId)processingPlayer.id).isServer()) {
+                        if (OnlineManager.lobby?.isOwner ?? false) {
+                            // in the future, maybe ensure incoming players have talked to the matchmaking server first
+                            // (in other words: ensure this codepath is hit before they arrive)
+                            NetIO.routerInstance.SendAcknoledgement(processingPlayer); // pierce NAT
+                        } else {
+                            MatchmakingManager.routerInstance.OnLobbyInfoSubmitted(players.ToArray());
+                        }
+                    } else {
+                        if (OnlineManager.lobby?.isOwner ?? false) {
+                            RainMeadow.Error("cheeky user is trying to force-introduce themselves!");
+                            return;
+                        }
+                        for (int i = 0; i < players.Length; i++)
+                        {
+                            if (((RouterPlayerId)players[i].id).isLoopback()) {
+                                // That's me
+                                // Put me where I belong. (...at the end of the player list?)
+                                OnlineManager.players.Remove(OnlineManager.mePlayer);
+                                OnlineManager.players.Add(OnlineManager.mePlayer);
+                                continue;
+                            }
+
+                            MatchmakingManager.routerInstance.AcknoledgeRouterPlayer(players[i]);
+                        }
+                    }
+                    break;
+
+                case ModifyPlayerListPacketOperation.Remove:
+                    if (((RouterPlayerId)processingPlayer.id).isServer()) {
+                        RainMeadow.Error("received player removal notice from server: this isn't supposed to happen");
+                    }
+                    RainMeadow.Debug("Removing players...\n\t" + string.Join<OnlinePlayer>("\n\t", players));
+                    for (int i = 0; i < players.Length; i++)
+                    {
+                        MatchmakingManager.routerInstance.RemoveRouterPlayer(players[i]);
+                    }
+                    break;
+            }
+#endif
         }
     }
 }

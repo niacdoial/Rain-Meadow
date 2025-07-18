@@ -23,6 +23,7 @@ namespace RainMeadow
             RouterInformLobby,
             RouterPublishLobby,
             RouterAcceptPublish,
+            RouterGenericFailure,
 
             Session,
             SessionEnd,
@@ -125,6 +126,7 @@ namespace RainMeadow
                 Type.RouterInformLobby => new RouterInformLobbyPacket(),
                 Type.RouterPublishLobby => new RouterPublishLobbyPacket(),
                 Type.RouterAcceptPublish => new RouterAcceptPublishPacket(),
+                Type.RouterGenericFailure => new RouterGenericFailurePacket(),
 
                 _ => null
             };

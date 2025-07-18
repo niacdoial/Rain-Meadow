@@ -45,6 +45,18 @@ namespace RainMeadow
         static void Main()
         {
             LobbyServer.netIo = new RouterServerSideNetIO();
+            RainMeadow.Debug("Entering mainloop");
+            RainMeadow.Debug("┌╨─╨─╨─╨─╨─╨─╨─╨─╨┐");
+            RainMeadow.Debug("╡╔═══════════════╗╞");
+            RainMeadow.Debug("╡║ ═──╦─────╦──═ ║╞");
+            RainMeadow.Debug("╡║    │     │    ║╞");
+            RainMeadow.Debug("╡║    │     │    ║╞");
+            RainMeadow.Debug("╡║ ═──╣     ╠──═ ║╞");
+            RainMeadow.Debug("╡║    │     │    ║╞");
+            RainMeadow.Debug("╡║    │     │    ║╞");
+            RainMeadow.Debug("╡║ ═──╝     ╚──═ ║╞");
+            RainMeadow.Debug("╡╚═══════════════╝╞");
+            RainMeadow.Debug("└╥─╥─╥─╥─╥─╥─╥─╥─╥┘");
             LobbyServer.netIo.Mainloop();
         }
     }

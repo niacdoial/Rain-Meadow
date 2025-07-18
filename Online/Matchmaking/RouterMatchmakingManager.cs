@@ -51,6 +51,9 @@ namespace RainMeadow {
             else
                return false;
         }
+        public bool isServer() {
+            return RoutingId == 0xffff_ffff_ffff_ffff;
+        }
 
         public override bool Equals(MeadowPlayerId other) {
             if (other is RouterPlayerId other_router_id) {
@@ -65,18 +68,36 @@ namespace RainMeadow {
 #if !IS_SERVER
     public class RouterMatchmakingManager : MatchmakingManager {
 
+        public enum MatchmakingState : byte {
+            Empty,
+            HostStarting,
+            HostReady,
+            PlayerJoining1,
+            PlayerJoining2,
+            PlayerReady,
+        }
+        public MatchmakingState state = MatchmakingState.Empty;
+
         public override void initializeMePlayer() {
             var meId = new RouterPlayerId();  // TODO: does CS use pass-by-copy or by-value already?
             OnlineManager.mePlayer = new OnlinePlayer( meId );
+            System.Random random = new System.Random();
+
             if (RainMeadow.rainMeadowOptions.PlayerRoutingId.Value != 0) {
                 meId.RoutingId = RainMeadow.rainMeadowOptions.PlayerRoutingId.Value;
             } else {
-                System.Random random = new System.Random();
-                // TODO: this returns a positive i64, so 63 bits!
                 byte[] idBytes = new Byte[sizeof(ulong)];
                 random.NextBytes(idBytes);
                 meId.RoutingId = System.BitConverter.ToUInt64(idBytes,0);
             }
+            // sometimes this generates an invalid value (or the user is being cheeky with the settings)
+            while (meId.RoutingId <= 0xffff || meId.RoutingId == 0xffff_ffff_ffff_ffff) {
+                RainMeadow.Debug("bad RoutingId for self! regenrating...");
+                byte[] idBytes = new Byte[sizeof(ulong)];
+                random.NextBytes(idBytes);
+                meId.RoutingId = System.BitConverter.ToUInt64(idBytes,0);
+            }
+
             // note: we don't know our endPoint yet, because of NAT
 
             if (RainMeadow.rainMeadowOptions.LanUserName.Value.Length > 0) {
@@ -91,13 +112,16 @@ namespace RainMeadow {
         }
 
         static List<INetLobbyInfo> lobbyinfo = new();
-        public void addLobby(INetLobbyInfo lobby) {
-            var updating_lobby = lobbyinfo.FirstOrDefault(x => x.host == lobby.host);
-            if (updating_lobby is not null) {
-                lobbyinfo.Remove(updating_lobby);
+        static List<ulong> lobby_ids = new();
+        public void addLobby(ulong lobbyId, INetLobbyInfo lobby) {
+            int upd_index = lobby_ids.FindIndex(x => x == lobbyId);
+            if (upd_index != -1) {
+                lobbyinfo.RemoveAt(upd_index);
+                lobby_ids.RemoveAt(upd_index);
             }
 
             lobbyinfo.Add(lobby);
+            lobby_ids.Add(lobbyId);
             OnLobbyListReceivedEvent(true, lobbyinfo.ToArray());
         }
 
@@ -162,16 +186,27 @@ namespace RainMeadow {
                 NetIO.SendType.Reliable,
                 true
             );
+            state = MatchmakingState.HostStarting;
         }
 
         public void OnLobbyPublished(ulong lobbyId) {
             this.lobbyId = lobbyId;
             MatchmakingManager.OnLobbyJoinedEvent(true, "");
+            if (state != MatchmakingState.HostStarting) {
+                RainMeadow.Error("Received publish-ack when we didn't expect");
+            }
+            state = MatchmakingState.HostReady;
         }
 
         public void LobbyAcknoledgedUs(OnlinePlayer owner)
         {
             RainMeadow.DebugMe();
+            if (OnlineManager.lobby != null) {
+                RainMeadow.Error("Received join-ack when already in a lobby!");
+            } else if (state != MatchmakingState.PlayerJoining2) {
+                RainMeadow.Error("Received join-ack when we didn't expect");
+            }
+            state = MatchmakingState.PlayerReady;
             RainMeadow.Debug("Lobby has ack'd us, adding player list...");
             foreach (OnlinePlayer player in lobbyPlayers) {
                 AcknoledgeRouterPlayer(player);
@@ -202,24 +237,22 @@ namespace RainMeadow {
             if (OnlineManager.players.Contains(joiningPlayer)) { return; }
             OnlineManager.players.Add(joiningPlayer);
             HandleJoin(joiningPlayer);
-            // NAT piercing happens here (players are expected to send unprompted acks to each other)
-            (NetIO.currentInstance as RouterNetIO)?.SendAcknoledgement(joiningPlayer);
+            // // NAT piercing happens here (players are expected to send unprompted acks to each other)
+            // // actually no, it needs to happen before the RequestJoinPacket can be sent
+            // (NetIO.currentInstance as RouterNetIO)?.SendAcknoledgement(joiningPlayer);
             RainMeadow.Debug($"Added {joiningPlayer} to the lobby matchmaking player list");
 
             if (OnlineManager.lobby != null && OnlineManager.lobby.isOwner)
             {
 
                 // Tell the other players to create this player
+                var packet = new RouterModifyPlayerListPacket(ModifyPlayerListPacketOperation.Add, new OnlinePlayer[] { joiningPlayer });
+                ((RouterNetIO)NetIO.currentInstance).SendToServer(packet, NetIO.SendType.Reliable);
                 foreach (OnlinePlayer player in OnlineManager.players)
                 {
                     if (player.isMe || player == joiningPlayer)
                         continue;
-
-                    ((RouterNetIO)NetIO.currentInstance).SendP2P(
-                        player,
-                        new RouterModifyPlayerListPacket(ModifyPlayerListPacketOperation.Add, new OnlinePlayer[] { joiningPlayer }),
-                        NetIO.SendType.Reliable
-                    );
+                    ((RouterNetIO)NetIO.currentInstance).SendP2P(player, packet, NetIO.SendType.Reliable);
                 }
 
                 // Tell joining peer to create everyone in the server
@@ -270,6 +303,12 @@ namespace RainMeadow {
         string lobbyPassword = "";
         public override void RequestJoinLobby(LobbyInfo lobby, string? password) {
             RainMeadow.DebugMe();
+
+            if (state != MatchmakingState.Empty) {
+                RainMeadow.Error("Received trying to join a lobby at a weird time");
+            }
+            state = MatchmakingState.PlayerJoining1;
+
             if (lobby is INetLobbyInfo lobbyInfo) {
                 lobbyPassword = password ?? "";
                 OnlineManager.currentlyJoiningLobby = lobby;
@@ -294,10 +333,9 @@ namespace RainMeadow {
 
         // phase 2 of joining a lobby: ask the host for permission
         OnlinePlayer[] lobbyPlayers;
-        private void OnLobbyInfoSubmitted(OnlinePlayer[] players, bool success) {
-            if (!success){
-                RainMeadow.Error("Could not ask the server for the lobby");
-                return;
+        public void OnLobbyInfoSubmitted(OnlinePlayer[] players) {
+            if (state != MatchmakingState.PlayerJoining1) {
+                RainMeadow.Error("Received join-serverack when we didn't expect");
             }
             lobbyPlayers = players;
             //OnPlayerListReceivedEvent(players);
@@ -326,11 +364,52 @@ namespace RainMeadow {
                 NetIO.SendType.Reliable,
                 true
             );
+            state = MatchmakingState.PlayerJoining2;
+        }
+
+        public void OnError(string message, bool ensure_takedown=false) {
+            switch (state) {
+            case MatchmakingState.Empty:
+                break;
+            // degrade player joining setup
+            case MatchmakingState.PlayerReady:
+                if (ensure_takedown){
+                    OnlineManager.LeaveLobby();
+                    lobbyPlayers = null;
+                    state = MatchmakingState.Empty;
+                    OnlineManager.currentlyJoiningLobby = null;
+                    this.lobbyId = 0;
+                }
+                break;  // because C# doesn't allow falling through...
+            case MatchmakingState.PlayerJoining2:
+                lobbyPlayers = null;
+                state = MatchmakingState.Empty;
+                OnlineManager.currentlyJoiningLobby = null;
+                this.lobbyId = 0;
+                break;
+            case MatchmakingState.PlayerJoining1:
+                state = MatchmakingState.Empty;
+                OnlineManager.currentlyJoiningLobby = null;
+                this.lobbyId = 0;
+                break;
+            case MatchmakingState.HostReady:
+                if (ensure_takedown){
+                    OnlineManager.LeaveLobby();
+                }
+                break;
+            case MatchmakingState.HostStarting:
+                break;
+            };
+            OnLobbyJoinedEvent(false, Utils.Translate(message));
         }
 
         // note: called not from the Matchmaking/NetIO layer but from the Lobby Event layer.
         // ...TODO: WHY is password checking this late in the process?
         public override void JoinLobby(bool success) {
+            if (state != MatchmakingState.PlayerReady) {
+                RainMeadow.Error("Entered RPC-enabled communications when we didn't expect");
+                state = MatchmakingState.PlayerReady;
+            }
             if (success)
             {
                 RainMeadow.Debug("Joining lobby");
@@ -338,9 +417,8 @@ namespace RainMeadow {
             }
             else
             {
-                OnlineManager.LeaveLobby();
                 RainMeadow.Debug("Failed to join local game. Wrong Password");
-                OnLobbyJoinedEvent(false, Utils.Translate("Wrong password!"));
+                OnError("Wrong password!", true);
             }
         }
 
@@ -375,6 +453,7 @@ namespace RainMeadow {
                 ((RouterNetIO)NetIO.currentInstance).SendToServer(packet, NetIO.SendType.Reliable);
             }
             NetIO.currentInstance.ForgetEverything();
+            state = MatchmakingState.Empty;
         }
 
 

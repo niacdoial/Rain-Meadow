@@ -46,7 +46,7 @@ namespace RainMeadow
                 if (OnlineManager.lobby.isOwner) {
                     RainMeadow.DebugMe();
                     var lobbyinfo = MakeLobbyInfo();
-                    (MatchmakingManager.instances[MatchmakingManager.MatchMakingDomain.Router] as RouterMatchmakingManager).addLobby(lobbyinfo);
+                    MatchmakingManager.routerInstance.addLobby(lobbyId, lobbyinfo);
                 }
             }
 #endif

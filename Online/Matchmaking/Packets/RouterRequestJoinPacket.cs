@@ -29,13 +29,19 @@ namespace RainMeadow
             RainMeadow.DebugMe();
             if (OnlineManager.lobby != null && MatchmakingManager.currentDomain == MatchmakingManager.MatchMakingDomain.Router)
             {
-                RouterMatchmakingManager matchmaker = (RouterMatchmakingManager)MatchmakingManager.instances[MatchmakingManager.MatchMakingDomain.Router];
+                RouterMatchmakingManager matchmaker = MatchmakingManager.routerInstance;
 
+                // TODO IP check?
                 if (senderUserName.Length > 0) {
                     processingPlayer.id.name = senderUserName;
                 }
                 if (lobbyId != matchmaker.lobbyId) {
                     RainMeadow.Error("Received a request to join for the wrong lobby ID!");
+                    NetIO.routerInstance.SendP2P(
+                        processingPlayer,
+                        new RouterGenericFailurePacket("Contacted host is hosting another lobby!"),
+                        NetIO.SendType.Reliable
+                    );
                     return;
                 }
 

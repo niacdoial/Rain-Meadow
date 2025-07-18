@@ -14,7 +14,7 @@ namespace RainMeadow
         }
     }
 
-    class SteamNetIO : NetIO {
+    public class SteamNetIO : NetIO {
 #if IS_SERVER
         override public void RecieveData() {
             throw new Exception("this should only be called player-side");

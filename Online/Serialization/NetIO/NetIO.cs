@@ -20,8 +20,11 @@ namespace RainMeadow
     public abstract class NetIO
     {
 #if !IS_SERVER
-        public static NetIO? currentInstance { get => instances[MatchmakingManager.currentDomain]; }
         public static Dictionary<MatchmakingManager.MatchMakingDomain, NetIO> instances = new();
+        public static NetIO? currentInstance { get => instances[MatchmakingManager.currentDomain]; }
+        public static SteamNetIO? steamInstance { get => (SteamNetIO)instances[MatchmakingManager.MatchMakingDomain.Steam]; }
+        public static LANNetIO? lanInstance { get => (LANNetIO)instances[MatchmakingManager.MatchMakingDomain.LAN]; }
+        public static RouterNetIO? routerInstance { get => (RouterNetIO)instances[MatchmakingManager.MatchMakingDomain.Router]; }
 #endif
         public enum SendType : byte
         {

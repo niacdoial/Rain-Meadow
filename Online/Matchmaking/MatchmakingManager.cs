@@ -38,8 +38,12 @@ namespace RainMeadow
                         var last = _Domain;
                         _Domain = value;
                         changedMatchMaker.Invoke(last, _Domain);  }}
-        public static MatchmakingManager currentInstance { get => instances[currentDomain]; }
+
         public static Dictionary<MatchMakingDomain, MatchmakingManager> instances = new Dictionary<MatchMakingDomain, MatchmakingManager>();
+        public static MatchmakingManager currentInstance { get => instances[currentDomain]; }
+        public static SteamMatchmakingManager steamInstance { get => (SteamMatchmakingManager)instances[MatchMakingDomain.Steam]; }
+        public static LANMatchmakingManager lanInstance { get => (LANMatchmakingManager)instances[MatchMakingDomain.LAN]; }
+        public static RouterMatchmakingManager routerInstance { get => (RouterMatchmakingManager)instances[MatchMakingDomain.Router]; }
 
 
         public static string CLIENT_KEY = "client";

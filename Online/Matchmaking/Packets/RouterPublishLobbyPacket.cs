@@ -76,11 +76,19 @@ namespace RainMeadow
         {
 #if IS_SERVER
             LobbyServer.maxPlayers = this.maxplayers;
-            LobbyServer.netIo.SendP2P(
-                processingPlayer,
-                new RouterAcceptPublishPacket((ulong)1),
-                NetIO.SendType.Reliable
-            );
+            if (UDPPeerManager.isEndpointLocal(((RouterPlayerId)processingPlayer.id).endPoint)) {
+                LobbyServer.netIo.SendP2P(
+                    processingPlayer,
+                    new RouterGenericFailurePacket("Cannot route players with local-network addresses!"),
+                    NetIO.SendType.Reliable
+                );
+            } else {
+                LobbyServer.netIo.SendP2P(
+                    processingPlayer,
+                    new RouterAcceptPublishPacket((ulong)1),
+                    NetIO.SendType.Reliable
+                );
+            }
 #else
             throw new Exception("This function must only be called server-side");
 #endif

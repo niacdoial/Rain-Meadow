@@ -22,14 +22,12 @@ namespace RainMeadow
         public override void Process()
         {
 #if IS_SERVER
-            LobbyServer.netIo.SendP2P(
-                processingPlayer,
-                new RouterModifyPlayerListPacket(
-                    ModifyPlayerListPacketOperation.Add,
-                    LobbyServer.players.ToArray()
-                ),
-                NetIO.SendType.Reliable
+            var packet = new RouterModifyPlayerListPacket(
+                ModifyPlayerListPacketOperation.Add,
+                LobbyServer.players.ToArray()
             );
+            LobbyServer.netIo.SendP2P(processingPlayer, packet, NetIO.SendType.Reliable);
+            LobbyServer.netIo.SendP2P(LobbyServer.netIo.serverPlayer, packet, NetIO.SendType.Reliable);
 #else
             throw new Exception("This function must only be called server-side");
 #endif
