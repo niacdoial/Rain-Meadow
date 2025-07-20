@@ -23,13 +23,13 @@ namespace RainMeadow {
         public RouterServerSideNetIO() {
             if (NetIOPlatform.PlatformUDPManager is null) return;
             NetIOPlatform.PlatformUDPManager.OnPeerForgotten += (peer) => {
-
+                LobbyServer.RemoveContactPlayer(peer);
             };
 
             RouterPlayerId serverId = new RouterPlayerId(0xffff_ffff_ffff_ffff);
             serverId.endPoint = LANPlayerId.BlackHole;  // by definition we don't know our public IP
             serverId.name = "SERVER";
-            serverPlayer = new OnlinePlayer(serverId);
+            serverPlayer = new OnlinePlayer(serverId) {isMe = true};
         }
         bool BasicChecks() {
             if (NetIOPlatform.PlatformUDPManager is null) {
@@ -110,7 +110,10 @@ namespace RainMeadow {
 
         public override void RecieveData()
         {
-            if (!BasicChecks()) return;
+            if (!BasicChecks()){
+                RainMeadow.Error("basic NetIO checks failed");
+                return;
+            }
 
             while (NetIOPlatform.PlatformUDPManager.IsPacketAvailable())
             {
@@ -124,9 +127,12 @@ namespace RainMeadow {
                     //, UDPPeerManager.CompareIPEndpoints(iPEndPoint, this.serverEndPoint)
                     using (MemoryStream netStream = new MemoryStream(data))
                     using (BinaryReader netReader = new BinaryReader(netStream)) {
-                        if (netReader.BaseStream.Position == ((MemoryStream)netReader.BaseStream).Length) continue; // nothing to read somehow?
+                        if (netReader.BaseStream.Position == ((MemoryStream)netReader.BaseStream).Length) {
+                            // nothing to read, for example as a result of SendAck
+                            continue;
+                        }
 #if IS_SERVER
-                        OnlinePlayer player = LobbyServer.GetPlayer(iPEndPoint);
+                        OnlinePlayer player = LobbyServer.GetContactPlayer(iPEndPoint, true);
 #else
                         OnlinePlayer player = ((RouterMatchmakingManager)MatchmakingManager.instances[MatchmakingManager.MatchMakingDomain.Router]).GetPlayerRouter(iPEndPoint);
 #endif

@@ -57,7 +57,7 @@ namespace RainMeadow
             modifyOperation = (ModifyPlayerListPacketOperation)reader.ReadByte();
             var endpoints = UDPPeerManager.DeserializeEndPoints(reader, (processingPlayer.id as RouterPlayerId).endPoint);
 
-            List<RouterPlayerId> routids = default;
+            List<RouterPlayerId> routids = new List<RouterPlayerId>();
             foreach (IPEndPoint end in endpoints) {
                 RouterPlayerId id = new RouterPlayerId();
                 id.endPoint = end;
@@ -74,7 +74,7 @@ namespace RainMeadow
 
             else if (modifyOperation == ModifyPlayerListPacketOperation.Remove) {
 #if IS_SERVER
-                players = routids.Select(x => LobbyServer.GetPlayer(x)).ToArray();
+                players = routids.Select(x => LobbyServer.GetLobbyPlayer(x)).Where(x => x != null).ToArray();
 #else
                 RouterMatchmakingManager matchmaker = MatchmakingManager.routerInstance;
                 players = routids.Select(x => matchmaker.GetPlayerRouter(x)).ToArray();
@@ -89,12 +89,14 @@ namespace RainMeadow
             // Server -> Host: inform of an incoming player
             // Host -> Player: normal meaning
             // Server -> Player: normal meaning plus ack to ask the host
-            // Player -> Host: invalid use
+            // Player -> Host, Player -> Player: invalid use
             // Player -> Server: invalid use for both Add and Remove
 
 #if IS_SERVER
             if ((RouterPlayerId)processingPlayer.id != (RouterPlayerId)LobbyServer.lobby.host) {
                 RainMeadow.Error("received RouterModifyPlayerListPacket from wrong source...");
+                RainMeadow.Debug("lobby host: %" + ((RouterPlayerId)LobbyServer.lobby.host).RoutingId.ToString());
+                RainMeadow.Debug("processing: %" + ((RouterPlayerId)processingPlayer.id).RoutingId.ToString());
                 return;
             }
             switch (modifyOperation)
@@ -102,14 +104,14 @@ namespace RainMeadow
                 case ModifyPlayerListPacketOperation.Add:
                     RainMeadow.Debug("Adding players...\n\t" + string.Join<OnlinePlayer>("\n\t", players));
                     for (int i = 0; i < players.Length; i++) {
-                        LobbyServer.players.Add((OnlinePlayer) players[i]);
+                        LobbyServer.lobbyPlayers.Add((OnlinePlayer) players[i]);
                     }
                     break;
 
                 case ModifyPlayerListPacketOperation.Remove:
                     RainMeadow.Debug("Removing players...\n\t" + string.Join<OnlinePlayer>("\n\t", players));
                     for (int i = 0; i < players.Length; i++) {
-                        LobbyServer.players.Remove((OnlinePlayer)players[i]);  // TODO: manage owner rotation
+                        LobbyServer.lobbyPlayers.Remove((OnlinePlayer)players[i]);  // TODO: manage owner rotation
                     }
                     break;
             }
@@ -121,12 +123,18 @@ namespace RainMeadow
                         if (OnlineManager.lobby?.isOwner ?? false) {
                             // in the future, maybe ensure incoming players have talked to the matchmaking server first
                             // (in other words: ensure this codepath is hit before they arrive)
-                            NetIO.routerInstance.SendAcknoledgement(processingPlayer); // pierce NAT
+                            foreach (OnlinePlayer player in players) {
+                                NetIO.routerInstance.SendAcknoledgement(player); // pierce NAT
+                                MatchmakingManager.routerInstance.AcknoledgeRouterPlayer(player);  // TODO: maybe this is a little early to announce this to everyone
+                            }
                         } else {
                             MatchmakingManager.routerInstance.OnLobbyInfoSubmitted(players.ToArray());
                         }
                     } else {
-                        if (OnlineManager.lobby?.isOwner ?? false) {
+                        if (OnlineManager.lobby == null) {
+                            return;
+                        }
+                        if (OnlineManager.lobby.isOwner || ((RouterPlayerId)OnlineManager.lobby.owner.id) != ((RouterPlayerId)processingPlayer.id)) {
                             RainMeadow.Error("cheeky user is trying to force-introduce themselves!");
                             return;
                         }
@@ -134,7 +142,7 @@ namespace RainMeadow
                         {
                             if (((RouterPlayerId)players[i].id).isLoopback()) {
                                 // That's me
-                                // Put me where I belong. (...at the end of the player list?)
+                                // move the existing "me" entry there rather than adding a new "me" entry without isMe flag.
                                 OnlineManager.players.Remove(OnlineManager.mePlayer);
                                 OnlineManager.players.Add(OnlineManager.mePlayer);
                                 continue;

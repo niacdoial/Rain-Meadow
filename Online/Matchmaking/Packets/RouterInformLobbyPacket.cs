@@ -42,12 +42,11 @@ namespace RainMeadow
             throw new Exception("This function must only be called player-side");
 #else
             if (MatchmakingManager.currentDomain != MatchmakingManager.MatchMakingDomain.Router) return;
-            if (OnlineManager.instance != null && OnlineManager.lobby != null) {
-                if (OnlineManager.lobby.isOwner) {
-                    RainMeadow.DebugMe();
-                    var lobbyinfo = MakeLobbyInfo();
-                    MatchmakingManager.routerInstance.addLobby(lobbyId, lobbyinfo);
-                }
+            if (OnlineManager.instance != null && OnlineManager.lobby == null) {
+                RainMeadow.DebugMe();
+                var lobbyinfo = MakeLobbyInfo();
+                lobbyinfo.lobbyId = lobbyId;
+                MatchmakingManager.routerInstance.addLobby(lobbyinfo);
             }
 #endif
         }

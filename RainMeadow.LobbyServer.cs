@@ -15,15 +15,20 @@ namespace RainMeadow
     class LobbyServer {
         public static RouterServerSideNetIO netIo;
         public static INetLobbyInfo lobby;
-        public static List<OnlinePlayer> players;
+        public static List<OnlinePlayer> lobbyPlayers = new List<OnlinePlayer> {};  // players in the one lobby
+        public static List<OnlinePlayer> contactPlayers = new List<OnlinePlayer> {};  // players that are in contact with the server
         public static int maxPlayers = 4;
 
-        public static OnlinePlayer GetPlayer(RouterPlayerId playerId) {
-            OnlinePlayer candidate = LobbyServer.players.FirstOrDefault(p => {
+        public static OnlinePlayer GetLobbyPlayer(RouterPlayerId playerId) {
+            OnlinePlayer candidate = LobbyServer.lobbyPlayers.FirstOrDefault(p => {
                 if (p.id is RouterPlayerId routid)
                     return (routid == playerId);
                 return false;
             });
+            if (candidate == null) {
+                RainMeadow.Error("attempting to remove nonexistant LobbyPlayer " + playerId.name + " %" + playerId.RoutingId.ToString());
+                return candidate;
+            }
             RouterPlayerId candId = (RouterPlayerId)candidate.id;
             if (!UDPPeerManager.CompareIPEndpoints(candId.endPoint, playerId.endPoint)) {
                 RainMeadow.Error("player IDs don't agree on endpoint: " + candId.endPoint.ToString() + " vs " + playerId.endPoint.ToString());
@@ -31,13 +36,36 @@ namespace RainMeadow
             }
             return candidate;
         }
-        public static OnlinePlayer GetPlayer(IPEndPoint endPoint) {
-            OnlinePlayer candidate = LobbyServer.players.FirstOrDefault(p => {
-                if (p.id is RouterPlayerId routid && routid.endPoint != null)
+        public static OnlinePlayer GetContactPlayer(IPEndPoint endPoint, bool allowCreate = false) {
+            OnlinePlayer candidate = LobbyServer.contactPlayers.FirstOrDefault(p => {
+                if (p.id is RouterPlayerId routid)
                     return UDPPeerManager.CompareIPEndpoints(routid.endPoint, endPoint);
                 return false;
             });
+            if (candidate == null && allowCreate) {
+                // create player with ID 0, it will be set immediately by packet decoding
+                RouterPlayerId newId = new RouterPlayerId(0) {endPoint = endPoint};
+                candidate = new OnlinePlayer(newId);
+                LobbyServer.contactPlayers.Add(candidate);
+            }
             return candidate;
+        }
+        public static void RemoveContactPlayer(IPEndPoint endPoint) {
+            int player_index = LobbyServer.contactPlayers.FindIndex(p => {
+                if (p.id is RouterPlayerId routid)
+                    return UDPPeerManager.CompareIPEndpoints(routid.endPoint, endPoint);
+                return false;
+            });
+            if (player_index != -1) {
+                RouterPlayerId leavingId = (RouterPlayerId)LobbyServer.contactPlayers[player_index].id;
+                LobbyServer.contactPlayers.RemoveAt(player_index);
+                if (leavingId == (RouterPlayerId)LobbyServer.lobby.host) {
+                    LobbyServer.lobby = null;
+                    LobbyServer.lobbyPlayers.Clear();
+                }
+            } else {
+                RainMeadow.Error("Peer cannot leave if not there to begin with");
+            }
         }
     }
     partial class RainMeadow

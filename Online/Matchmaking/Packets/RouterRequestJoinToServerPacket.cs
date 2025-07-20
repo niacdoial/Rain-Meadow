@@ -24,10 +24,14 @@ namespace RainMeadow
 #if IS_SERVER
             var packet = new RouterModifyPlayerListPacket(
                 ModifyPlayerListPacketOperation.Add,
-                LobbyServer.players.ToArray()
+                LobbyServer.lobbyPlayers.ToArray()
             );
             LobbyServer.netIo.SendP2P(processingPlayer, packet, NetIO.SendType.Reliable);
-            LobbyServer.netIo.SendP2P(LobbyServer.netIo.serverPlayer, packet, NetIO.SendType.Reliable);
+            packet = new RouterModifyPlayerListPacket(
+                ModifyPlayerListPacketOperation.Add,
+                new OnlinePlayer[] {processingPlayer}
+            );
+            LobbyServer.netIo.SendP2P(LobbyServer.GetLobbyPlayer((RouterPlayerId)LobbyServer.lobby.host), packet, NetIO.SendType.Reliable);
 #else
             throw new Exception("This function must only be called server-side");
 #endif

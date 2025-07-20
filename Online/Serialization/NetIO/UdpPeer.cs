@@ -562,7 +562,11 @@ namespace RainMeadow
             public bool need_begin_conversation_ack = true;
 
         }
+#if IS_SERVER
+        public const int DEFAULT_PORT = 8710;
+#else
         public const int DEFAULT_PORT = 8720;
+#endif
         public const int FIND_PORT_ATTEMPTS = 8; // 8 players somehow hosting from the same machine is ridiculous.
         public UDPPeerManager() {
             try {
@@ -751,8 +755,9 @@ namespace RainMeadow
                 }
 
 
-                if (packet_type == PacketType.HeartBeat)
+                if (packet_type == PacketType.HeartBeat) {
                     writer.Write(peer.remote_acknowledgement);
+                }
                 writer.Write(packet);
                 socket.SendTo(stream.GetBuffer().Take((int)stream.Position).ToArray(), peer.PeerEndPoint);
             }
@@ -771,6 +776,8 @@ namespace RainMeadow
                 peer.TicksSinceLastIncomingPacket += (ulong)elapsedTime;
 
 #if IS_SERVER // for now the server can't read a config file
+                // TODO: "active" vs "passive" connection modes,
+                // also handle player disconnect by stop answering heartbeats once last packet acks
                 ulong heartbeatTime = 30_000;
                 ulong timeoutTime = 120_000;
 #else
@@ -795,7 +802,7 @@ namespace RainMeadow
                             SendRaw(peer.outgoingpacket.Peek(), peer, PacketType.Reliable, peer.need_begin_conversation_ack);
                         } else if (peer.TicksSinceLastIncomingPacket > heartbeatTime) {
                             SendRaw(
-                                Enumerable.Repeat((byte)1, 1).ToArray(),
+                                new byte[1] {1},
                                 peer,
                                 PacketType.HeartBeat
                             );
@@ -910,7 +917,7 @@ namespace RainMeadow
                                     new_data = reader.ReadBytes(len - 2 - sizeof(ulong));
                                 }
                                 SendRaw(
-                                    Enumerable.Repeat((byte)0, 1).ToArray(),
+                                    new byte[1] {0},
                                     peer,
                                     PacketType.HeartBeat
                                 );
@@ -922,6 +929,7 @@ namespace RainMeadow
                                 if (EventMath.IsNewer(remote_ack, peer.wanted_acknowledgement)) {
                                     ++peer.wanted_acknowledgement;
                                     if (EventMath.IsNewer(remote_ack, peer.wanted_acknowledgement)) {
+                                        // this can happen if we leave the Meadow menu then reenter it before the matchmaking server times us out
                                         RainMeadow.Error("Reliable Packet Acknowledgement too advanced! We might have sent a packet too early?");
                                         // we can make packet delivery recover from this, by just... skipping numbers in the next packets IDs sent
                                         peer.wanted_acknowledgement = remote_ack;
@@ -936,7 +944,7 @@ namespace RainMeadow
                                 bool wants_response = reader.ReadBoolean();
                                 if (wants_response)
                                     SendRaw(
-                                        Enumerable.Repeat((byte)0, 1).ToArray(),
+                                        new byte[1] {0},
                                         peer,
                                         PacketType.HeartBeat
                                     );

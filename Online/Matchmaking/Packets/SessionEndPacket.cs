@@ -11,7 +11,9 @@ namespace RainMeadow
 #if IS_SERVER
             throw new Exception("this function must be called from the player side");
 #else
-            if (MatchmakingManager.currentDomain != MatchmakingManager.MatchMakingDomain.LAN) return;
+            if (MatchmakingManager.currentDomain == MatchmakingManager.MatchMakingDomain.LAN) {}
+            else if (MatchmakingManager.currentDomain == MatchmakingManager.MatchMakingDomain.Router) {}
+            else return;
             NetIO.currentInstance.ForgetPlayer(processingPlayer);
 #endif
         }

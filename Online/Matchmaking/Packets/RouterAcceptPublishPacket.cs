@@ -38,7 +38,7 @@ namespace RainMeadow
             if (OnlineManager.lobby != null) {
                 if (OnlineManager.lobby.isOwner) {
                     RainMeadow.DebugMe();
-                    RouterMatchmakingManager matchmaker = (MatchmakingManager.instances[MatchmakingManager.MatchMakingDomain.Router] as RouterMatchmakingManager);
+                    RouterMatchmakingManager matchmaker = MatchmakingManager.routerInstance;
                     matchmaker.OnLobbyPublished(lobbyId);
                 }
             }

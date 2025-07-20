@@ -43,13 +43,15 @@ namespace RainMeadow
         public static void Encode(Packet packet, BinaryWriter writer, OnlinePlayer toPlayer)
         {
             processingPlayer = toPlayer;
+            writer.Write((byte)packet.type);
 
 #if IS_SERVER
             if (true) {
+                if (LobbyServer.netIo.serverPlayer.id is RouterPlayerId meId && toPlayer.id is RouterPlayerId toId) {
 #else
             if (MatchmakingManager.currentDomain == MatchmakingManager.MatchMakingDomain.Router) {
-#endif
                 if (OnlineManager.mePlayer.id is RouterPlayerId meId && toPlayer.id is RouterPlayerId toId) {
+#endif
                     packet.routingFrom = meId.RoutingId;
                     packet.routingTo = toId.RoutingId;
                     writer.Write(packet.routingTo);
@@ -58,7 +60,6 @@ namespace RainMeadow
 
             }
 
-            writer.Write((byte)packet.type);
             long payloadPos = writer.Seek(2, SeekOrigin.Current);
 
 
@@ -97,15 +98,23 @@ namespace RainMeadow
                     RainMeadow.Error("BAD ROUTING: received a packet of type " + type.ToString() + " destined to user " + routingTo.ToString());
                     return;
                 }
-                if (routingFrom != ((RouterPlayerId)fromPlayer.id).RoutingId) {
+
+                RouterPlayerId fromId = (RouterPlayerId)fromPlayer.id;
+                if (routingFrom == 0) {
+                    RainMeadow.Error("BAD ROUTING: received a packet from a null ID");
+                    return;
+                } else if (fromId.RoutingId == 0) {
+                    fromId.RoutingId = routingFrom;  // set IPEndPoint / player ID mapping on first contact
+                } else if (routingFrom != fromId.RoutingId) {
                     RainMeadow.Error(
                         "BAD ROUTING: received a packet from "
                         + ((RouterPlayerId)fromPlayer.id).RoutingId +
-                        " but sender field reads " + routingTo.ToString()
+                        " but sender field reads " + routingFrom.ToString()
                     );
                     return;
                 }
             }
+            RainMeadow.Debug("packet decode: " + type.ToString());
 
             Packet? packet = type switch
             {

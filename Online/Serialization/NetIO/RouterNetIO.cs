@@ -21,8 +21,9 @@ namespace RainMeadow
     public class RouterNetIO : NetIO {
         static MatchmakingManager.MatchMakingDomain MMDomain = MatchmakingManager.MatchMakingDomain.Router;
 
-        IPEndPoint serverEndPoint;  // TODO implement a way to update that without powercycling the game
-        OnlinePlayer serverPlayer;
+        private IPEndPoint serverEndPoint;  // TODO implement a way to update that without powercycling the game
+        public const ulong serverRoutingId = 0xffff_ffff_ffff_ffff;
+        public OnlinePlayer serverPlayer;
         public RouterNetIO() {
             if (NetIOPlatform.PlatformUDPManager is null) return;
             NetIOPlatform.PlatformUDPManager.OnPeerForgotten += (peer) => {
@@ -50,10 +51,13 @@ namespace RainMeadow
                     // to determine if the current closure is being called from a timeout or from a voluntary disconnect
                     ((RouterMatchmakingManager)MatchmakingManager.instances[MatchmakingManager.MatchMakingDomain.Router]).RemoveRouterPlayer(player);
             };
+
+            RainMeadow.Debug("what the settings say about the server's IP, *apparently*: " + RainMeadow.rainMeadowOptions.MatchmakingRouter.Value);
             serverEndPoint = UDPPeerManager.GetEndPointByName(
                 RainMeadow.rainMeadowOptions.MatchmakingRouter.Value
+                //"127.0.0.1:8710"
             );
-            RouterPlayerId serverId = new RouterPlayerId(0xffff_ffff_ffff_ffff);
+            RouterPlayerId serverId = new RouterPlayerId(serverRoutingId);
             serverId.endPoint = serverEndPoint;
             serverId.name = "SERVER";
             serverPlayer = new OnlinePlayer(serverId);
@@ -115,7 +119,11 @@ namespace RainMeadow
         }
 
         public void SendToServer(Packet packet, SendType sendType, bool start_conversation = false) {
-            if (!BasicChecks()) return;
+            if (!BasicChecks()) {
+                RainMeadow.Error("failed basic checks for netIO!");
+                return;
+            }
+            RainMeadow.Debug("pkt server send " + packet.type.ToString());
 
             // TODO add code to make sure this peer is known by the UDPPeerManager as the server
             using (MemoryStream memory = new MemoryStream(128))
@@ -195,9 +203,8 @@ namespace RainMeadow
                     using (MemoryStream netStream = new MemoryStream(data))
                     using (BinaryReader netReader = new BinaryReader(netStream)) {
                         if (netReader.BaseStream.Position == ((MemoryStream)netReader.BaseStream).Length) continue; // nothing to read somehow?
-                        var player = ((RouterMatchmakingManager)MatchmakingManager.instances[MatchmakingManager.MatchMakingDomain.Router]).GetPlayerRouter(iPEndPoint);
-                        if (player is null)
-                        {
+                        var player = MatchmakingManager.routerInstance.GetPlayerRouter(iPEndPoint);
+                        if (player is null) {
                             RainMeadow.Error("Routed player not found! Cannot instantiate new one without heads-up");
                             return;
                         }

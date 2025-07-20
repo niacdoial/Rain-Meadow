@@ -36,7 +36,7 @@ namespace RainMeadow
                     processingPlayer.id.name = senderUserName;
                 }
                 if (lobbyId != matchmaker.lobbyId) {
-                    RainMeadow.Error("Received a request to join for the wrong lobby ID!");
+                    RainMeadow.Error("Received a request to join for the wrong lobby ID! %"+lobbyId.ToString()+" vs %"+matchmaker.lobbyId.ToString());
                     NetIO.routerInstance.SendP2P(
                         processingPlayer,
                         new RouterGenericFailurePacket("Contacted host is hosting another lobby!"),

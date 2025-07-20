@@ -41,23 +41,28 @@ namespace RainMeadow
 
         public override void Process() {
 #if IS_SERVER
-            if (UDPPeerManager.isEndpointLocal(((RouterPlayerId)processingPlayer.id).endPoint)) {
+            // TODO: use version string
+            if (false) { //(UDPPeerManager.isEndpointLocal(((RouterPlayerId)processingPlayer.id).endPoint)) {
                 LobbyServer.netIo.SendP2P(
                     processingPlayer,
                     new RouterGenericFailurePacket("Cannot route players with local-network addresses!"),
                     NetIO.SendType.Reliable
                 );
             } else {
-                LobbyServer.netIo.SendP2P(processingPlayer, new RouterInformLobbyPacket(
-                    (ulong)1,
-                    LobbyServer.maxPlayers,
-                    ((RouterPlayerId)LobbyServer.lobby.host).name,
-                    LobbyServer.lobby.hasPassword,
-                    LobbyServer.lobby.mode,
-                    LobbyServer.players.Count,
-                    LobbyServer.lobby.requiredMods,
-                    LobbyServer.lobby.bannedMods
-                ), NetIO.SendType.Reliable);
+                if (LobbyServer.lobby != null) {
+                    LobbyServer.netIo.SendP2P(processingPlayer, new RouterInformLobbyPacket(
+                        (ulong)1,
+                        LobbyServer.maxPlayers,
+                        LobbyServer.lobby.name,
+                        LobbyServer.lobby.hasPassword,
+                        LobbyServer.lobby.mode,
+                        LobbyServer.lobbyPlayers.Count,
+                        LobbyServer.lobby.requiredMods,
+                        LobbyServer.lobby.bannedMods
+                    ), NetIO.SendType.Reliable);
+                } else {
+                    LobbyServer.netIo.SendAcknoledgement(processingPlayer);
+                }
             }
 #else
             throw new Exception("This function must only be called server-side");

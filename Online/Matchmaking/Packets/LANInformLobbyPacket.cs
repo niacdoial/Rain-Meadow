@@ -59,12 +59,10 @@ namespace RainMeadow
             throw new Exception("This function must only be called player-side");
 #else
             if (MatchmakingManager.currentDomain != MatchmakingManager.MatchMakingDomain.LAN) return;
-            if (OnlineManager.instance != null && OnlineManager.lobby != null) {
-                if (OnlineManager.lobby.isOwner) {
-                    RainMeadow.DebugMe();
-                    var lobbyinfo = MakeLobbyInfo();
-                    (MatchmakingManager.instances[MatchmakingManager.MatchMakingDomain.LAN] as LANMatchmakingManager).addLobby(lobbyinfo);
-                }
+            if (OnlineManager.instance != null && OnlineManager.lobby == null) {
+                RainMeadow.DebugMe();
+                var lobbyinfo = MakeLobbyInfo();
+                (MatchmakingManager.instances[MatchmakingManager.MatchMakingDomain.LAN] as LANMatchmakingManager).addLobby(lobbyinfo);
             }
 #endif
         }

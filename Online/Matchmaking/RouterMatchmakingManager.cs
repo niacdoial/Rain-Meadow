@@ -46,8 +46,12 @@ namespace RainMeadow {
 #endif
 
         public bool isLoopback() {
+#if IS_SERVER
+            if (LobbyServer.netIo.serverPlayer.id is RouterPlayerId mePlayerId)
+#else
             if (OnlineManager.mePlayer.id is RouterPlayerId mePlayerId)
-               return mePlayerId == this;
+#endif
+                return mePlayerId == this;
             else
                return false;
         }
@@ -80,7 +84,7 @@ namespace RainMeadow {
 
         public override void initializeMePlayer() {
             var meId = new RouterPlayerId();  // TODO: does CS use pass-by-copy or by-value already?
-            OnlineManager.mePlayer = new OnlinePlayer( meId );
+            OnlineManager.mePlayer = new OnlinePlayer( meId ) { isMe = true };
             System.Random random = new System.Random();
 
             if (RainMeadow.rainMeadowOptions.PlayerRoutingId.Value != 0) {
@@ -112,16 +116,13 @@ namespace RainMeadow {
         }
 
         static List<INetLobbyInfo> lobbyinfo = new();
-        static List<ulong> lobby_ids = new();
-        public void addLobby(ulong lobbyId, INetLobbyInfo lobby) {
-            int upd_index = lobby_ids.FindIndex(x => x == lobbyId);
+        public void addLobby(INetLobbyInfo lobby) {
+            int upd_index = lobbyinfo.FindIndex(x => x.lobbyId == lobbyId);
             if (upd_index != -1) {
                 lobbyinfo.RemoveAt(upd_index);
-                lobby_ids.RemoveAt(upd_index);
             }
 
             lobbyinfo.Add(lobby);
-            lobby_ids.Add(lobbyId);
             OnLobbyListReceivedEvent(true, lobbyinfo.ToArray());
         }
 
@@ -136,11 +137,16 @@ namespace RainMeadow {
         // }
 
         public OnlinePlayer GetPlayerRouter(RouterPlayerId playerId) {
-            OnlinePlayer candidate = OnlineManager.players.FirstOrDefault(p => {
-                if (p.id is RouterPlayerId routid)
-                    return (routid == playerId);
-                return false;
-            });
+            OnlinePlayer candidate = null;
+            if (playerId.RoutingId == RouterNetIO.serverRoutingId) {
+                candidate = NetIO.routerInstance.serverPlayer;
+            } else {
+                candidate = OnlineManager.players.FirstOrDefault(p => {
+                    if (p.id is RouterPlayerId routid)
+                        return (routid == playerId);
+                    return false;
+                });
+            }
             RouterPlayerId candId = (RouterPlayerId)candidate.id;
             if (!UDPPeerManager.CompareIPEndpoints(candId.endPoint, playerId.endPoint)) {
                 RainMeadow.Error("player IDs don't agree on endpoint: " + candId.endPoint.ToString() + " vs " + playerId.endPoint.ToString());
@@ -154,6 +160,11 @@ namespace RainMeadow {
                     return UDPPeerManager.CompareIPEndpoints(routid.endPoint, endPoint);
                 return false;
             });
+            if (candidate == null) {
+                if (UDPPeerManager.CompareIPEndpoints(endPoint, ((RouterPlayerId)NetIO.routerInstance.serverPlayer.id).endPoint)) {
+                    candidate = NetIO.routerInstance.serverPlayer;
+                }
+            }
             return candidate;
         }
 
@@ -168,15 +179,22 @@ namespace RainMeadow {
         }
 
         LobbyVisibility visibility;
-        int? maxPlayerCount;
         public ulong lobbyId = 0;
 
+        //string gameMode = "";
+        //string lobbyPassword  // defined later
+        // int MAX_LOBBY  // defined in MatchmakingManager.cs
         public override void CreateLobby(LobbyVisibility visibility, string gameMode, string? password, int? maxPlayerCount) {
-            maxPlayerCount = maxPlayerCount ?? 4;
-            OnlineManager.lobby = new Lobby(new OnlineGameMode.OnlineGameModeType(gameMode), OnlineManager.mePlayer, password);
-            ((RouterNetIO)NetIO.currentInstance).SendToServer(
+            MAX_LOBBY = maxPlayerCount ?? 4;
+            //this.gameMode = gameMode;
+            lobbyPassword = password;
+            this.visibility = visibility;
+
+            OnlineManager.lobby = new Lobby(new OnlineGameMode.OnlineGameModeType(gameMode), OnlineManager.mePlayer, lobbyPassword);
+
+            NetIO.routerInstance.SendToServer(
                 new RouterPublishLobbyPacket(
-                    maxPlayerCount ?? 4,
+                    MAX_LOBBY,
                     OnlineManager.mePlayer.id.name,
                     password != null,
                     gameMode, 1,
@@ -196,6 +214,7 @@ namespace RainMeadow {
                 RainMeadow.Error("Received publish-ack when we didn't expect");
             }
             state = MatchmakingState.HostReady;
+            MatchmakingManager.OnLobbyJoinedEvent(true, "");
         }
 
         public void LobbyAcknoledgedUs(OnlinePlayer owner)
@@ -237,10 +256,8 @@ namespace RainMeadow {
             if (OnlineManager.players.Contains(joiningPlayer)) { return; }
             OnlineManager.players.Add(joiningPlayer);
             HandleJoin(joiningPlayer);
-            // // NAT piercing happens here (players are expected to send unprompted acks to each other)
-            // // actually no, it needs to happen before the RequestJoinPacket can be sent
-            // (NetIO.currentInstance as RouterNetIO)?.SendAcknoledgement(joiningPlayer);
-            RainMeadow.Debug($"Added {joiningPlayer} to the lobby matchmaking player list");
+
+            RainMeadow.Debug($"Added {routid.RoutingId} to the lobby matchmaking player list");
 
             if (OnlineManager.lobby != null && OnlineManager.lobby.isOwner)
             {
@@ -318,7 +335,7 @@ namespace RainMeadow {
                 }
                 this.lobbyId = lobbyInfo.lobbyId;
 
-                RainMeadow.Debug("Sending Request to join lobby...");
+                RainMeadow.Debug("Sending Request 1 to join lobby...");
                 // NOTE: inform server to get a list of players,
                 // then inform the host (doesn't need any info?)
                 ((RouterNetIO)NetIO.currentInstance).SendToServer(
@@ -357,7 +374,8 @@ namespace RainMeadow {
                 return;
             }
 
-            RainMeadow.Debug("Sending Request to join lobby...");
+            AcknoledgeRouterPlayer(host);
+            RainMeadow.Debug("Sending Request 2 to join lobby...");
             ((RouterNetIO)NetIO.currentInstance).SendP2P(
                 host,
                 new RouterRequestJoinPacket(OnlineManager.mePlayer.id, lobbyId),

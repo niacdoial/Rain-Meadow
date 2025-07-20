@@ -20,9 +20,16 @@ namespace RainMeadow
         public string bannedMods = "";
 
         public RouterPublishLobbyPacket(): base() {}
-// note: no static removal of constructors because types inherit this
+// note: no static removal of constructors because types (InformLobby, AcceptJoin) inherit this
         public RouterPublishLobbyPacket(int maxplayers, string name, bool passwordprotected, string mode, int currentplayercount, string highImpactMods = "", string bannedMods = "")
         {
+#if IS_SERVER
+            this.hostEndPoint = ((RouterPlayerId)LobbyServer.lobby.host).endPoint;
+            this.hostRoutingId = ((RouterPlayerId)LobbyServer.lobby.host).RoutingId;
+#else
+            this.hostEndPoint = ((RouterPlayerId)OnlineManager.mePlayer.id).endPoint;  // note that this is likely garbage! host doesn't know their IP because NAT
+            this.hostRoutingId = ((RouterPlayerId)OnlineManager.mePlayer.id).RoutingId;
+#endif
             this.currentplayercount = currentplayercount;
             this.mode = mode;
             this.maxplayers = maxplayers;
@@ -75,14 +82,24 @@ namespace RainMeadow
         public override void Process()
         {
 #if IS_SERVER
-            LobbyServer.maxPlayers = this.maxplayers;
-            if (UDPPeerManager.isEndpointLocal(((RouterPlayerId)processingPlayer.id).endPoint)) {
+            if (false) { //(UDPPeerManager.isEndpointLocal(((RouterPlayerId)processingPlayer.id).endPoint)) {
                 LobbyServer.netIo.SendP2P(
                     processingPlayer,
                     new RouterGenericFailurePacket("Cannot route players with local-network addresses!"),
                     NetIO.SendType.Reliable
                 );
             } else {
+                if (hostRoutingId != ((RouterPlayerId)processingPlayer.id).RoutingId) {
+                    RainMeadow.Error(
+                        "Player %" + ((RouterPlayerId)processingPlayer.id).RoutingId.ToString() +
+                        " decided to advertise lobby by player %" + hostRoutingId.ToString()
+                    );
+                    return;
+                }
+                hostEndPoint = ((RouterPlayerId)processingPlayer.id).endPoint; // fixing what the host doesn't know
+                LobbyServer.maxPlayers = this.maxplayers;
+                LobbyServer.lobbyPlayers.Add(processingPlayer);
+                LobbyServer.lobby = MakeLobbyInfo();
                 LobbyServer.netIo.SendP2P(
                     processingPlayer,
                     new RouterAcceptPublishPacket((ulong)1),

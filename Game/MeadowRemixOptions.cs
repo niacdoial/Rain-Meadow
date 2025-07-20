@@ -39,7 +39,7 @@ public class RainMeadowOptions : OptionInterface
 
     public readonly Configurable<string> LanUserName;
     public readonly Configurable<string> MatchmakingRouter;
-    public readonly Configurable<ulong> PlayerRoutingId;  // TODO: UI?
+    public readonly Configurable<ulong> PlayerRoutingId;
     public readonly Configurable<int> UdpTimeout;
     public readonly Configurable<int> UdpHeartbeat;
     public readonly Configurable<bool> DisableMeadowPauseAnimation;
@@ -320,7 +320,7 @@ public class RainMeadowOptions : OptionInterface
         };
             arenaTab.AddItems(OnlineArenaSettings);
 
-            OnlineLANSettings = new UIelement[7]
+            OnlineLANSettings = new UIelement[11]
             {
                 new OpLabel(10f, 550f, Translate("LAN"), bigText: true),
                 new OpLabel(10f, 505, Translate("Username"), bigText: false),
@@ -337,6 +337,16 @@ public class RainMeadowOptions : OptionInterface
                 new OpTextBox(UdpHeartbeat, new Vector2(10f, 370), 160f)
                 {
                     accept = OpTextBox.Accept.Int
+                },
+                new OpLabel(10f, 345, Translate("Router player ID (integer)"), bigText: false),
+                new OpTextBox(PlayerRoutingId, new Vector2(10f, 320), 160f)
+                {
+                    accept = OpTextBox.Accept.Int  // TODO: do not crop it to 32 bits!
+                },
+                new OpLabel(10f, 295, Translate("server endpoint (ip:port)"), bigText: false),
+                new OpTextBox(MatchmakingRouter, new Vector2(10f, 270), 160f)
+                {
+                    //accept = OpTextBox.Accept.StringASCII
                 }
 
         };

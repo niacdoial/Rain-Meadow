@@ -55,7 +55,7 @@ public class LobbyCreateMenu : SmartMenu
         visibilityDropDown = new OpComboBox2(new Configurable<MatchmakingManager.LobbyVisibility>(MatchmakingManager.LobbyVisibility.Public), where, 160, OpResourceSelector.GetEnumNames(null, typeof(MatchmakingManager.LobbyVisibility)).Select(li => { li.displayName = Translate(li.displayName); return li; }).ToList()) { colorEdge = MenuColorEffect.rgbWhite };
         new UIelementWrapper(this.tabWrapper, visibilityDropDown);
 
-        
+
         where.y -= 45;
         where.x -= 80;
         mainPage.subObjects.Add(
