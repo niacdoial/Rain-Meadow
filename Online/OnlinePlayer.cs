@@ -2,19 +2,14 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using RainMeadow.Shared;
 
 namespace RainMeadow
 {
-    public partial class OnlinePlayer : IEquatable<OnlinePlayer>
-    {
-        public MeadowPlayerId id; // big id for matchmaking
-        public ushort inLobbyId; // small id in lobby serialization
-
-#if !IS_SERVER  // let's remove the sophisticated logic from the server-side code
+    public partial class OnlinePlayer : BasicOnlinePlayer, IEquatable<OnlinePlayer> {
         public Queue<OnlineEvent> OutgoingEvents = new(8);
         public List<OnlineEvent> recentlyAckedEvents = new(4);
         public Queue<OnlineStateMessage> OutgoingStates = new(16);
-#endif
 
         public ushort nextOutgoingEvent = 1; // outgoing, event id
         public ushort lastEventFromRemote; // incoming, the last event I've received from them, I'll write it back on headers as an ack
@@ -26,12 +21,7 @@ namespace RainMeadow
         public HashSet<uint> recentlyAckdTicks = new(); // incoming, recent ticks they've acked (from bitpack)
         public uint oldestTickToConsider; // incoming, from acked ticks the oldest to use for deltas
 
-
         public bool isActuallySpectating;
-        public bool needsAck;
-
-        public bool isMe;
-        public bool hasLeft;
 
         // For Debug Overlay
         public int ping; // rtt
@@ -43,12 +33,8 @@ namespace RainMeadow
         public readonly int[] bytesIn = new int[40];
         public readonly int[] bytesOut = new int[40];
 
-        public OnlinePlayer(MeadowPlayerId id)
-        {
-            this.id = id;
-        }
+        public OnlinePlayer(MeadowPlayerId id): base(id) {}
 
-#if !IS_SERVER  // let's remove the sophisticated logic from the server-side code
         public OnlineEvent QueueEvent(OnlineEvent e)
         {
             e.eventId = this.nextOutgoingEvent;
@@ -191,33 +177,26 @@ namespace RainMeadow
         {
             return new TickReference(this);
         }
-#endif // !IS_SERVER
-
-        public override string ToString()
-        {
-            return $"{inLobbyId}:{id}";
-        }
 
         // IEqu
         public override bool Equals(object obj) => this.Equals(obj as OnlinePlayer);
-        public bool Equals(OnlinePlayer other)
-        {
+        public bool Equals(OnlinePlayer other) {
             return other != null && id == other.id;
         }
         public override int GetHashCode() => id.GetHashCode();
         public string GetUniqueID()
         {
-#if IS_SERVER
-            return ((RouterPlayerId) id).RoutingId.ToString();
-#else
             if (id is RouterPlayerId routid) {
                 return routid.RoutingId.ToString();
             } else if (id is SteamMatchmakingManager.SteamPlayerId steaid) {
                 return steaid.steamID.m_SteamID.ToString();
-            } else {
+            } else if (id is LANPlayerId) {
                 return inLobbyId.ToString();
+            } else if (id is NetPlayerId) {
+                return inLobbyId.ToString();
+            } else {
+                throw new Exception("Unknown MeadowPlayerId type");
             }
-#endif
         }
         public static bool operator ==(OnlinePlayer lhs, OnlinePlayer rhs)
         {

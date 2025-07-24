@@ -4,10 +4,8 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Runtime.CompilerServices;
-
-#if !IS_SERVER  // only the client needs to depend on unity
 using UnityEngine;
-#endif
+using RainMeadow.Shared;
 
 namespace RainMeadow
 {
@@ -18,22 +16,21 @@ namespace RainMeadow
 
     public partial class RainMeadow
     {
-#if IS_SERVER
-        class LoggerClass {
-
-            public void LogInfo(string msg) {
-                Console.WriteLine("INFO : " + msg);
-            }
-            public void LogError(string msg) {
-                Console.WriteLine("ERROR: " + msg);
+        class SharedCodeLoggingHook {
+            public SharedCodeLoggingHook() {
+                SharedCodeLogger.ErrorInner += (data, file, method) => {
+                    RainMeadow.Error(data, file, method);
+                };
+                SharedCodeLogger.DebugInner += (data, file, method) => {
+                    RainMeadow.Debug(data, file, method);
+                };
+                SharedCodeLogger.DebugMeInner += (file, method) => {
+                    RainMeadow.DebugMe(file, method);
+                };
             }
         }
-        LoggerClass Logger;
-        RainMeadow() {Logger = new LoggerClass();}
-        static RainMeadow instance = new RainMeadow();
+        private static SharedCodeLoggingHook _hook;
 
-        static Stopwatch stopwatch = Stopwatch.StartNew();
-#endif
         private static string TrimCaller(string callerFile) {
             string cFile = callerFile.Substring(Math.Max(
                 callerFile.LastIndexOf(Path.DirectorySeparatorChar),
@@ -42,11 +39,7 @@ namespace RainMeadow
             return cFile.Substring(0, cFile.LastIndexOf('.'));
         }
         private static string LogTime() {
-#if IS_SERVER
-            return Convert.ToUInt64(stopwatch.Elapsed.TotalMilliseconds).ToString();
-#else
             return ((int)(Time.time * 1000)).ToString();
-#endif
         }
         private static string LogDOT() { return DateTime.Now.ToUniversalTime().TimeOfDay.ToString().Substring(0, 8); }
         public static void Debug(object data, [CallerFilePath] string callerFile = "", [CallerMemberName] string callerName = "")

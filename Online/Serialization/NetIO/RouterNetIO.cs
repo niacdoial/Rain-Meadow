@@ -8,6 +8,7 @@ using System.Net.NetworkInformation;
 using System.Net.Sockets;
 using System.Runtime.InteropServices;
 //using Kittehface.Framework20;
+using RainMeadow.Shared;
 
 namespace RainMeadow
 {
@@ -15,19 +16,30 @@ namespace RainMeadow
         static partial void PlatformRouterAvailable(ref bool val) {
             val = NetIOPlatform.PlatformUDPManager is not null;
         }
+        public static RouterNetIO? routerInstance { get => (RouterNetIO)instances[MatchmakingManager.MatchMakingDomain.Router]; }
     }
 
-#if !IS_SERVER
-    public class RouterNetIO : NetIO {
-        static MatchmakingManager.MatchMakingDomain MMDomain = MatchmakingManager.MatchMakingDomain.Router;
-
+    public class RouterNetIO : NonSteamNetIO {
         private IPEndPoint serverEndPoint;  // TODO implement a way to update that without powercycling the game
-        public const ulong serverRoutingId = 0xffff_ffff_ffff_ffff;
+        public const ulong serverRoutingId = 0xffff_ffff_ffff_ffff;  // TODO make shared constant
         public OnlinePlayer serverPlayer;
+
+        public override bool IsActive() {
+            if (NetIOPlatform.PlatformUDPManager is null) {
+                RainMeadow.Error("Cannot perform action without a functionning UDPPeerManager");
+                return false;
+            }
+            if (MatchmakingManager.currentDomain != MatchmakingManager.MatchMakingDomain.Router) {
+                RainMeadow.Error("Action performed on the wrong type of MatchMakingDomain");
+                return false;
+            }
+            return true;
+        }
+
         public RouterNetIO() {
             if (NetIOPlatform.PlatformUDPManager is null) return;
             NetIOPlatform.PlatformUDPManager.OnPeerForgotten += (peer) => {
-                if (MatchmakingManager.currentDomain != MMDomain) {
+                if (MatchmakingManager.currentDomain != MatchmakingManager.MatchMakingDomain.Router) {
                     return;
                 }
                 List<OnlinePlayer> playerstoRemove = new();
@@ -54,32 +66,21 @@ namespace RainMeadow
 
             RainMeadow.Debug("what the settings say about the server's IP, *apparently*: " + RainMeadow.rainMeadowOptions.MatchmakingRouter.Value);
             serverEndPoint = UDPPeerManager.GetEndPointByName(
-                RainMeadow.rainMeadowOptions.MatchmakingRouter.Value
-                //"127.0.0.1:8710"
+                //RainMeadow.rainMeadowOptions.MatchmakingRouter.Value
+                "127.0.0.1:8720"
             );
             RouterPlayerId serverId = new RouterPlayerId(serverRoutingId);
             serverId.endPoint = serverEndPoint;
             serverId.name = "SERVER";
             serverPlayer = new OnlinePlayer(serverId);
         }
-        bool BasicChecks() {
-            if (NetIOPlatform.PlatformUDPManager is null) {
-                RainMeadow.Error("Cannot perform action without a functionning UDPPeerManager");
-                return false;
-            }
-            if (MatchmakingManager.currentDomain != MatchmakingManager.MatchMakingDomain.Router) {
-                RainMeadow.Error("Action performed on the wrong type of MatchMakingDomain");
-                return false;
-            }
-            return true;
-        }
 
-        public override void SendSessionData(OnlinePlayer toPlayer)
+        public override void SendSessionData(BasicOnlinePlayer toPlayer)
         {
             if (NetIOPlatform.PlatformUDPManager is null) return;
             try
             {
-                OnlineManager.serializer.WriteData(toPlayer);
+                OnlineManager.serializer.WriteData((OnlinePlayer)toPlayer);
                 SendP2P(toPlayer, new SessionPacket(OnlineManager.serializer.buffer, (ushort)OnlineManager.serializer.Position), SendType.Unreliable);
                 OnlineManager.serializer.EndWrite();
             }
@@ -91,133 +92,25 @@ namespace RainMeadow
             }
         }
 
-        public void SendBroadcast(Packet packet) {
-            throw new NotImplementedException(); // RouterNetIO cannot send packets to Broatcast
-        }
+        // public override void SendBroadcast(Packet packet) {
+        //     throw new NotImplementedException(); // RouterNetIO cannot send packets to Broatcast
+        // }
 
-        // If using a domain requires you to start a conversation, then any packet sent before before starting a conversation is ignored.
-        // otherwise, the parameter "start_conversation" is ignored.
-        public void SendP2P(OnlinePlayer player, Packet packet, SendType sendType, bool start_conversation = false) {
-            if (!BasicChecks()) return;
-
-            if (player.id is RouterPlayerId routid) {
-                using (MemoryStream memory = new MemoryStream(128))
-                using (BinaryWriter writer = new BinaryWriter(memory)) {
-                    Packet.Encode(packet, writer, player);
-                    NetIOPlatform.PlatformUDPManager.Send(
-                        memory.GetBuffer(),
-                        routid.endPoint,
-                        sendType switch {
-                            NetIO.SendType.Reliable => UDPPeerManager.PacketType.Reliable,
-                            NetIO.SendType.Unreliable => UDPPeerManager.PacketType.Unreliable,
-                            _ => UDPPeerManager.PacketType.Unreliable,
-                        },
-                        start_conversation
-                    );
-                }
+        // "Target runtime doesn't support covariant return types in overrides." (sigh)
+        public override BasicOnlinePlayer? GetPlayerFromEndPoint(IPEndPoint iPEndPoint) {
+            var player = MatchmakingManager.routerInstance.GetPlayerRouter(iPEndPoint);
+            if (player is null) {
+                RainMeadow.Error("Routed player not found! Cannot instantiate new one without heads-up");
             }
+            return player as BasicOnlinePlayer;
         }
 
-        public void SendToServer(Packet packet, SendType sendType, bool start_conversation = false) {
-            if (!BasicChecks()) {
-                RainMeadow.Error("failed basic checks for netIO!");
-                return;
-            }
-            RainMeadow.Debug("pkt server send " + packet.type.ToString());
-
-            // TODO add code to make sure this peer is known by the UDPPeerManager as the server
-            using (MemoryStream memory = new MemoryStream(128))
-            using (BinaryWriter writer = new BinaryWriter(memory)) {
-                Packet.Encode(packet, writer, this.serverPlayer);
-                NetIOPlatform.PlatformUDPManager.Send(
-                    memory.GetBuffer(),
-                    this.serverEndPoint,
-                    sendType switch {
-                        NetIO.SendType.Reliable => UDPPeerManager.PacketType.Reliable,
-                        NetIO.SendType.Unreliable => UDPPeerManager.PacketType.Unreliable,
-                        _ => UDPPeerManager.PacketType.Unreliable,
-                    },
-                    start_conversation
-                );
-            }
-        }
-
-
-        public void SendAcknoledgement(OnlinePlayer player) {
-            if (!BasicChecks()) return;
-
-            if (player.id is RouterPlayerId routid) {
-                NetIOPlatform.PlatformUDPManager.Send(
-                    Array.Empty<byte>(),
-                    routid.endPoint,
-                    UDPPeerManager.PacketType.Reliable,
-                    true
-                );
-            }
-        }
-        public void SendServerAcknoledgement() {
-            if (!BasicChecks()) return;
-
-            NetIOPlatform.PlatformUDPManager.Send(
-                Array.Empty<byte>(),
-                this.serverEndPoint,
-                UDPPeerManager.PacketType.Reliable,
-                true
-            );
-        }
-
-        public override void ForgetPlayer(OnlinePlayer player) {
-            if (!BasicChecks()) return;
-
-            if (player.id is RouterPlayerId routid) {
-                NetIOPlatform.PlatformUDPManager.ForgetPeer(routid.endPoint);
-            }
-        }
-
-        public override void ForgetEverything() {
-            if (!BasicChecks()) return;
-            NetIOPlatform.PlatformUDPManager.ForgetAllPeers();
-        }
-
-        public override void Update()
-        {
-            if (NetIOPlatform.PlatformUDPManager is null) return;
-            NetIOPlatform.PlatformUDPManager.Update();
-            base.Update();
-        }
-
-        public override void RecieveData()
-        {
-            if (!BasicChecks()) return;
-
-            while (NetIOPlatform.PlatformUDPManager.IsPacketAvailable())
-            {
-                try
-                {
-                    //RainMeadow.Debug("To read: " + UdpPeer.debugClient.Available);
-                    byte[]? data = NetIOPlatform.PlatformUDPManager.Recieve(out EndPoint? remoteEndpoint);
-                    if (data == null) continue;
-                    IPEndPoint? iPEndPoint = remoteEndpoint as IPEndPoint;
-                    if (iPEndPoint is null) continue;
-                    //, UDPPeerManager.CompareIPEndpoints(iPEndPoint, this.serverEndPoint)
-                    using (MemoryStream netStream = new MemoryStream(data))
-                    using (BinaryReader netReader = new BinaryReader(netStream)) {
-                        if (netReader.BaseStream.Position == ((MemoryStream)netReader.BaseStream).Length) continue; // nothing to read somehow?
-                        var player = MatchmakingManager.routerInstance.GetPlayerRouter(iPEndPoint);
-                        if (player is null) {
-                            RainMeadow.Error("Routed player not found! Cannot instantiate new one without heads-up");
-                            return;
-                        }
-                        Packet.Decode(netReader, player);
-                    }
-                }
-                catch (Exception e)
-                {
-                    RainMeadow.Error(e);
-                    OnlineManager.serializer.EndRead();
-                }
+        public override void ProcessPacket(Packet packet, BasicOnlinePlayer player) {
+            if (player is OnlinePlayer plr) {
+                PacketProcessing.ProcessPacketForRouter(packet, plr);
+            } else {
+                throw new Exception("Shared network code lost half the OnlinePlayer object");
             }
         }
     }
-#endif  // !IS_SERVER
 }

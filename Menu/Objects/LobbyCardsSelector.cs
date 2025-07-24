@@ -11,6 +11,7 @@ using Menu.Remix;
 using Menu.Remix.MixedUI;
 using RWCustom;
 using UnityEngine;
+using RainMeadow.Shared;
 
 namespace RainMeadow;
 public class LobbyCardsList : RectangularMenuObject, Slider.ISliderOwner

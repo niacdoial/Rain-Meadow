@@ -2,6 +2,8 @@
 using System.Collections.Generic;
 using System.Linq;
 
+using RainMeadow.Shared;
+
 namespace RainMeadow.Generics
 {
     // Welcome to generics hell

@@ -3,6 +3,7 @@ using Steamworks;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using RainMeadow.Shared;
 
 namespace RainMeadow
 {
@@ -20,7 +21,6 @@ namespace RainMeadow
         }
     }
 
-#if !IS_SERVER
     public class SteamMatchmakingManager : MatchmakingManager
     {
         public class SteamPlayerId : MeadowPlayerId
@@ -482,5 +482,4 @@ namespace RainMeadow
             SteamFriends.ActivateGameOverlayInviteDialog(lobbyID);
         }
     }
-#endif  // !IS_SERVER
 }

@@ -3,7 +3,7 @@ using System;
 using System.IO;
 using System.Net;
 using System.Runtime.InteropServices;
-
+using RainMeadow.Shared;
 
 namespace RainMeadow
 {
@@ -12,14 +12,18 @@ namespace RainMeadow
         static partial void PlatformSteamAvailable(ref bool val) {
             val = SteamManager.Instance.m_bInitialized && SteamUser.BLoggedOn();
         }
+        public static SteamNetIO? steamInstance { get => (SteamNetIO)instances[MatchmakingManager.MatchMakingDomain.Steam]; }
     }
 
     public class SteamNetIO : NetIO {
-#if IS_SERVER
-        override public void RecieveData() {
-            throw new Exception("this should only be called player-side");
+        public override bool IsActive() {
+            if (MatchmakingManager.currentDomain != MatchmakingManager.MatchMakingDomain.Steam) {
+                RainMeadow.Error("Action performed on the wrong type of MatchMakingDomain");
+                return false;
+            }
+            return true;
         }
-#else
+
         // public override void SendP2P(OnlinePlayer player, Packet packet, SendType sendType, bool start_conversation = false) {
         //     // base.SendP2P(player, packet, sendType, start_conversation);
 
@@ -28,11 +32,11 @@ namespace RainMeadow
 
 
 
-        public override void SendSessionData(OnlinePlayer toPlayer)
+        public override void SendSessionData(BasicOnlinePlayer toPlayer)
         {
             try
             {
-                OnlineManager.serializer.WriteData(toPlayer);
+                OnlineManager.serializer.WriteData((OnlinePlayer)toPlayer);
                 var steamNetId = (toPlayer.id as SteamMatchmakingManager.SteamPlayerId).oid;
                 unsafe
                 {
@@ -59,9 +63,7 @@ namespace RainMeadow
 
         public void SteamRecieveData()
         {
-            if (MatchmakingManager.currentDomain != MatchmakingManager.MatchMakingDomain.Steam) {
-                return;
-            }
+            if (!IsActive()) return;
 
             lock (OnlineManager.serializer)
             {
@@ -105,7 +107,6 @@ namespace RainMeadow
                 while (n > 0);
             }
         }
-#endif  // !IS_SERVER
     }
 
 }

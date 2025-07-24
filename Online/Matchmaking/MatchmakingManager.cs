@@ -4,6 +4,7 @@ using System.ComponentModel;
 using System.Linq;
 using System.Net;
 using Menu;
+using RainMeadow.Shared;
 
 namespace RainMeadow
 {
@@ -20,7 +21,6 @@ namespace RainMeadow
 
         };
 
-#if !IS_SERVER
         public static event LobbyListReceived_t OnLobbyListReceived = delegate {};
         public static event PlayerListReceived_t OnPlayerListReceived = delegate {};
         public static event LobbyJoined_t OnLobbyJoined = delegate {};
@@ -228,6 +228,5 @@ namespace RainMeadow
         public virtual void OpenInvitationOverlay() {
             OnlineManager.instance.manager.ShowDialog(new DialogNotify(Utils.Translate("You cannot use this feature here."), OnlineManager.instance.manager, null));
         }
-#endif  // !IS_SERVER
     }
 }

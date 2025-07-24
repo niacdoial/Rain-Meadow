@@ -3,73 +3,72 @@ using System.Net;
 using System;
 using System.Linq;
 using System.Diagnostics;
+using RainMeadow.Shared;
 
 namespace RainMeadow {
-    public class INetLobbyInfo : LobbyInfo {
-        public MeadowPlayerId host;
-        public ulong lobbyId = 0;  // TODO: maybe more separation than that?
-        public INetLobbyInfo(MeadowPlayerId host, string name, string mode, int playerCount, bool hasPassword, int maxPlayerCount, string highImpactMods = "", string bannedMods = "") :
-            base(name, mode, playerCount, hasPassword, maxPlayerCount, highImpactMods, bannedMods) {
-            this.host = host;
-        }
+    // public class INetLobbyInfo : LobbyInfo {
+    //     public MeadowPlayerId host;
+    //     public ulong lobbyId = 0;  // TODO: maybe more separation than that?
+    //     public INetLobbyInfo(MeadowPlayerId host, string name, string mode, int playerCount, bool hasPassword, int maxPlayerCount, string highImpactMods = "", string bannedMods = "") :
+    //         base(name, mode, playerCount, hasPassword, maxPlayerCount, highImpactMods, bannedMods) {
+    //         this.host = host;
+    //     }
 
-        public override string GetLobbyJoinCode(string? password = null)
-        {
-            if (host is LANPlayerId pHost) {
-                if (password != null)
-                    return $"+connect_lan_lobby {pHost.endPoint.Address.Address} {pHost.endPoint.Port} +lobby_password {password}";
-                return $"+connect_lan_lobby {pHost.endPoint.Address.Address} {pHost.endPoint.Port}";
-            } else if (host is RouterPlayerId rHost) {
-                if (password != null)
-                    return $"+connect_router_lobby {this.lobbyId} {rHost.RoutingId} +lobby_password {password}";
-                return $"+connect_router_lobby {this.lobbyId} {rHost.RoutingId}";
-            } else {
-                throw new Exception("wrong lobby type");
-            }
-        }
-    }
+    //     public override string GetLobbyJoinCode(string? password = null)
+    //     {
+    //         if (host is LANPlayerId pHost) {
+    //             if (password != null)
+    //                 return $"+connect_lan_lobby {pHost.endPoint.Address.Address} {pHost.endPoint.Port} +lobby_password {password}";
+    //             return $"+connect_lan_lobby {pHost.endPoint.Address.Address} {pHost.endPoint.Port}";
+    //         } else if (host is RouterPlayerId rHost) {
+    //             if (password != null)
+    //                 return $"+connect_router_lobby {this.lobbyId} {rHost.RoutingId} +lobby_password {password}";
+    //             return $"+connect_router_lobby {this.lobbyId} {rHost.RoutingId}";
+    //         } else {
+    //             throw new Exception("wrong lobby type");
+    //         }
+    //     }
+    // }
 
-    public class RouterPlayerId : MeadowPlayerId {
-        static readonly IPEndPoint BlackHole = new IPEndPoint(IPAddress.Parse("253.253.253.253"), 999);
+//     public class RouterPlayerId : MeadowPlayerId {
+//         static readonly IPEndPoint BlackHole = new IPEndPoint(IPAddress.Parse("253.253.253.253"), 999);
 
-        public ulong RoutingId = 0;
-        public IPEndPoint endPoint;
+//         public ulong RoutingId = 0;
+//         public IPEndPoint endPoint;
 
-        public RouterPlayerId() { endPoint = BlackHole; }
-        public RouterPlayerId(ulong id = 0) { RoutingId = id; endPoint = BlackHole; }
+//         public RouterPlayerId() { endPoint = BlackHole; }
+//         public RouterPlayerId(ulong id = 0) { RoutingId = id; endPoint = BlackHole; }
 
-        override public int GetHashCode() { unchecked { return (int)RoutingId; } }
-#if !IS_SERVER // let's not bring serialisation in the server's code
-        override public void CustomSerialize(Serializer serializer) {
-            serializer.Serialize(ref RoutingId);
-        }
-#endif
+//         override public int GetHashCode() { unchecked { return (int)RoutingId; } }
+// #if !IS_SERVER // let's not bring serialisation in the server's code
+//         override public void CustomSerialize(Serializer serializer) {
+//             serializer.Serialize(ref RoutingId);
+//         }
+// #endif
 
-        public bool isLoopback() {
-#if IS_SERVER
-            if (LobbyServer.netIo.serverPlayer.id is RouterPlayerId mePlayerId)
-#else
-            if (OnlineManager.mePlayer.id is RouterPlayerId mePlayerId)
-#endif
-                return mePlayerId == this;
-            else
-               return false;
-        }
-        public bool isServer() {
-            return RoutingId == 0xffff_ffff_ffff_ffff;
-        }
+//         public bool isLoopback() {
+// #if IS_SERVER
+//             if (LobbyServer.netIo.serverPlayer.id is RouterPlayerId mePlayerId)
+// #else
+//             if (OnlineManager.mePlayer.id is RouterPlayerId mePlayerId)
+// #endif
+//                 return mePlayerId == this;
+//             else
+//                return false;
+//         }
+//         public bool isServer() {
+//             return RoutingId == 0xffff_ffff_ffff_ffff;
+//         }
 
-        public override bool Equals(MeadowPlayerId other) {
-            if (other is RouterPlayerId other_router_id) {
-                return RoutingId == other_router_id.RoutingId;
-            }
+//         public override bool Equals(MeadowPlayerId other) {
+//             if (other is RouterPlayerId other_router_id) {
+//                 return RoutingId == other_router_id.RoutingId;
+//             }
 
-            return false;
-        }
-    }
+//             return false;
+//         }
+//     }
 
-
-#if !IS_SERVER
     public class RouterMatchmakingManager : MatchmakingManager {
 
         public enum MatchmakingState : byte {
@@ -112,7 +111,7 @@ namespace RainMeadow {
 
         public override void RequestLobbyList() {
             var packet = new RouterRequestLobbyPacket(CLIENT_VAL);
-            ((RouterNetIO)NetIO.currentInstance).SendToServer(packet, NetIO.SendType.Reliable, true);
+            NetIOPlatform.routerInstance.SendToServer(packet, NetIO.SendType.Reliable, true);
         }
 
         static List<INetLobbyInfo> lobbyinfo = new();
@@ -172,7 +171,7 @@ namespace RainMeadow {
         public override void SendChatMessage(string message) {
             foreach (OnlinePlayer player in OnlineManager.players) {
                 if (player.isMe) continue;
-                ((RouterNetIO)NetIO.currentInstance).SendP2P(player, new ChatMessagePacket(message), NetIO.SendType.Reliable);
+                NetIOPlatform.routerInstance.SendP2P(player, new ChatMessagePacket(message), NetIO.SendType.Reliable);
             }
 
             RecieveChatMessage(OnlineManager.mePlayer, message);
@@ -264,17 +263,17 @@ namespace RainMeadow {
 
                 // Tell the other players to create this player
                 var packet = new RouterModifyPlayerListPacket(ModifyPlayerListPacketOperation.Add, new OnlinePlayer[] { joiningPlayer });
-                ((RouterNetIO)NetIO.currentInstance).SendToServer(packet, NetIO.SendType.Reliable);
+                NetIOPlatform.routerInstance.SendToServer(packet, NetIO.SendType.Reliable);
                 foreach (OnlinePlayer player in OnlineManager.players)
                 {
                     if (player.isMe || player == joiningPlayer)
                         continue;
-                    ((RouterNetIO)NetIO.currentInstance).SendP2P(player, packet, NetIO.SendType.Reliable);
+                    NetIOPlatform.routerInstance.SendP2P(player, packet, NetIO.SendType.Reliable);
                 }
 
                 // Tell joining peer to create everyone in the server
                 // (safety precaution in case the server has out-of-date info or something)
-                ((RouterNetIO)NetIO.currentInstance).SendP2P(
+                NetIOPlatform.routerInstance.SendP2P(
                     joiningPlayer,
                     new RouterModifyPlayerListPacket(
                         ModifyPlayerListPacketOperation.Add,
@@ -303,16 +302,16 @@ namespace RainMeadow {
                 );
 
                 // Tell the other players to remove this player
-                ((RouterNetIO)NetIO.currentInstance).SendToServer(packet, NetIO.SendType.Reliable);
+                NetIOPlatform.routerInstance.SendToServer(packet, NetIO.SendType.Reliable);
                 foreach (OnlinePlayer player in OnlineManager.players)
                 {
                     if (player.isMe)
                         continue;
 
-                    ((RouterNetIO)NetIO.currentInstance).SendP2P(player, packet, NetIO.SendType.Reliable);
+                    NetIOPlatform.routerInstance.SendP2P(player, packet, NetIO.SendType.Reliable);
                 }
             }
-            NetIO.currentInstance.ForgetPlayer(leavingPlayer);
+            NetIOPlatform.routerInstance.ForgetPlayer(leavingPlayer);
             OnPlayerListReceivedEvent(playerList.ToArray());
         }
 
@@ -338,7 +337,7 @@ namespace RainMeadow {
                 RainMeadow.Debug("Sending Request 1 to join lobby...");
                 // NOTE: inform server to get a list of players,
                 // then inform the host (doesn't need any info?)
-                ((RouterNetIO)NetIO.currentInstance).SendToServer(
+                NetIOPlatform.routerInstance.SendToServer(
                     new RouterRequestJoinToServerPacket(lobbyInfo.lobbyId),
                     NetIO.SendType.Reliable,
                     true
@@ -376,7 +375,7 @@ namespace RainMeadow {
 
             AcknoledgeRouterPlayer(host);
             RainMeadow.Debug("Sending Request 2 to join lobby...");
-            ((RouterNetIO)NetIO.currentInstance).SendP2P(
+            NetIOPlatform.routerInstance.SendP2P(
                 host,
                 new RouterRequestJoinPacket(OnlineManager.mePlayer.id, lobbyId),
                 NetIO.SendType.Reliable,
@@ -455,7 +454,7 @@ namespace RainMeadow {
             if (OnlineManager.players is not null) {
                 if (OnlineManager.players.Count > 1) {
                     foreach (OnlinePlayer p in OnlineManager.players) {
-                        ((RouterNetIO)NetIO.currentInstance).SendP2P(p,
+                        NetIOPlatform.routerInstance.SendP2P(p,
                             new SessionEndPacket(),
                                 NetIO.SendType.Reliable);
                     }
@@ -468,9 +467,9 @@ namespace RainMeadow {
                 );
 
                 // Tell the other players to remove this player
-                ((RouterNetIO)NetIO.currentInstance).SendToServer(packet, NetIO.SendType.Reliable);
+                NetIOPlatform.routerInstance.SendToServer(packet, NetIO.SendType.Reliable);
             }
-            NetIO.currentInstance.ForgetEverything();
+            NetIOPlatform.currentInstance.ForgetEverything();
             state = MatchmakingState.Empty;
         }
 
@@ -502,5 +501,4 @@ namespace RainMeadow {
 
         public override bool canOpenInvitations => false;
     }
-#endif  // !IS_SERVER
 }

@@ -5,6 +5,7 @@ using System.Net;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using RainMeadow.Shared;
 
 namespace RainMeadow
 {
@@ -229,8 +230,8 @@ namespace RainMeadow
             {
                 normalized.x = (float)playerGFX.player.flipDirection * 0.05f;
 
-                // simplification of sin(acos(x)) 
-                normalized.y = Mathf.Sqrt(1 - (normalized.x*normalized.x))*Math.Sign(normalized.y); 
+                // simplification of sin(acos(x))
+                normalized.y = Mathf.Sqrt(1 - (normalized.x*normalized.x))*Math.Sign(normalized.y);
             }
 
             return normalized;
@@ -311,7 +312,7 @@ namespace RainMeadow
                     }
                 }
             }
-            
+
             this.ConnectEnd();
         }
     }

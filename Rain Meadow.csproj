@@ -44,11 +44,6 @@
     </None>
   </ItemGroup>
 
-  <ItemGroup>
-    <Compile Remove="RainMeadow.LobbyServer.cs"/>
-    <Compile Remove="Online/Serialization/NetIO/RouterServerSideNetIO.cs"/>
-  </ItemGroup>
-
   <Target Name="PostBuild" AfterTargets="PostBuildEvent">
     <ItemGroup>
       <BuildFiles Include="$(Outdir)\Rain Meadow.*" />

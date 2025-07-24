@@ -9,98 +9,98 @@ using System.Net.Sockets;
 using System.Diagnostics;
 using UnityEngine;
 using System.Diagnostics.PerformanceData;
-
+using RainMeadow.Shared;
 
 namespace RainMeadow {
 
-    public class LANPlayerId : MeadowPlayerId
-    {
-        // Blackhole Endpoint
-        // https://superuser.com/questions/698244/ip-address-that-is-the-equivalent-of-dev-null
-        public static readonly IPEndPoint BlackHole = new IPEndPoint(IPAddress.Parse("253.253.253.253"), 999);
-        public IPEndPoint endPoint;
-        public LANPlayerId(IPEndPoint? endPoint) : base(
-                UsernameGenerator.GenerateRandomUsername(endPoint?.GetHashCode() ?? 0))
-        {
-            this.endPoint = endPoint ?? BlackHole;
-        }
+//     public class LANPlayerId : MeadowPlayerId
+//     {
+//         // Blackhole Endpoint
+//         // https://superuser.com/questions/698244/ip-address-that-is-the-equivalent-of-dev-null
+//         public static readonly IPEndPoint BlackHole = new IPEndPoint(IPAddress.Parse("253.253.253.253"), 999);
+//         public IPEndPoint endPoint;
+//         public LANPlayerId(IPEndPoint? endPoint) : base(
+//                 UsernameGenerator.GenerateRandomUsername(endPoint?.GetHashCode() ?? 0))
+//         {
+//             this.endPoint = endPoint ?? BlackHole;
+//         }
 
-#if !IS_SERVER
-        public override void OpenProfileLink() {
-            string dialogue = "";
-            bool isMe = isLoopback();
-            if (isMe) {
-                dialogue += Utils.Translate("Your network interface(s) are");
-                foreach (var ip in UDPPeerManager.getInterfaceAddresses()) {
-                    dialogue += Environment.NewLine + ip.ToString() + ":" + this.endPoint.Port.ToString();
-                }
-            } else dialogue += Utils.Translate("<NAME> network interface is ").Replace("<NAME>", name) + endPoint.ToString();
-            if (OnlineManager.lobby?.owner?.id?.Equals(this) ?? false) {
-                dialogue += Environment.NewLine + (isMe? Utils.Translate("You are ") : Utils.Translate("This player is ")) + Utils.Translate( "the owner of the lobby.");
-                dialogue += Environment.NewLine + Utils.Translate("Players can “Direct Connect” to this lobby through ") + (isMe? Utils.Translate("your") : Utils.Translate("their")) + Utils.Translate(" interface(s).");
-            }
-            OnlineManager.instance.manager.ShowDialog(
-                new DialogNotify(dialogue, new Vector2(478.1f, 115.200005f*(1 + 0.2f*UDPPeerManager.getInterfaceAddresses().Length)),
-                    OnlineManager.instance.manager, null));
-        }
-#endif
+// #if !IS_SERVER
+//         public override void OpenProfileLink() {
+//             string dialogue = "";
+//             bool isMe = isLoopback();
+//             if (isMe) {
+//                 dialogue += Utils.Translate("Your network interface(s) are");
+//                 foreach (var ip in UDPPeerManager.getInterfaceAddresses()) {
+//                     dialogue += Environment.NewLine + ip.ToString() + ":" + this.endPoint.Port.ToString();
+//                 }
+//             } else dialogue += Utils.Translate("<NAME> network interface is ").Replace("<NAME>", name) + endPoint.ToString();
+//             if (OnlineManager.lobby?.owner?.id?.Equals(this) ?? false) {
+//                 dialogue += Environment.NewLine + (isMe? Utils.Translate("You are ") : Utils.Translate("This player is ")) + Utils.Translate( "the owner of the lobby.");
+//                 dialogue += Environment.NewLine + Utils.Translate("Players can “Direct Connect” to this lobby through ") + (isMe? Utils.Translate("your") : Utils.Translate("their")) + Utils.Translate(" interface(s).");
+//             }
+//             OnlineManager.instance.manager.ShowDialog(
+//                 new DialogNotify(dialogue, new Vector2(478.1f, 115.200005f*(1 + 0.2f*UDPPeerManager.getInterfaceAddresses().Length)),
+//                     OnlineManager.instance.manager, null));
+//         }
+// #endif
 
-        public void reset()
-        {
-            this.endPoint = BlackHole;
-        }
+//         public void reset()
+//         {
+//             this.endPoint = BlackHole;
+//         }
 
-        public override int GetHashCode() {
-            return this.endPoint?.GetHashCode() ?? 0;
-        }
+//         public override int GetHashCode() {
+//             return this.endPoint?.GetHashCode() ?? 0;
+//         }
 
-#if !IS_SERVER // let's not bring serialisation in the server's code
-        public override void CustomSerialize(Serializer serializer)
-        {
-            if (serializer.IsWriting) {
-                if (this.isLoopback()) {
-                    serializer.writer.Write(true);
-                } else {
-                    serializer.writer.Write(false);
-                    serializer.writer.Write((int)endPoint.Port);
-                    serializer.writer.Write((int)endPoint.Address.GetAddressBytes().Length);
-                    serializer.writer.Write(endPoint.Address.GetAddressBytes());
-                }
-            } else if (serializer.IsReading) {
-                bool issender = serializer.reader.ReadBoolean();
-                if (issender) {
-                    this.endPoint = (serializer.currPlayer.id as LANPlayerId)?.endPoint ?? BlackHole;
-                } else {
-                    int port = serializer.reader.ReadInt32();
-                    byte[] endpointbytes = serializer.reader.ReadBytes(serializer.reader.ReadInt32());
-                    this.endPoint = new IPEndPoint(new IPAddress(endpointbytes), port);
-                }
-            }
-        }
-#endif
+// #if !IS_SERVER // let's not bring serialisation in the server's code
+//         public override void CustomSerialize(Serializer serializer)
+//         {
+//             if (serializer.IsWriting) {
+//                 if (this.isLoopback()) {
+//                     serializer.writer.Write(true);
+//                 } else {
+//                     serializer.writer.Write(false);
+//                     serializer.writer.Write((int)endPoint.Port);
+//                     serializer.writer.Write((int)endPoint.Address.GetAddressBytes().Length);
+//                     serializer.writer.Write(endPoint.Address.GetAddressBytes());
+//                 }
+//             } else if (serializer.IsReading) {
+//                 bool issender = serializer.reader.ReadBoolean();
+//                 if (issender) {
+//                     this.endPoint = (serializer.currPlayer.id as LANPlayerId)?.endPoint ?? BlackHole;
+//                 } else {
+//                     int port = serializer.reader.ReadInt32();
+//                     byte[] endpointbytes = serializer.reader.ReadBytes(serializer.reader.ReadInt32());
+//                     this.endPoint = new IPEndPoint(new IPAddress(endpointbytes), port);
+//                 }
+//             }
+//         }
+// #endif
 
-        public bool isLoopback() {
-#if IS_SERVER
-            throw new Exception("this should only be called player-side");
-#else
-            if (NetIO.currentInstance is LANNetIO netio) {
-                if (NetIOPlatform.PlatformUDPManager.port != endPoint?.Port) return false;
-            }
+//         public bool isLoopback() {
+// #if IS_SERVER
+//             throw new Exception("this should only be called player-side");
+// #else
+//             if (NetIOPlatform.currentInstance is LANNetIO netio) {
+//                 if (NetIOPlatform.PlatformUDPManager.port != endPoint?.Port) return false;
+//             }
 
-            return UDPPeerManager.isLoopback(endPoint.Address);
-#endif
-        }
+//             return UDPPeerManager.isLoopback(endPoint.Address);
+// #endif
+//         }
 
-        public override bool Equals(MeadowPlayerId other)
-        {
+//         public override bool Equals(MeadowPlayerId other)
+//         {
 
-            if (other is LANPlayerId lanid) {
-                return UDPPeerManager.CompareIPEndpoints(endPoint, lanid.endPoint);
-            }
-            return false;
-        }
-    }
-#if !IS_SERVER
+//             if (other is LANPlayerId lanid) {
+//                 return UDPPeerManager.CompareIPEndpoints(endPoint, lanid.endPoint);
+//             }
+//             return false;
+//         }
+//     }
+
     public class LANMatchmakingManager : MatchmakingManager {
         public override void initializeMePlayer() {
             OnlineManager.mePlayer = new OnlinePlayer(new LANPlayerId(new IPEndPoint(
@@ -118,7 +118,7 @@ namespace RainMeadow {
             // To create a proper list, we need to send a message to the broadcast endpoint.
             // and wait for responces from possible hosts.
             for (int i = 0; i < 8; i++) {
-                if (NetIO.currentInstance is LANNetIO lanentio) {
+                if (NetIOPlatform.currentInstance is LANNetIO lanentio) {
                     using (MemoryStream memoryStream = new())
                     using (BinaryWriter writer = new(memoryStream)) {
                         lanentio.SendBroadcast(new LANRequestLobbyPacket());
@@ -141,14 +141,14 @@ namespace RainMeadow {
 
         public void SendLobbyInfo(OnlinePlayer other) {
             if (OnlineManager.lobby != null && OnlineManager.lobby.isOwner) {
-                if (NetIO.currentInstance is LANNetIO lannetio) {
+                if (NetIOPlatform.currentInstance is LANNetIO lannetio) {
                     var packet = new LANInformLobbyPacket(
                         maxplayercount, Utils.Translate("LAN Lobby"), OnlineManager.lobby.hasPassword,
                         OnlineManager.lobby.gameModeType.value, OnlineManager.players.Count,
                         RainMeadowModManager.ModArrayToString(RainMeadowModManager.GetRequiredMods()),
                         RainMeadowModManager.ModArrayToString(RainMeadowModManager.GetBannedMods())
                     );
-                    ((LANNetIO)NetIO.currentInstance).SendP2P(other, packet, NetIO.SendType.Unreliable, true);
+                    NetIOPlatform.lanInstance.SendP2P(other, packet, NetIO.SendType.Unreliable, true);
                 }
             }
         }
@@ -166,7 +166,7 @@ namespace RainMeadow {
         public override void SendChatMessage(string message) {
             foreach (OnlinePlayer player in OnlineManager.players) {
                 if (player.isMe) continue;
-                ((LANNetIO)NetIO.currentInstance).SendP2P(player, new ChatMessagePacket(message), NetIO.SendType.Reliable);
+                NetIOPlatform.lanInstance.SendP2P(player, new ChatMessagePacket(message), NetIO.SendType.Reliable);
             }
 
             RecieveChatMessage(OnlineManager.mePlayer, message);
@@ -202,7 +202,7 @@ namespace RainMeadow {
             if (OnlineManager.players.Contains(joiningPlayer)) { return; }
             OnlineManager.players.Add(joiningPlayer);
             HandleJoin(joiningPlayer);
-            (NetIO.currentInstance as LANNetIO)?.SendAcknoledgement(joiningPlayer);
+            (NetIOPlatform.currentInstance as LANNetIO)?.SendAcknoledgement(joiningPlayer);
             RainMeadow.Debug($"Added {joiningPlayer} to the lobby matchmaking player list");
 
             if (OnlineManager.lobby != null && OnlineManager.lobby.isOwner)
@@ -214,12 +214,12 @@ namespace RainMeadow {
                     if (player.isMe || player == joiningPlayer)
                         continue;
 
-                    ((LANNetIO)NetIO.currentInstance).SendP2P(player, new LANModifyPlayerListPacket(ModifyPlayerListPacketOperation.Add, new OnlinePlayer[] { joiningPlayer }),
+                    NetIOPlatform.lanInstance.SendP2P(player, new LANModifyPlayerListPacket(ModifyPlayerListPacketOperation.Add, new OnlinePlayer[] { joiningPlayer }),
                         NetIO.SendType.Reliable);
                 }
 
                 // Tell joining peer to create everyone in the server
-                ((LANNetIO)NetIO.currentInstance).SendP2P(
+                NetIOPlatform.lanInstance.SendP2P(
                     joiningPlayer,
                     new LANModifyPlayerListPacket(
                         ModifyPlayerListPacketOperation.Add,
@@ -252,10 +252,10 @@ namespace RainMeadow {
                     if (player.isMe)
                         continue;
 
-                    ((LANNetIO)NetIO.currentInstance).SendP2P(player, packet, NetIO.SendType.Reliable);
+                    NetIOPlatform.lanInstance.SendP2P(player, packet, NetIO.SendType.Reliable);
                 }
             }
-            NetIO.currentInstance.ForgetPlayer(leavingPlayer);
+            NetIOPlatform.currentInstance.ForgetPlayer(leavingPlayer);
             OnPlayerListReceivedEvent(playerList.ToArray());
         }
         string lobbyPassword = "";
@@ -275,7 +275,7 @@ namespace RainMeadow {
                 }
 
                 RainMeadow.Debug("Sending Request to join lobby...");
-                ((LANNetIO)NetIO.currentInstance).SendP2P(
+                NetIOPlatform.lanInstance.SendP2P(
                     new OnlinePlayer(lobbyInfo.host),
                     new LANRequestJoinPacket((LANPlayerId)OnlineManager.mePlayer.id),
                     NetIO.SendType.Reliable,
@@ -322,13 +322,13 @@ namespace RainMeadow {
             if (OnlineManager.players is not null) {
                 if (OnlineManager.players.Count > 1) {
                     foreach (OnlinePlayer p in  OnlineManager.players) {
-                        ((LANNetIO)NetIO.currentInstance).SendP2P(p,
+                        NetIOPlatform.lanInstance.SendP2P(p,
                             new SessionEndPacket(),
                                 NetIO.SendType.Reliable);
                     }
                 }
             }
-            NetIO.currentInstance.ForgetEverything();
+            NetIOPlatform.currentInstance.ForgetEverything();
         }
 
         public override OnlinePlayer GetLobbyOwner() {
@@ -361,5 +361,4 @@ namespace RainMeadow {
 
         public override bool canOpenInvitations => false;
     }
-#endif  // !IS_SERVER
 }
