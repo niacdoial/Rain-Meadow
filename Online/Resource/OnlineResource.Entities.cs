@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using RainMeadow.Shared;
 
 namespace RainMeadow
 {
@@ -326,7 +327,8 @@ namespace RainMeadow
             RainMeadow.Debug($"{oe} : {this} : to {newOwner}");
             if (oe != null && entityTransferRequest.from == oe.owner && isOwner && isActive && !isReleasing)
             {
-                OnlineManager.RunDeferred(() => { // deferred so we receive the incoming state first
+                OnlineManager.RunDeferred(() =>
+                { // deferred so we receive the incoming state first
                     EntityTransfered(oe, newOwner);
                 });
                 entityTransferRequest.from.QueueEvent(new GenericResult.Ok(entityTransferRequest));

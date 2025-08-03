@@ -15,13 +15,6 @@ namespace RainMeadow
     }
 
     class SteamNetIO : NetIO {
-        // public override void SendP2P(OnlinePlayer player, Packet packet, SendType sendType, bool start_conversation = false) {
-        //     // base.SendP2P(player, packet, sendType, start_conversation);
-            
-        //     // RainMeadow.Error("UNIMPLEMENTED");
-        // }
-
-
 
         public override void SendSessionData(OnlinePlayer toPlayer)
         {
@@ -47,7 +40,9 @@ namespace RainMeadow
         }
         public override void Update()
         {
-            if (MatchmakingManager.currentDomain != MatchmakingManager.MatchMakingDomain.Steam) {
+            SteamAPI.RunCallbacks();
+            if (MatchmakingManager.currentDomain != MatchmakingManager.MatchMakingDomain.Steam)
+            {
                 return;
             }
             
