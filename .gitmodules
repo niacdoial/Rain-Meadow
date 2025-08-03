@@ -1,0 +1,3 @@
+[submodule "MeadowSharedCode"]
+	path = MeadowSharedCode
+	url = https://github.com/niacdoial/Rain-Meadow-Shared-Code.git
