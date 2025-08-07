@@ -10,7 +10,11 @@ using RainMeadow.Shared;
 
 namespace RainMeadow
 {
-
+    public partial class NetworkDomain
+    {
+        static partial void PlatformLanAvailable(ref bool val) { val = NetworkDomain.PlatformUDPManager is not null; }
+    }
+    
     public partial class LANNetworkDomain
     {
         public override void SendSessionData(OnlinePlayer toPlayer)

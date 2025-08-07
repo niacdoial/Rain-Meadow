@@ -6,6 +6,10 @@ using System.Linq;
 
 namespace RainMeadow
 {
+    public partial class NetworkDomain
+    {
+        static partial void PlatformSteamAvailable(ref bool val) { val = SteamManager.Initialized && SteamUser.BLoggedOn(); }
+    }
 
     public partial class SteamNetworkDomain : NetworkDomain
     {
