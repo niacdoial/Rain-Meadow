@@ -71,7 +71,7 @@ public class ArenaMainLobbyPage : PositionedMenuObject
         Container.AddChild(chatLobbyStateDivider);
 
         BuildPlayerDisplay();
-        MatchmakingManager.OnPlayerListReceived += OnlineManager_OnPlayerListReceived;
+        NetworkDomain.OnPlayerListReceived += OnlineManager_OnPlayerListReceived;
         arenaInfoButton = new(menu, this, "Meadow_Menu_SmallQuestionMark", "", new Vector2(chatMenuBox.pos.x + chatMenuBox.size.x / 2 - 12, playerDisplayer!.pos.y + playerDisplayer.scrollUpButton!.pos.y), "");
         arenaInfoButton.OnClick += _ => OpenInfoDialog();
 

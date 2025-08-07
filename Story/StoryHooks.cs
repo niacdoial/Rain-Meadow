@@ -1179,7 +1179,7 @@ namespace RainMeadow
                 self.AddPart(new SpectatorHud(self, cam));
                 self.AddPart(new Pointing(self));
 
-                if (MatchmakingManager.currentInstance.canSendChatMessages)
+                if (NetworkDomain.currentInstance.canSendChatMessages)
                     self.AddPart(new ChatHud(self, cam));
             }
         }

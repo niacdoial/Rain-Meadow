@@ -426,7 +426,7 @@ namespace RainMeadow
                 {
                     var args = System.Environment.GetCommandLineArgs();
 
-                    MatchmakingManager.JoinLobbyUsingCode(string.Join(" ", args));
+                    NetworkDomain.JoinLobbyUsingCode(string.Join(" ", args));
                 }
                 catch (Exception ex)
                 {
@@ -454,7 +454,7 @@ namespace RainMeadow
             var meadowButton = new SimpleButton(self, self.pages[0], self.Translate("MEADOW"), "MEADOW", Vector2.zero, new Vector2(Menu.MainMenu.GetButtonWidth(self.CurrLang), 30f));
             self.AddMainMenuButton(meadowButton, () =>
             {
-                if (!MatchmakingManager.supported_matchmakers.Contains(MatchmakingManager.MatchMakingDomain.Steam) && !showed_no_steam_warning)
+                if (!NetworkDomain.supportedDomains.Contains(NetworkDomain.NetworkDomainType.Steam) && !showed_no_steam_warning)
                 {
                     showed_no_steam_warning = true;
                     self.manager.ShowDialog(new DialogNotify(self.LongTranslate("Steam is not currently available. Some features of Rain Meadow have been disabled."), self.manager,

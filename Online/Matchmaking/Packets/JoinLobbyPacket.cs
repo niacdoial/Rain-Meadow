@@ -9,23 +9,22 @@ namespace RainMeadow
 
         public override void Process()
         {
-            if (MatchmakingManager.currentDomain != MatchmakingManager.MatchMakingDomain.LAN) return;
+            if (NetworkDomain.currentDomain != NetworkDomain.NetworkDomainType.LAN) return;
             var newLobbyInfo = MakeLobbyInfo();
 
             // If we don't have a lobby and we a currently joining a lobby
             if (OnlineManager.lobby is null && OnlineManager.currentlyJoiningLobby is not null)
             {
                 // If the lobby we want to join is a lan lobby
-                if (OnlineManager.currentlyJoiningLobby is LANMatchmakingManager.LANLobbyInfo oldLobbyInfo)
+                if (OnlineManager.currentlyJoiningLobby is LANNetworkDomain.LANLobbyInfo oldLobbyInfo)
                 {
                     // If the lobby we want to join is the lobby that allowed us to join.
                     if (UDPPeerManager.CompareIPEndpoints(oldLobbyInfo.endPoint, newLobbyInfo.endPoint))
                     {
                         OnlineManager.currentlyJoiningLobby = newLobbyInfo;
-                        var matchmaker = (LANMatchmakingManager)MatchmakingManager.instances[MatchmakingManager.MatchMakingDomain.LAN];
-                        var processingPlayer = matchmaker.GetPlayerLAN(processingEndpoint, true);
-                        (MatchmakingManager.instances[MatchmakingManager.MatchMakingDomain.LAN] as LANMatchmakingManager).maxplayercount = newLobbyInfo.maxPlayerCount;
-                        (MatchmakingManager.instances[MatchmakingManager.MatchMakingDomain.LAN] as LANMatchmakingManager).LobbyAcknoledgedUs(processingPlayer);
+                        var processingPlayer = NetworkDomain.LAN.GetPlayerLAN(processingEndpoint, true);
+                        NetworkDomain.LAN.maxplayercount = newLobbyInfo.maxPlayerCount;
+                        NetworkDomain.LAN.LobbyAcknoledgedUs(processingPlayer);
                     }
                 }
             }

@@ -29,17 +29,12 @@ namespace RainMeadow
 
         public OnlineManager(ProcessManager manager) : base(manager, RainMeadow.Ext_ProcessID.OnlineManager)
         {
-            NetIO.InitializesNetIO();
             instance = this;
             framesPerSecond = 20; // alternatively, run as fast as we can for the receiving stuff, but send on a lower tickrate?
             milisecondsPerFrame = 1000 / framesPerSecond;
-            MatchmakingManager.InitLobbyManager();
+            NetworkDomain.Initialize();
             LeaveLobby();
-            MatchmakingManager.OnLobbyJoined += OnlineManager_OnLobbyJoined;
-            MatchmakingManager.changedMatchMaker += (MatchmakingManager.MatchMakingDomain last, MatchmakingManager.MatchMakingDomain current) => {
-                MatchmakingManager.instances[last].LeaveLobby();
-                LeaveLobby();
-            };
+            NetworkDomain.OnLobbyJoined += OnlineManager_OnLobbyJoined;
             RainMeadow.Debug("OnlineManager Created");
         }
 
@@ -63,8 +58,8 @@ namespace RainMeadow
         public static void LeaveLobby()
         {
             ChatLogManager.ResetPlayerColors();
-            MatchmakingManager.currentInstance.LeaveLobby();
-            NetIO.currentInstance?.ForgetEverything();
+            NetworkDomain.currentInstance.HandleLeavingLobby();
+            NetworkDomain.currentInstance.ForgetEverything();
             lobby = null;
 
             subscriptions = new();
@@ -77,7 +72,7 @@ namespace RainMeadow
 
             RainMeadowModManager.Reset();
             
-            MatchmakingManager.currentInstance.initializeMePlayer();
+            NetworkDomain.currentInstance.initializeMePlayer();
             players = new List<OnlinePlayer>() { mePlayer };
 
             instance.manager.rainWorld.progression.Destroy();
@@ -88,7 +83,7 @@ namespace RainMeadow
         public override void RawUpdate(float dt)
         {
             myTimeStacker += dt * (float)framesPerSecond;
-            NetIO.currentInstance?.Update(); // incoming data
+            NetworkDomain.currentInstance?.RecieveData(); // incoming data
             lastReceive = UnityEngine.Time.realtimeSinceStartup;
 
             if (myTimeStacker >= 1f)
@@ -105,7 +100,7 @@ namespace RainMeadow
         // from a force-load situation
         public static void ForceLoadUpdate()
         {
-            NetIO.currentInstance?.Update();
+            NetworkDomain.currentInstance?.RecieveData();
             lastReceive = UnityEngine.Time.realtimeSinceStartup;
 
             if (UnityEngine.Time.realtimeSinceStartup > lastSend + 1f / instance.framesPerSecond)
@@ -166,7 +161,7 @@ namespace RainMeadow
 
             if (toPlayer.needsAck || toPlayer.OutgoingEvents.Count > 0 || toPlayer.OutgoingStates.Count > 0)
             {
-                NetIO.currentInstance?.SendSessionData(toPlayer);
+                NetworkDomain.currentInstance?.SendSessionData(toPlayer);
             }
         }
 

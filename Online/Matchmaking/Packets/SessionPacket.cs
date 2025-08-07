@@ -31,11 +31,9 @@ namespace RainMeadow
         {
             if (OnlineManager.lobby is not null)
             {
-                if (MatchmakingManager.currentDomain != MatchmakingManager.MatchMakingDomain.LAN) return;
-                var lanmatchmaker = (LANMatchmakingManager)MatchmakingManager.instances[MatchmakingManager.MatchMakingDomain.LAN];
-
+                if (NetworkDomain.currentDomain != NetworkDomain.NetworkDomainType.LAN) return;
                 Buffer.BlockCopy(data, 0, OnlineManager.serializer.buffer, 0, size);
-                OnlineManager.serializer.ReadData(lanmatchmaker.GetPlayerLAN(processingEndpoint, true), size);
+                OnlineManager.serializer.ReadData(NetworkDomain.LAN?.GetPlayerLAN(processingEndpoint, true), size);
             }
         }
     }

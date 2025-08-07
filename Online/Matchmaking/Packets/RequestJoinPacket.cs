@@ -17,10 +17,9 @@ namespace RainMeadow
         public override void Process()
         {
             RainMeadow.DebugMe();
-            if (OnlineManager.lobby != null && MatchmakingManager.currentDomain == MatchmakingManager.MatchMakingDomain.LAN)
+            if (OnlineManager.lobby != null && NetworkDomain.currentDomain == NetworkDomain.NetworkDomainType.LAN)
             {
-                var matchmaker = (LANMatchmakingManager)MatchmakingManager.instances[MatchmakingManager.MatchMakingDomain.LAN];
-                var processingPlayer = matchmaker.GetPlayerLAN(processingEndpoint, true);
+                var processingPlayer = NetworkDomain.LAN?.GetPlayerLAN(processingEndpoint, true);
 
                 if (LanUserName.Length > 0)
                 {
@@ -29,18 +28,18 @@ namespace RainMeadow
 
                 // Tell everyone else about them
                 RainMeadow.Debug("Telling client they got in.");
-                matchmaker.AcknoledgeLANPlayer(processingPlayer);
+                NetworkDomain.LAN?.AcknoledgeLANPlayer(processingPlayer);
 
                 // Tell them they are in
-                ((LANNetIO)NetIO.instances[MatchmakingManager.MatchMakingDomain.LAN]).SendP2P(processingPlayer, new JoinLobbyPacket(
-                    matchmaker.maxplayercount,
+                NetworkDomain.LAN?.SendP2P(processingPlayer, new JoinLobbyPacket(
+                    NetworkDomain.LAN.maxplayercount,
                     "LAN Lobby",
                     OnlineManager.lobby.hasPassword,
                     OnlineManager.lobby.gameModeType.value,
                     OnlineManager.players.Count,
                     RainMeadowModManager.ModArrayToString(RainMeadowModManager.GetRequiredMods()),
                     RainMeadowModManager.ModArrayToString(RainMeadowModManager.GetBannedMods())
-                ), NetIO.SendType.Reliable);
+                ), UDPPeerManager.PacketType.Unreliable);
 
             }
         }

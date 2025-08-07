@@ -89,7 +89,7 @@ namespace RainMeadow
             {
                 if (msg.Length > 0 && !string.IsNullOrWhiteSpace(msg))
                 {
-                    MatchmakingManager.currentInstance.SendChatMessage(msg);
+                    NetworkDomain.currentInstance.SendChatMessage(msg);
                     foreach (var player in OnlineManager.players)
                     {
                         player.InvokeRPC(RPCs.UpdateUsernameTemporarily, msg);

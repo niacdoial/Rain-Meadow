@@ -675,7 +675,7 @@ namespace RainMeadow
                 ids = new(count);
                 for (int i = 0; i < count; i++)
                 {
-                    MeadowPlayerId s = MatchmakingManager.currentInstance.GetEmptyId();
+                    MeadowPlayerId s = NetworkDomain.currentInstance.GetEmptyId();
                     s.CustomSerialize(this);
                     ids.Add(s);
                 }

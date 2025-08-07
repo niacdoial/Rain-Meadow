@@ -16,9 +16,10 @@ namespace RainMeadow.UI.Components
             this.largeButtonHeightSpacing = largeButtonHeightSpacing;
             this.smallButtonHeightSpacing = smallButtonHeightSpacing;
             inviteFriends = this.AddSideButton("Meadow_Menu_InviteFriends", description: menu.Translate("Invite friends"), signal: "INVITE_FRIENDS");
+            inviteFriends.buttonBehav.greyedOut = NetworkDomain.currentInstance.canOpenInvitations;
             inviteFriends.OnClick += (_) =>
             {
-                    MatchmakingManager.currentInstance.OpenInvitationOverlay();
+                    NetworkDomain.currentInstance.OpenInvitationOverlay();
             };
             refreshDisplayButtons = PopulatePlayerDisplays;
             UpdatePlayerList(onlinePlayers);

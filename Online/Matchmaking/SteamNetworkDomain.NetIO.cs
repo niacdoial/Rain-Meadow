@@ -1,27 +1,23 @@
-using Steamworks;
 using System;
-using System.IO;
-using System.Net;
+using System.Collections.Generic;
+using System.ComponentModel;
+using System.Linq;
 using System.Runtime.InteropServices;
-
+using HarmonyLib;
+using Menu;
+using Steamworks;
 
 namespace RainMeadow
 {
 
-    partial class NetIOPlatform {
-        static partial void PlatformSteamAvailable(ref bool val) {
-            val = SteamManager.Instance.m_bInitialized && SteamUser.BLoggedOn();
-        }
-    }
-
-    class SteamNetIO : NetIO {
-
+    public partial class SteamNetworkDomain
+    {
         public override void SendSessionData(OnlinePlayer toPlayer)
         {
             try
             {
                 OnlineManager.serializer.WriteData(toPlayer);
-                var steamNetId = (toPlayer.id as SteamMatchmakingManager.SteamPlayerId).oid;
+                var steamNetId = (toPlayer.id as SteamNetworkDomain.SteamPlayerId).oid;
                 unsafe
                 {
                     fixed (byte* dataPointer = OnlineManager.serializer.buffer)
@@ -36,16 +32,10 @@ namespace RainMeadow
                 OnlineManager.serializer.EndWrite();
                 throw;
             }
-                
+
         }
-        public override void Update()
+        public override void RecieveData()
         {
-            SteamAPI.RunCallbacks();
-            if (MatchmakingManager.currentDomain != MatchmakingManager.MatchMakingDomain.Steam)
-            {
-                return;
-            }
-            
             SteamAPI.RunCallbacks();
             lock (OnlineManager.serializer)
             {
@@ -62,8 +52,8 @@ namespace RainMeadow
                             if (OnlineManager.lobby != null)
                             {
 
-                                var fromPlayer = (MatchmakingManager.instances[MatchmakingManager.MatchMakingDomain.Steam] as SteamMatchmakingManager).GetPlayerSteam(message.m_identityPeer.GetSteamID().m_SteamID);
-                                if (fromPlayer == null)
+                                var fromPlayer = NetworkDomain.Steam?.GetPlayerSteam(message.m_identityPeer.GetSteamID().m_SteamID);
+                                if (fromPlayer is null)
                                 {
                                     RainMeadow.Error("player not found: " + message.m_identityPeer + " " + message.m_identityPeer.GetSteamID());
                                     continue;
@@ -89,6 +79,15 @@ namespace RainMeadow
                 while (n > 0);
             }
         }
-    }
+        public override void ForgetPlayer(OnlinePlayer player)
+        {
 
+        }
+
+        public override void ForgetEverything()
+        {
+
+        }
+
+    }
 }

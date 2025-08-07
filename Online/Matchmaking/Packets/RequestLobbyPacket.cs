@@ -8,11 +8,11 @@ namespace RainMeadow
 
         public override void Process()
         {
-            if (MatchmakingManager.currentDomain != MatchmakingManager.MatchMakingDomain.LAN) return;
+            if (NetworkDomain.currentDomain != NetworkDomain.NetworkDomainType.LAN) return;
             if (OnlineManager.lobby != null)
             {
                 RainMeadow.DebugMe();
-                (MatchmakingManager.instances[MatchmakingManager.MatchMakingDomain.LAN] as LANMatchmakingManager).SendLobbyInfo(processingEndpoint);
+                NetworkDomain.LAN?.SendLobbyInfo(processingEndpoint);
             }
 
         }

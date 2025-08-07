@@ -8,7 +8,8 @@ namespace RainMeadow
         public string name;
 
         public virtual string GetPersonaName() { return name; }
-        public virtual void OpenProfileLink() {
+        public virtual void OpenProfileLink()
+        {
             OnlineManager.instance.manager.ShowDialog(new DialogNotify(Utils.Translate("This player does not have a profile."), OnlineManager.instance.manager, null));
         }
         public virtual bool canOpenProfileLink { get => false; }

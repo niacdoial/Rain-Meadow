@@ -62,7 +62,7 @@ namespace RainMeadow
             BindSettings();
             BuildLayout();
 
-            MatchmakingManager.OnPlayerListReceived += OnlineManager_OnPlayerListReceived;
+            NetworkDomain.OnPlayerListReceived += OnlineManager_OnPlayerListReceived;
             if (arena.currentGameMode == "" || arena.currentGameMode is null)
             {
                 arena.currentGameMode = FFA.FFAMode.value;

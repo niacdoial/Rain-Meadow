@@ -192,7 +192,7 @@ namespace RainMeadow.UI.Components
                     if (msg.Length > 0 && !string.IsNullOrWhiteSpace(msg))
                     {
                         // /n is type a new line, not supported and usually its ENTER, so we sending message. sending to players if messg has one letter
-                        MatchmakingManager.currentInstance.SendChatMessage(msg);
+                        NetworkDomain.currentInstance.SendChatMessage(msg);
                         foreach (var player in OnlineManager.players)
                         {
                             player.InvokeRPC(RPCs.UpdateUsernameTemporarily, msg);

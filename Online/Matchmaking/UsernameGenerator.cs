@@ -6,13 +6,13 @@ namespace RainMeadow
     {
         private static readonly string[] Adjectives =
         {
-        "brave", "quick", "silent", "happy", "angry", "noble", "sly", "curious", "wise", "bold", "fearful", "sad"
-    };
+            "brave", "quick", "silent", "happy", "angry", "noble", "sly", "curious", "wise", "bold", "fearful", "sad", "ancient"
+        };
 
         private static readonly string[] Nouns =
         {
-        "slugcat", "vulture", "lizard", "scavenger", "guardian", "noodlefly", "pearl", "rainworld", "shelter", "iterator"
-    };
+            "slugcat", "vulture", "lizard", "scavenger", "guardian", "noodlefly", "pearl", "benefactor", "shelter", "iterator"
+        };
 
         public static string GenerateRandomUsername(int seed)
         {

@@ -2,44 +2,62 @@
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
+using HarmonyLib;
 using Menu;
+using RainMeadow.Shared;
 
 namespace RainMeadow
 {
 
-    // Contemplating on renaming this class as it has a lot more responcibilities than just matchmaking
-    public abstract class MatchmakingManager
+    public abstract partial class NetworkDomain
     {
-        public class MatchMakingDomain: ExtEnum<MatchMakingDomain> {
-            public MatchMakingDomain(string name, bool register) : base(name, register) { }
+        public class NetworkDomainType : ExtEnum<NetworkDomainType>
+        {
+            public NetworkDomainType(string name, bool register) : base(name, register) { }
 
-            public static MatchMakingDomain LAN = new MatchMakingDomain("Local", true);
+            public static NetworkDomainType LAN = new NetworkDomainType("Local", true);
             // public static MatchMakingDomain Router = new MatchMakingDomain("Router", true);
-            public static MatchMakingDomain Steam = new MatchMakingDomain("Steam", true);
+            public static NetworkDomainType Steam = new NetworkDomainType("Steam", true);
 
 
         };
 
+        static partial void PlatformSteamAvailable(ref bool val);
+        static partial void PlatformLanAvailable(ref bool val);
+        static partial void PlatformRouterAvailable(ref bool val);
 
-        public static event LobbyListReceived_t OnLobbyListReceived = delegate {};
-        public static event PlayerListReceived_t OnPlayerListReceived = delegate {};
-        public static event LobbyJoined_t OnLobbyJoined = delegate {};
+
+        public static bool isSteamAvailable { get { bool val = false; PlatformSteamAvailable(ref val); return val; } }
+        public static bool isLANAvailable { get { bool val = false; PlatformLanAvailable(ref val); return val; } }
+        public static bool isRouterAvailable { get { bool val = false; PlatformRouterAvailable(ref val); return val; } }
+        public static UDPPeerManager? PlatformUDPManager { get; private set; }
+
+
+        public static event LobbyListReceived_t OnLobbyListReceived = delegate { };
+        public static event PlayerListReceived_t OnPlayerListReceived = delegate { };
+        public static event LobbyJoined_t OnLobbyJoined = delegate { };
 
         protected static void OnLobbyJoinedEvent(bool ok, string error = "") => OnLobbyJoined?.Invoke(ok, error);
         protected static void OnPlayerListReceivedEvent(PlayerInfo[] players) => OnPlayerListReceived?.Invoke(players);
         protected static void OnLobbyListReceivedEvent(bool ok, LobbyInfo[] lobbies) => OnLobbyListReceived?.Invoke(ok, lobbies);
 
         public static event ChangedMatchMakingDomain_t changedMatchMaker = delegate { };
-        public delegate void ChangedMatchMakingDomain_t(MatchMakingDomain last, MatchMakingDomain current);
+        public delegate void ChangedMatchMakingDomain_t(NetworkDomainType last, NetworkDomainType current);
 
-        private static MatchMakingDomain _Domain = MatchMakingDomain.LAN;
+        private static NetworkDomainType _Domain = NetworkDomainType.LAN;
 
-        public static MatchMakingDomain currentDomain { get { return _Domain; } set { 
-                        var last = _Domain; 
-                        _Domain = value; 
-                        changedMatchMaker.Invoke(last, _Domain);  }} 
-        public static MatchmakingManager currentInstance { get => instances[currentDomain]; }
-        public static Dictionary<MatchMakingDomain, MatchmakingManager> instances = new Dictionary<MatchMakingDomain, MatchmakingManager>();
+        public static NetworkDomainType currentDomain
+        {
+            get { return _Domain; }
+            set
+            {
+                var last = _Domain;
+                _Domain = value;
+                changedMatchMaker.Invoke(last, _Domain);
+            }
+        }
+        public static NetworkDomain currentInstance { get => instances[currentDomain]; }
+        public static Dictionary<NetworkDomainType, NetworkDomain> instances = new Dictionary<NetworkDomainType, NetworkDomain>();
 
 
         public static string CLIENT_KEY = "client";
@@ -51,34 +69,50 @@ namespace RainMeadow
         public static string PASSWORD_KEY = "password";
         public static int MAX_LOBBY = 4;
 
-        static public readonly List<MatchMakingDomain> supported_matchmakers = new();
+        static public readonly List<NetworkDomainType> supportedDomains = new();
 
-        public static void InitLobbyManager()
+        static public LANNetworkDomain? LAN => instances.GetValueSafe(NetworkDomainType.LAN) as LANNetworkDomain;
+        static public SteamNetworkDomain? Steam => instances.GetValueSafe(NetworkDomainType.Steam) as SteamNetworkDomain;
+
+        public static void Initialize()
         {
-            supported_matchmakers.Clear();
+            supportedDomains.Clear();
             instances.Clear();
 
-            if (NetIOPlatform.isLANAvailable) {
-                supported_matchmakers.Add(MatchMakingDomain.LAN); 
-                instances.Add(MatchMakingDomain.LAN, new LANMatchmakingManager());
-                currentDomain = MatchMakingDomain.LAN;
+            try
+            {
+                PlatformUDPManager = new();
             }
-                
-            // if (NetIOPlatform.isRouterAvailable) {
+            catch (Exception except)
+            {
+                RainMeadow.Error(except);
+            }
+
+
+            if (isLANAvailable)
+            {
+                supportedDomains.Add(NetworkDomainType.LAN);
+                instances.Add(NetworkDomainType.LAN, new LANNetworkDomain());
+                currentDomain = NetworkDomainType.LAN;
+            }
+
+            // if (isRouterAvailable) {
             //     supported_matchmakers.Add(MatchMakingDomain.Router);
             //     instances.Add(MatchMakingDomain.Router, new RouterMatchmakingManager());
             //     currentDomain = MatchMakingDomain.Router;
             // }
 
-            if (NetIOPlatform.isSteamAvailable) {
-                instances.Add(MatchMakingDomain.Steam, new SteamMatchmakingManager());
-                supported_matchmakers.Add(MatchMakingDomain.Steam);
-                currentDomain = MatchMakingDomain.Steam;
+            if (isSteamAvailable)
+            {
+                instances.Add(NetworkDomainType.Steam, new SteamNetworkDomain());
+                supportedDomains.Add(NetworkDomainType.Steam);
+                currentDomain = NetworkDomainType.Steam;
             }
-      
 
+            if (!supportedDomains.Any()) throw new Exception("No supported networking domains.");
             OnlineManager.LeaveLobby();
-            changedMatchMaker += (last, current) => {
+            changedMatchMaker += (last, current) =>
+            {
                 OnlineManager.LeaveLobby();
             };
         }
@@ -106,11 +140,12 @@ namespace RainMeadow
         public abstract void JoinLobby(bool success);
 
         public abstract void JoinLobbyUsingArgs(params string?[] args);
-        public static void JoinLobbyUsingCode(string code) {
+        public static void JoinLobbyUsingCode(string code)
+        {
             RainMeadow.Debug($"Attempting to join lobby with code: {code}");
 
             string[] args = code.Split(' ');
-            
+
             int connect_steam_idx = Array.IndexOf(args, "+connect_lobby"),
                 connect_lan_idx = Array.IndexOf(args, "+connect_lan_lobby"),
                 password_idx = Array.IndexOf(args, "+lobby_password");
@@ -125,9 +160,9 @@ namespace RainMeadow
             {
                 if (args.Length > connect_steam_idx + 1)
                 {
-                    foreach (var domain in supported_matchmakers)
+                    foreach (var domain in supportedDomains)
                     {
-                        if (domain == MatchMakingDomain.Steam)
+                        if (domain == NetworkDomainType.Steam)
                         {
                             //switch domain if necessary
                             if (currentDomain != domain)
@@ -144,9 +179,9 @@ namespace RainMeadow
             {
                 if (args.Length > connect_lan_idx + 2)
                 {
-                    foreach (var domain in supported_matchmakers)
+                    foreach (var domain in supportedDomains)
                     {
-                        if (domain == MatchMakingDomain.LAN)
+                        if (domain == NetworkDomainType.LAN)
                         {
                             //switch domain if necessary
                             if (currentDomain != domain)
@@ -162,7 +197,7 @@ namespace RainMeadow
             RainMeadow.Debug("No lobby found in that code.");
         }
 
-        public abstract void LeaveLobby();
+        public abstract void HandleLeavingLobby();
 
         public abstract OnlinePlayer GetLobbyOwner();
 
@@ -183,11 +218,13 @@ namespace RainMeadow
 
         public virtual bool canSendChatMessages => false;
         public virtual void SendChatMessage(string message) { }
-        public virtual void RecieveChatMessage(OnlinePlayer player, string message) { 
+        public virtual void RecieveChatMessage(OnlinePlayer player, string message)
+        {
             ChatLogManager.LogMessage($"{player.id.GetPersonaName()}", $"{message}");
         }
 
-        public void HandleJoin(OnlinePlayer player) {
+        public void HandleJoin(OnlinePlayer player)
+        {
             if (OnlineManager.lobby != null && OnlineManager.mePlayer == OnlineManager.lobby.owner && OnlineManager.lobby.bannedUsers.list.Contains(player.id))
             {
                 BanHammer.BanUser(player);
@@ -209,7 +246,7 @@ namespace RainMeadow
             }
             RainMeadow.Debug($"Actually removing player:{player}");
             OnlineManager.players.Remove(player);
-            NetIO.currentInstance?.ForgetPlayer(player);
+            ForgetPlayer(player);
 
             ChatLogManager.LogSystemMessage((player.id.GetPersonaName()) + " " + Utils.Translate("left the game."));
         }
@@ -218,8 +255,9 @@ namespace RainMeadow
 
         public abstract string GetLobbyID();
 
-        public abstract bool canOpenInvitations { get; } 
-        public virtual void OpenInvitationOverlay() {
+        public abstract bool canOpenInvitations { get; }
+        public virtual void OpenInvitationOverlay()
+        {
             OnlineManager.instance.manager.ShowDialog(new DialogNotify("You cannot use this feature here.", OnlineManager.instance.manager, null));
         }
     }

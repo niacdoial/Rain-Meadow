@@ -29,9 +29,9 @@ namespace RainMeadow
         public override Type type => Type.ChatMessage;
 
         public override void Process() {
-            var matchmaker = (LANMatchmakingManager)MatchmakingManager.instances[MatchmakingManager.MatchMakingDomain.LAN];
+            var matchmaker = (LANNetworkDomain)NetworkDomain.instances[NetworkDomain.NetworkDomainType.LAN];
             var processingPlayer = matchmaker.GetPlayerLAN(processingEndpoint, true);
-            MatchmakingManager.currentInstance.RecieveChatMessage(processingPlayer, message);
+            NetworkDomain.currentInstance.RecieveChatMessage(processingPlayer, message);
         }
     }
 }

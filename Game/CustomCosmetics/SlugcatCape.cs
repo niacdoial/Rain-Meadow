@@ -153,7 +153,7 @@ namespace RainMeadow
         static public Color? HasCape(MeadowPlayerId player)
         {
             if (cape_cache.TryGetValue(player, out var entry) && entry is not null) return (Color)entry;
-            if (player is SteamMatchmakingManager.SteamPlayerId steamid)
+            if (player is SteamNetworkDomain.SteamPlayerId steamid)
             {
                 ulong steamID = steamid.oid.GetSteamID64();
                 SHA256 Sha = SHA256.Create();
@@ -166,7 +166,7 @@ namespace RainMeadow
                 }
             }
 
-            if (player is LANMatchmakingManager.LANPlayerId lanPlayer)
+            if (player is LANNetworkDomain.LANPlayerId lanPlayer)
             {
                 if (lanPlayer.name == "goldcape") return RainWorld.SaturatedGold;
                 if (lanPlayer.name == "redcape") return Color.red;

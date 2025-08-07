@@ -156,7 +156,7 @@ namespace RainMeadow
             var directConnectButton = new SimplerButton(this, mainPage, Translate("Direct Connect"), new Vector2(where.x, where.y), new Vector2(160f, 30f));
             directConnectButton.OnClick += (_) =>
             {   
-                if (MatchmakingManager.currentDomain != MatchmakingManager.MatchMakingDomain.LAN)
+                if (NetworkDomain.currentDomain != NetworkDomain.NetworkDomainType.LAN)
                 {
                     ShowErrorDialog("Direct Connection is only available in the Local Matchmaker");
                     return;
@@ -172,11 +172,11 @@ namespace RainMeadow
 
             mainPage.subObjects.Add(directConnectButton);
             
-            domainDropDown = new OpComboBox2(new Configurable<MatchmakingManager.MatchMakingDomain>(
-                MatchmakingManager.currentDomain), where, 160f - 35f, 
-                MatchmakingManager.supported_matchmakers.Select(x => new ListItem(x.value, Utils.Translate(x.value))).ToList()) { colorEdge = MenuColorEffect.rgbWhite };
+            domainDropDown = new OpComboBox2(new Configurable<NetworkDomain.NetworkDomainType>(
+                NetworkDomain.currentDomain), where, 160f - 35f, 
+                NetworkDomain.supportedDomains.Select(x => new ListItem(x.value, Utils.Translate(x.value))).ToList()) { colorEdge = MenuColorEffect.rgbWhite };
             domainDropDown.OnChange += () => {
-                MatchmakingManager.currentDomain = new MatchmakingManager.MatchMakingDomain(domainDropDown.value, false);
+                NetworkDomain.currentDomain = new NetworkDomain.NetworkDomainType(domainDropDown.value, false);
                 lobbyList.ClearLobbies();
                 lobbyList.CreateCards();
                 RefreshLobbyList(null);
@@ -194,13 +194,13 @@ namespace RainMeadow
             // }
 
             // // Lobby machine go!
-            MatchmakingManager.OnLobbyListReceived += OnlineManager_OnLobbyListReceived;
-            MatchmakingManager.OnLobbyJoined += OnlineManager_OnLobbyJoined;
-            if (MatchmakingManager.supported_matchmakers.Contains(MatchmakingManager.MatchMakingDomain.Steam)) {
+            NetworkDomain.OnLobbyListReceived += OnlineManager_OnLobbyListReceived;
+            NetworkDomain.OnLobbyJoined += OnlineManager_OnLobbyJoined;
+            if (NetworkDomain.supportedDomains.Contains(NetworkDomain.NetworkDomainType.Steam)) {
                 SteamNetworkingUtils.InitRelayNetworkAccess();
             }   
             
-            MatchmakingManager.currentInstance.RequestLobbyList();
+            NetworkDomain.currentInstance.RequestLobbyList();
 
             manager.musicPlayer?.MenuRequestsSong("Establish", 1, 0);
         }
@@ -271,7 +271,7 @@ namespace RainMeadow
 
 
             if (care_about_lobby_size) {
-                MatchmakingManager.MAX_LOBBY = lobbyInfo.maxPlayerCount;
+                NetworkDomain.MAX_LOBBY = lobbyInfo.maxPlayerCount;
                 if (lobbyInfo.playerCount >= lobbyInfo.maxPlayerCount)
                 {
                     ShowErrorDialog("Failed to join lobby.<LINE> Lobby is full");
@@ -290,7 +290,7 @@ namespace RainMeadow
 
             lastClickedLobby = lobbyInfo;
 
-            if (lobbyInfo is LANMatchmakingManager.LANLobbyInfo) {
+            if (lobbyInfo is LANNetworkDomain.LANLobbyInfo) {
                 RainMeadow.DebugMe();
                 RainMeadow.Debug($"{lobbyInfo.name}, {lobbyInfo.maxPlayerCount}, {lobbyInfo.mode}, {lobbyInfo.playerCount}, {lobbyInfo.hasPassword}");
             }
@@ -311,7 +311,7 @@ namespace RainMeadow
 
         private void RefreshLobbyList(SymbolButton obj)
         {
-            MatchmakingManager.currentInstance.RequestLobbyList();
+            NetworkDomain.currentInstance.RequestLobbyList();
         }
 
         public void StartJoiningLobby(LobbyInfo lobby, string? password = null, bool checkMods = true)
@@ -335,7 +335,7 @@ namespace RainMeadow
         public void RequestLobbyJoin(LobbyInfo lobby, string? password = null)
         {
             RainMeadow.DebugMe();
-            MatchmakingManager.currentInstance.RequestJoinLobby(lobby, password);
+            NetworkDomain.currentInstance.RequestJoinLobby(lobby, password);
         }
 
         private void OnlineManager_OnLobbyListReceived(bool ok, LobbyInfo[] lobbies)
@@ -370,8 +370,8 @@ namespace RainMeadow
 
         public override void ShutDownProcess()
         {
-            MatchmakingManager.OnLobbyListReceived -= OnlineManager_OnLobbyListReceived;
-            MatchmakingManager.OnLobbyJoined -= OnlineManager_OnLobbyJoined;
+            NetworkDomain.OnLobbyListReceived -= OnlineManager_OnLobbyListReceived;
+            NetworkDomain.OnLobbyJoined -= OnlineManager_OnLobbyJoined;
             base.ShutDownProcess();
         }
 
@@ -466,7 +466,7 @@ namespace RainMeadow
                     var dialogue = popupDialog as DirectConnectionDialogue;
                     var endpoint = UDPPeerManager.GetEndPointByName(dialogue?.IPBox?.value ?? "");
                     if (endpoint != null) {
-                        var fakelobbyinfo = new LANMatchmakingManager.LANLobbyInfo(endpoint, "Direct Connection", "Meadow", 0, true, 2);
+                        var fakelobbyinfo = new LANNetworkDomain.LANLobbyInfo(endpoint, "Direct Connection", "Meadow", 0, true, 2);
                         Action join = () => {
                             GreyOutLobbyCards(true);
                             StartJoiningLobby(fakelobbyinfo,

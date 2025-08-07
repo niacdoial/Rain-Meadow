@@ -110,7 +110,7 @@ namespace RainMeadow
             SetupOnlineMenuItems();
             UpdatePlayerList();
 
-            MatchmakingManager.OnPlayerListReceived += OnlineManager_OnPlayerListReceived;
+            NetworkDomain.OnPlayerListReceived += OnlineManager_OnPlayerListReceived;
 
             ChatTextBox.OnShutDownRequest += ResetChatInput;
             ChatLogManager.Subscribe(this);
@@ -483,9 +483,12 @@ namespace RainMeadow
             pages[0].subObjects.Add(lobbyLabel);
 
             var invite = new SimplerButton(this, pages[0], Translate("Invite Friends"), new(nextButton.pos.x + 80f, 50f), new(110, 35));
-            if (MatchmakingManager.currentInstance.canOpenInvitations) {
-                invite.OnClick += (_) => MatchmakingManager.currentInstance.OpenInvitationOverlay();
-            } else {
+            if (NetworkDomain.currentInstance.canOpenInvitations)
+            {
+                invite.OnClick += (_) => NetworkDomain.currentInstance.OpenInvitationOverlay();
+            }
+            else
+            {
                 invite.GetButtonBehavior.greyedOut = true;
             }
             

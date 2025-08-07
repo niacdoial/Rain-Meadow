@@ -55,19 +55,19 @@ namespace RainMeadow
 
         public override void Process()
         {
-            if (MatchmakingManager.currentDomain != MatchmakingManager.MatchMakingDomain.LAN) return;
+            if (NetworkDomain.currentDomain != NetworkDomain.NetworkDomainType.LAN) return;
             if (OnlineManager.instance != null && OnlineManager.lobby != null) {
                 if (OnlineManager.lobby.isOwner) {
                     RainMeadow.DebugMe();
                     var lobbyinfo = MakeLobbyInfo();
-                    (MatchmakingManager.instances[MatchmakingManager.MatchMakingDomain.LAN] as LANMatchmakingManager).addLobby(lobbyinfo);
+                    NetworkDomain.LAN?.AddLobby(lobbyinfo);
                 }
             }
         }
 
-        public LANMatchmakingManager.LANLobbyInfo MakeLobbyInfo()
+        public LANNetworkDomain.LANLobbyInfo MakeLobbyInfo()
         {
-            return new LANMatchmakingManager.LANLobbyInfo(processingEndpoint, name, mode, currentplayercount, passwordprotected, maxplayers, mods, bannedMods);
+            return new LANNetworkDomain.LANLobbyInfo(processingEndpoint, name, mode, currentplayercount, passwordprotected, maxplayers, mods, bannedMods);
         }
 
     }

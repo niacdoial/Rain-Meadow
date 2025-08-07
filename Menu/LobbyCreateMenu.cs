@@ -52,7 +52,7 @@ public class LobbyCreateMenu : SmartMenu
         var visibilityLabel = new ProperlyAlignedMenuLabel(this, mainPage, Translate("Visibility:"), where, new Vector2(200, 20f), false);
         mainPage.subObjects.Add(visibilityLabel);
         where.x += 80;
-        visibilityDropDown = new OpComboBox2(new Configurable<MatchmakingManager.LobbyVisibility>(MatchmakingManager.LobbyVisibility.Public), where, 160, OpResourceSelector.GetEnumNames(null, typeof(MatchmakingManager.LobbyVisibility)).Select(li => { li.displayName = Translate(li.displayName); return li; }).ToList()) { colorEdge = MenuColorEffect.rgbWhite };
+        visibilityDropDown = new OpComboBox2(new Configurable<NetworkDomain.LobbyVisibility>(NetworkDomain.LobbyVisibility.Public), where, 160, OpResourceSelector.GetEnumNames(null, typeof(NetworkDomain.LobbyVisibility)).Select(li => { li.displayName = Translate(li.displayName); return li; }).ToList()) { colorEdge = MenuColorEffect.rgbWhite };
         new UIelementWrapper(this.tabWrapper, visibilityDropDown);
 
         
@@ -123,9 +123,9 @@ public class LobbyCreateMenu : SmartMenu
     private void RequestLobbyCreate()
     {
         RainMeadow.DebugMe();
-        Enum.TryParse<MatchmakingManager.LobbyVisibility>(visibilityDropDown.value, out var value);
+        Enum.TryParse<NetworkDomain.LobbyVisibility>(visibilityDropDown.value, out var value);
         string? password = passwordInputBox.value.IsNullOrWhiteSpace() ? null : passwordInputBox.value;
-        MatchmakingManager.currentInstance.CreateLobby(value, modeDropDown.value, password, maxPlayerCount);
+        NetworkDomain.currentInstance.CreateLobby(value, modeDropDown.value, password, maxPlayerCount);
     }
 
     private void ShowLoadingDialog(string text)
