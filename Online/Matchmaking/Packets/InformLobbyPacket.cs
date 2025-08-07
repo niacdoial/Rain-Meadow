@@ -1,4 +1,6 @@
 using System.IO;
+using RainMeadow.Shared;
+
 
 namespace RainMeadow
 {
@@ -12,7 +14,7 @@ namespace RainMeadow
         public string mods = "";
         public string bannedMods = "";
 
-        public InformLobbyPacket(): base() {}
+        public InformLobbyPacket() : base() { }
         public InformLobbyPacket(int maxplayers, string name, bool passwordprotected, string mode, int currentplayercount, string highImpactMods = "", string bannedMods = "")
         {
             this.currentplayercount = currentplayercount;
@@ -63,9 +65,9 @@ namespace RainMeadow
             }
         }
 
-        public LANMatchmakingManager.LANLobbyInfo MakeLobbyInfo() {
-            return new LANMatchmakingManager.LANLobbyInfo(
-                (processingPlayer.id as LANMatchmakingManager.LANPlayerId).endPoint, name, mode, currentplayercount, passwordprotected, maxplayers, mods, bannedMods); 
+        public LANMatchmakingManager.LANLobbyInfo MakeLobbyInfo()
+        {
+            return new LANMatchmakingManager.LANLobbyInfo(processingEndpoint, name, mode, currentplayercount, passwordprotected, maxplayers, mods, bannedMods);
         }
 
     }

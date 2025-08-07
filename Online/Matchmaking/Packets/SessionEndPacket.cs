@@ -1,3 +1,6 @@
+
+using RainMeadow.Shared;
+
 namespace RainMeadow
 {
     public class SessionEndPacket : Packet
@@ -7,7 +10,9 @@ namespace RainMeadow
         public override void Process()
         {
             if (MatchmakingManager.currentDomain != MatchmakingManager.MatchMakingDomain.LAN) return;
-            NetIO.currentInstance?.ForgetPlayer(processingPlayer);
+            var lanmatchmaker = (LANMatchmakingManager)MatchmakingManager.instances[MatchmakingManager.MatchMakingDomain.LAN];
+            var player = lanmatchmaker.GetPlayerLAN(processingEndpoint);
+            if (player is not null) NetIO.currentInstance?.ForgetPlayer(player);
         }
     }
 }

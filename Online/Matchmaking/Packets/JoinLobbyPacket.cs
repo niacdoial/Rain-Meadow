@@ -22,6 +22,8 @@ namespace RainMeadow
                     if (UDPPeerManager.CompareIPEndpoints(oldLobbyInfo.endPoint, newLobbyInfo.endPoint))
                     {
                         OnlineManager.currentlyJoiningLobby = newLobbyInfo;
+                        var matchmaker = (LANMatchmakingManager)MatchmakingManager.instances[MatchmakingManager.MatchMakingDomain.LAN];
+                        var processingPlayer = matchmaker.GetPlayerLAN(processingEndpoint, true);
                         (MatchmakingManager.instances[MatchmakingManager.MatchMakingDomain.LAN] as LANMatchmakingManager).maxplayercount = newLobbyInfo.maxPlayerCount;
                         (MatchmakingManager.instances[MatchmakingManager.MatchMakingDomain.LAN] as LANMatchmakingManager).LobbyAcknoledgedUs(processingPlayer);
                     }

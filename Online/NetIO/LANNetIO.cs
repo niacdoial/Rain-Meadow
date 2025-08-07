@@ -14,8 +14,30 @@ namespace RainMeadow
     }
 
     public class LANNetIO : NetIO {
-        public LANNetIO() {
+        public LANNetIO() {            
             if (NetIOPlatform.PlatformUDPManager is null) return;
+
+            Packet.packetFactory += (Packet.Type type, ref Packet? packet) =>
+            {
+                if (packet is null)
+                {
+                    packet = type switch
+                    {
+                        Packet.Type.RequestJoin => new RequestJoinPacket(),
+                        Packet.Type.ModifyPlayerList => new ModifyPlayerListPacket(),
+                        Packet.Type.JoinLobby => new JoinLobbyPacket(),
+                        Packet.Type.Session => new SessionPacket(),
+                        Packet.Type.SessionEnd => new SessionEndPacket(),
+                        Packet.Type.RequestLobby => new RequestLobbyPacket(),
+                        Packet.Type.InformLobby => new InformLobbyPacket(),
+                        Packet.Type.ChatMessage => new ChatMessagePacket(),
+
+                        _ => null
+                    };
+                }
+            };
+
+
             NetIOPlatform.PlatformUDPManager.OnPeerForgotten += (peer) => {
                 if (MatchmakingManager.currentDomain != MatchmakingManager.MatchMakingDomain.LAN) {
                     return;
@@ -68,21 +90,13 @@ namespace RainMeadow
             {
                 IPEndPoint point = new(IPAddress.Broadcast, broadcast_port);
 
-                var player = (MatchmakingManager.instances[MatchmakingManager.MatchMakingDomain.LAN] as LANMatchmakingManager).GetPlayerLAN(point);
-                if (player == null)
-                {
-                    RainMeadow.Debug("Player not found! Instantiating new at: " + point);
-                    var playerid = new LANMatchmakingManager.LANPlayerId(point);
-                    player = new OnlinePlayer(playerid);
-                }
-
                 using (MemoryStream memory = new MemoryStream(128))
                 using (BinaryWriter writer = new BinaryWriter(memory))
                 {
-                    Packet.Encode(packet, writer, player);
+                    Packet.Encode(packet, writer, point);
 
                     for (int i = 0; i < 4; i++)
-                        NetIOPlatform.PlatformUDPManager.Send(memory.GetBuffer(), ((LANMatchmakingManager.LANPlayerId)player.id).endPoint,
+                        NetIOPlatform.PlatformUDPManager.Send(memory.GetBuffer(), point,
                             UDPPeerManager.PacketType.UnreliableBroadcast, true);
                 }
             }
@@ -98,7 +112,7 @@ namespace RainMeadow
             if (player.id is LANMatchmakingManager.LANPlayerId lanid) {
                 using (MemoryStream memory = new MemoryStream(128))
                 using (BinaryWriter writer = new BinaryWriter(memory)) {
-                    Packet.Encode(packet, writer, player);
+                    Packet.Encode(packet, writer, lanid.endPoint);
                     NetIOPlatform.PlatformUDPManager.Send(memory.GetBuffer(), lanid.endPoint, sendType switch
                     {
                         NetIO.SendType.Reliable => UDPPeerManager.PacketType.Reliable,
@@ -168,15 +182,7 @@ namespace RainMeadow
                     BinaryReader netReader = new BinaryReader(netStream);
 
                     if (netReader.BaseStream.Position == ((MemoryStream)netReader.BaseStream).Length) continue; // nothing to read somehow?
-                    var player = ((LANMatchmakingManager)MatchmakingManager.instances[MatchmakingManager.MatchMakingDomain.LAN]).GetPlayerLAN(iPEndPoint);
-                    if (player is null)
-                    {
-                        RainMeadow.Debug("Player not found! Instantiating new at: " + iPEndPoint.Port);
-                        var playerid = new LANMatchmakingManager.LANPlayerId(iPEndPoint);
-                        player = new OnlinePlayer(playerid);
-                    }
-
-                    Packet.Decode(netReader, player);
+                    Packet.Decode(netReader, iPEndPoint);
                 }
                 catch (Exception e)
                 {

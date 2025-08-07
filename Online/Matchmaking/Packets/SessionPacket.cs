@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using RainMeadow.Shared;
 
 namespace RainMeadow
 {
@@ -28,9 +29,13 @@ namespace RainMeadow
 
         public override void Process()
         {
-            if (OnlineManager.lobby is not null) {
+            if (OnlineManager.lobby is not null)
+            {
+                if (MatchmakingManager.currentDomain != MatchmakingManager.MatchMakingDomain.LAN) return;
+                var lanmatchmaker = (LANMatchmakingManager)MatchmakingManager.instances[MatchmakingManager.MatchMakingDomain.LAN];
+
                 Buffer.BlockCopy(data, 0, OnlineManager.serializer.buffer, 0, size);
-                OnlineManager.serializer.ReadData(processingPlayer, size);
+                OnlineManager.serializer.ReadData(lanmatchmaker.GetPlayerLAN(processingEndpoint, true), size);
             }
         }
     }

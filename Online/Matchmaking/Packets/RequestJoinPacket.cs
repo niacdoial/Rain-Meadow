@@ -1,5 +1,6 @@
 using System.IO;
 using MonoMod.Utils;
+using RainMeadow.Shared;
 
 namespace RainMeadow
 {
@@ -19,7 +20,7 @@ namespace RainMeadow
             if (OnlineManager.lobby != null && MatchmakingManager.currentDomain == MatchmakingManager.MatchMakingDomain.LAN)
             {
                 var matchmaker = (LANMatchmakingManager)MatchmakingManager.instances[MatchmakingManager.MatchMakingDomain.LAN];
-                var netIO = (LANNetIO)NetIO.instances[MatchmakingManager.MatchMakingDomain.LAN];
+                var processingPlayer = matchmaker.GetPlayerLAN(processingEndpoint, true);
 
                 if (LanUserName.Length > 0)
                 {
@@ -31,7 +32,7 @@ namespace RainMeadow
                 matchmaker.AcknoledgeLANPlayer(processingPlayer);
 
                 // Tell them they are in
-                netIO.SendP2P(processingPlayer, new JoinLobbyPacket(
+                ((LANNetIO)NetIO.instances[MatchmakingManager.MatchMakingDomain.LAN]).SendP2P(processingPlayer, new JoinLobbyPacket(
                     matchmaker.maxplayercount,
                     "LAN Lobby",
                     OnlineManager.lobby.hasPassword,

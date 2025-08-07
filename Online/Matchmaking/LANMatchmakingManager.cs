@@ -144,25 +144,40 @@ namespace RainMeadow {
         }
 
 
-        public void SendLobbyInfo(OnlinePlayer other) {
+        public void SendLobbyInfo(IPEndPoint endPoint) {
             if (OnlineManager.lobby != null && OnlineManager.lobby.isOwner) {
                 if (NetIO.currentInstance is LANNetIO lannetio) {
                     var packet = new InformLobbyPacket(
                         maxplayercount, Utils.Translate("LAN Lobby"), OnlineManager.lobby.hasPassword,
                         OnlineManager.lobby.gameModeType.value, OnlineManager.players.Count,
                         RainMeadowModManager.ModArrayToString(RainMeadowModManager.GetRequiredMods()), RainMeadowModManager.ModArrayToString(RainMeadowModManager.GetBannedMods()));
-                    lannetio.SendP2P(other, packet, NetIO.SendType.Unreliable, true);
+                    using (MemoryStream memory = new MemoryStream(128))
+                    using (BinaryWriter writer = new BinaryWriter(memory))
+                    {
+                        Packet.Encode(packet, writer, endPoint);
+                        NetIOPlatform.PlatformUDPManager.Send(memory.GetBuffer(), endPoint, UDPPeerManager.PacketType.Unreliable, true);
+                    }
                 }
             }
         }
 
-        public OnlinePlayer GetPlayerLAN(IPEndPoint other) {
-            return OnlineManager.players.FirstOrDefault(p => {
+        public OnlinePlayer? GetPlayerLAN(IPEndPoint other, bool create = false)
+        {
+            var player = OnlineManager.players.FirstOrDefault(p =>
+            {
                 if (p.id is LANPlayerId lanid)
                     if (lanid.endPoint != null)
                         return UDPPeerManager.CompareIPEndpoints(lanid.endPoint, other);
                 return false;
             });
+
+            if (player is null && create)
+            {
+                RainMeadow.Debug($"Couldn't find player with endpoint {other}. Creating one...");
+                player = new OnlinePlayer(new LANPlayerId(other));
+            }
+
+            return player;
         }
 
         public override bool canSendChatMessages => true;

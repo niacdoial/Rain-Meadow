@@ -36,8 +36,7 @@ namespace RainMeadow
             bool includeme = lanids.FirstOrDefault(x => x.isLoopback()) is not null;
 
             lanids = lanids.Where(x => !x.isLoopback());
-            var processinglanid = (LANMatchmakingManager.LANPlayerId)processingPlayer.id;
-            UDPPeerManager.SerializeEndPoints(writer, lanids.Select(x => x.endPoint).ToArray(), processinglanid.endPoint, includeme);
+            UDPPeerManager.SerializeEndPoints(writer, lanids.Select(x => x.endPoint).ToArray(), processingEndpoint, includeme);
 
             if (modifyOperation == Operation.Add) {
                 if (includeme) {
@@ -54,8 +53,8 @@ namespace RainMeadow
         public override void Deserialize(BinaryReader reader)
         {
             modifyOperation = (Operation)reader.ReadByte();
-            var endpoints = UDPPeerManager.DeserializeEndPoints(reader, (processingPlayer.id as LANMatchmakingManager.LANPlayerId).endPoint);
-            var lanmatchmaker = (MatchmakingManager.instances[MatchmakingManager.MatchMakingDomain.LAN] as LANMatchmakingManager);
+            var endpoints = UDPPeerManager.DeserializeEndPoints(reader, processingEndpoint);
+            var lanmatchmaker = (LANMatchmakingManager)MatchmakingManager.instances[MatchmakingManager.MatchMakingDomain.LAN];
 
             if (modifyOperation == Operation.Add) {
                 players = endpoints.Select(x => new OnlinePlayer(new LANMatchmakingManager.LANPlayerId(x))).ToArray();
@@ -65,7 +64,7 @@ namespace RainMeadow
             }
                 
             else if (modifyOperation == Operation.Remove)
-                players = endpoints.Select(x => lanmatchmaker.GetPlayerLAN(x)).ToArray();
+                players = endpoints.Select(x => lanmatchmaker.GetPlayerLAN(x)).OfType<OnlinePlayer>().ToArray();
 
         }
 
