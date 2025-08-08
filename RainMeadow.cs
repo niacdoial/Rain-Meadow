@@ -1,6 +1,7 @@
 ﻿using BepInEx;
 using Menu;
 using RainMeadow.Game;
+using RainMeadow.Shared;
 using System;
 using System.Diagnostics;
 using System.Reflection;
@@ -209,6 +210,10 @@ namespace RainMeadow
                 ItemHooks();
                 ObjectHooks();
                 JollyHooks();
+
+                SharedCodeLogger.DebugInner += RainMeadow.Debug;
+                SharedCodeLogger.DebugMeInner += RainMeadow.DebugMe;
+                SharedCodeLogger.ErrorInner += RainMeadow.Error;
 
                 CapeManager.FetchCapes();
 
