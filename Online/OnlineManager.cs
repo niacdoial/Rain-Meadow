@@ -55,6 +55,36 @@ namespace RainMeadow
             }
         }
 
+        public static void AddPlayer(OnlinePlayer player)
+        {
+            players.Add(player);
+            if (lobby != null && mePlayer == lobby.owner && lobby.bannedUsers.list.Contains(player.id))
+            {
+                BanHammer.BanUser(player);
+                ChatLogManager.LogSystemMessage((player.id.GetPersonaName()) + " " + Utils.Translate("tried to join the game but was kicked."));
+                return;
+            }
+            ChatLogManager.LogSystemMessage((player.id.GetPersonaName()) + " " + Utils.Translate("joined the game."));
+        }
+
+        public static void RemovePlayer(OnlinePlayer player)
+        {
+            RainMeadow.Debug($"Handling player disconnect:{player}");
+            player.hasLeft = true;
+            lobby?.OnPlayerDisconnect(player);
+            while (player.HasUnacknoledgedEvents())
+            {
+                player.AbortUnacknoledgedEvents();
+                lobby?.OnPlayerDisconnect(player);
+                ForceLoadUpdate(); // process incoming data
+            }
+            RainMeadow.Debug($"Actually removing player:{player}");
+            players.Remove(player);
+            NetworkDomain.currentInstance.ForgetPlayer(player);
+            ChatLogManager.LogSystemMessage((player.id.GetPersonaName()) + " " + Utils.Translate("left the game."));
+        }
+
+
         public static void LeaveLobby()
         {
             ChatLogManager.ResetPlayerColors();
@@ -71,8 +101,8 @@ namespace RainMeadow
             OnlinePhysicalObject.map = new();
 
             RainMeadowModManager.Reset();
-            
-            NetworkDomain.currentInstance.initializeMePlayer();
+
+            mePlayer = NetworkDomain.currentInstance.CreateMePlayer();
             players = new List<OnlinePlayer>() { mePlayer };
 
             instance.manager.rainWorld.progression.Destroy();

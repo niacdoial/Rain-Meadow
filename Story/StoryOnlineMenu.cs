@@ -386,7 +386,7 @@ namespace RainMeadow
 
         }
 
-        private void OnlineManager_OnPlayerListReceived(PlayerInfo[] players)
+        private void OnlineManager_OnPlayerListReceived(MeadowPlayerId[] players)
         {
             if (RainMeadow.isStoryMode(out var _))
             {

@@ -126,15 +126,12 @@ namespace RainMeadow
                 return false;
             }
         }
-        public override void initializeMePlayer()
+        public override OnlinePlayer CreateMePlayer()
         {
-            OnlineManager.mePlayer = new OnlinePlayer(new LANPlayerId(new IPEndPoint(
-                UDPPeerManager.getInterfaceAddresses()[0], PlatformUDPManager.port)))
-            { isMe = true };
-            if (RainMeadow.rainMeadowOptions.LanUserName.Value.Length > 0)
-            {
-                OnlineManager.mePlayer.id.name = RainMeadow.rainMeadowOptions.LanUserName.Value;
-            }
+            return new OnlinePlayer(new LANPlayerId(new IPEndPoint(
+                UDPPeerManager.getInterfaceAddresses()[0], PlatformUDPManager.port))
+                { name = RainMeadow.rainMeadowOptions.LanUserName.Value })
+                { isMe = true };
         }
 
 
@@ -246,8 +243,7 @@ namespace RainMeadow
 
             RainMeadow.DebugMe();
             if (OnlineManager.players.Contains(joiningPlayer)) { return; }
-            OnlineManager.players.Add(joiningPlayer);
-            HandleJoin(joiningPlayer);
+            OnlineManager.AddPlayer(joiningPlayer);
             SendAcknoledgement(joiningPlayer);
             RainMeadow.Debug($"Added {joiningPlayer} to the lobby matchmaking player list");
 
@@ -269,7 +265,8 @@ namespace RainMeadow
                     OnlineManager.players.Append(OnlineManager.mePlayer).ToArray()),
                     UDPPeerManager.PacketType.Reliable);
             }
-            OnPlayerListReceivedEvent(playerList.ToArray());
+
+            OnPlayerListReceivedEvent(OnlineManager.players.Select(x => x.id).ToArray());
         }
 
         public void RemoveLANPlayer(OnlinePlayer leavingPlayer)
@@ -280,7 +277,7 @@ namespace RainMeadow
 
             if (leavingPlayer.isMe) return;
             if (!OnlineManager.players.Contains(leavingPlayer)) { return; }
-            HandleDisconnect(leavingPlayer);
+            OnlineManager.RemovePlayer(leavingPlayer);
             if (OnlineManager.lobby is not null)
                 if (OnlineManager.lobby.isOwner)
                 {
@@ -295,7 +292,7 @@ namespace RainMeadow
                     }
                 }
             ForgetPlayer(leavingPlayer);
-            OnPlayerListReceivedEvent(playerList.ToArray());
+            OnPlayerListReceivedEvent(OnlineManager.players.Select(x => x.id).ToArray());
         }
         string lobbyPassword = "";
         public override void RequestJoinLobby(LobbyInfo lobby, string? password)
@@ -365,11 +362,10 @@ namespace RainMeadow
             ForgetEverything();
         }
 
-        public override OnlinePlayer GetLobbyOwner()
+        public override OnlinePlayer? GetLobbyOwner()
         {
             if (OnlineManager.lobby == null) return null;
-
-            if (OnlineManager.lobby.owner.hasLeft == true || OnlineManager.lobby == null)
+            if (OnlineManager.lobby.owner is null || OnlineManager.lobby.owner.hasLeft)
             {
                 // select a new owner. 
                 // The order of players should be 
@@ -379,6 +375,8 @@ namespace RainMeadow
                     if (onlinePlayer.hasLeft) continue;
                     return onlinePlayer;
                 }
+
+                return null;
             }
 
             return OnlineManager.lobby.owner;

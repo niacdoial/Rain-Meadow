@@ -104,7 +104,7 @@ public class ArenaMainLobbyPage : PositionedMenuObject
         playerDisplayer.CallForRefresh();
     }
 
-    public void OnlineManager_OnPlayerListReceived(PlayerInfo[] players)
+    public void OnlineManager_OnPlayerListReceived(MeadowPlayerId[] players)
     {
         RainMeadow.DebugMe();
         playerDisplayer?.UpdatePlayerList([.. OnlineManager.players.OrderByDescending(x => x.isMe)]);

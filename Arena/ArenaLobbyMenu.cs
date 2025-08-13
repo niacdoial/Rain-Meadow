@@ -362,7 +362,7 @@ namespace RainMeadow
 
             }
         }
-        private void OnlineManager_OnPlayerListReceived(PlayerInfo[] players)
+        private void OnlineManager_OnPlayerListReceived(MeadowPlayerId[] players)
         {
             if (RainMeadow.isArenaMode(out var arena)) //apparently null lobby can happen, so need!
             {

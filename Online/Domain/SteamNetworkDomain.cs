@@ -107,10 +107,9 @@ namespace RainMeadow
             me = SteamUser.GetSteamID();
         }
 
-        public override void initializeMePlayer()
+        public override OnlinePlayer CreateMePlayer()
         {
-            RainMeadow.DebugMe();
-            OnlineManager.mePlayer = new OnlinePlayer(new SteamPlayerId(me)) { isMe = true };
+            return new OnlinePlayer(new SteamPlayerId(me)) { isMe = true };
         }
         public override void RequestLobbyList()
         {
@@ -267,7 +266,6 @@ namespace RainMeadow
             }
         }
 
-        public override List<PlayerInfo> playerList => OnlineManager.players.Select(player => new PlayerInfo(() => player.id.OpenProfileLink(), player.id.name)).ToList();
 
         public void UpdatePlayersList()
         {
@@ -289,12 +287,7 @@ namespace RainMeadow
                 {
                     if (!oldplayers.Contains(p)) PlayerJoined(p);
                 }
-                // OnlineManager.players will have been updated to match newplayers
-                foreach (CSteamID player in newplayers)
-                {
-                    playerList.Add(new PlayerInfo(() => SteamFriends.ActivateGameOverlayToWebPage($"https://steamcommunity.com/profiles/{player}"), SteamFriends.GetFriendPersonaName(player)));
-                }
-                OnPlayerListReceivedEvent(playerList.ToArray());
+                OnPlayerListReceivedEvent(OnlineManager.players.Select(x => x.id).ToArray());
             }
             catch (Exception e)
             {
@@ -328,9 +321,7 @@ namespace RainMeadow
             if (p == me) return;
             SteamFriends.RequestUserInformation(p, true);
             var player = new OnlinePlayer(new SteamPlayerId(p));
-            OnlineManager.players.Add(player);
-
-            HandleJoin(player);
+            OnlineManager.AddPlayer(player);
         }
 
         private void PlayerLeft(CSteamID p)
@@ -339,7 +330,7 @@ namespace RainMeadow
 
             if (OnlineManager.players.FirstOrDefault(op => (op.id as SteamPlayerId).steamID == p) is OnlinePlayer player)
             {
-                HandleDisconnect(player);
+                OnlineManager.RemovePlayer(player);
             }
         }
 

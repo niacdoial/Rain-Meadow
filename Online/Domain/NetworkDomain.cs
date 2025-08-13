@@ -38,7 +38,7 @@ namespace RainMeadow
         public static event LobbyJoined_t OnLobbyJoined = delegate { };
 
         protected static void OnLobbyJoinedEvent(bool ok, string error = "") => OnLobbyJoined?.Invoke(ok, error);
-        protected static void OnPlayerListReceivedEvent(PlayerInfo[] players) => OnPlayerListReceived?.Invoke(players);
+        protected static void OnPlayerListReceivedEvent(MeadowPlayerId[] players) => OnPlayerListReceived?.Invoke(players);
         protected static void OnLobbyListReceivedEvent(bool ok, LobbyInfo[] lobbies) => OnLobbyListReceived?.Invoke(ok, lobbies);
 
         public static event ChangedMatchMakingDomain_t changedMatchMaker = delegate { };
@@ -148,10 +148,10 @@ namespace RainMeadow
         }
 
         public delegate void LobbyListReceived_t(bool ok, LobbyInfo[] lobbies);
-        public delegate void PlayerListReceived_t(PlayerInfo[] players);
+        public delegate void PlayerListReceived_t(MeadowPlayerId[] players);
         public delegate void LobbyJoined_t(bool ok, string error = "");
 
-        public abstract void initializeMePlayer();
+        public abstract OnlinePlayer CreateMePlayer();
         public abstract void RequestLobbyList();
 
         public abstract void CreateLobby(LobbyVisibility visibility, string gameMode, string? password, int? maxPlayerCount);
@@ -219,14 +219,13 @@ namespace RainMeadow
 
         public abstract void HandleLeavingLobby();
 
-        public abstract OnlinePlayer GetLobbyOwner();
+        public abstract OnlinePlayer? GetLobbyOwner();
 
         public virtual OnlinePlayer GetPlayer(MeadowPlayerId id)
         {
             return OnlineManager.players.FirstOrDefault(p => p.id == id);
         }
 
-        public virtual List<PlayerInfo> playerList => OnlineManager.players.Select(player => new PlayerInfo(() => player.id.OpenProfileLink(), player.id.name)).ToList();
 
         // the idea here was to decide by ping some day
         public virtual OnlinePlayer BestTransferCandidate(OnlineResource onlineResource, List<OnlinePlayer> subscribers)
@@ -241,34 +240,6 @@ namespace RainMeadow
         public virtual void RecieveChatMessage(OnlinePlayer player, string message)
         {
             ChatLogManager.LogMessage($"{player.id.GetPersonaName()}", $"{message}");
-        }
-
-        public void HandleJoin(OnlinePlayer player)
-        {
-            if (OnlineManager.lobby != null && OnlineManager.mePlayer == OnlineManager.lobby.owner && OnlineManager.lobby.bannedUsers.list.Contains(player.id))
-            {
-                BanHammer.BanUser(player);
-                ChatLogManager.LogSystemMessage((player.id.GetPersonaName()) + " " + Utils.Translate("tried to join the game but was kicked."));
-                return;
-            }
-            ChatLogManager.LogSystemMessage((player.id.GetPersonaName()) + " " + Utils.Translate("joined the game."));
-        }
-        public void HandleDisconnect(OnlinePlayer player)
-        {
-            RainMeadow.Debug($"Handling player disconnect:{player}");
-            player.hasLeft = true;
-            OnlineManager.lobby?.OnPlayerDisconnect(player);
-            while (player.HasUnacknoledgedEvents())
-            {
-                player.AbortUnacknoledgedEvents();
-                OnlineManager.lobby?.OnPlayerDisconnect(player);
-                OnlineManager.ForceLoadUpdate(); // process incoming data
-            }
-            RainMeadow.Debug($"Actually removing player:{player}");
-            OnlineManager.players.Remove(player);
-            ForgetPlayer(player);
-
-            ChatLogManager.LogSystemMessage((player.id.GetPersonaName()) + " " + Utils.Translate("left the game."));
         }
 
         public abstract MeadowPlayerId GetEmptyId();
