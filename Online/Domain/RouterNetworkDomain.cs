@@ -14,6 +14,14 @@ namespace RainMeadow
 
     public partial class RouterNetworkDomain : NetworkDomain
     {
+        public RouterNetworkDomain()
+        {
+            InitializePackets();
+        }
+
+
+
+
         public class RouterLobbyInfo : LobbyInfo
         {
             public IPEndPoint endPoint;
@@ -25,8 +33,8 @@ namespace RainMeadow
             public override string GetLobbyJoinCode(string? password = null)
             {
                 if (password != null)
-                    return $"+connect_lan_lobby {endPoint.Address.Address} {endPoint.Port} +lobby_password {password}";
-                return $"+connect_lan_lobby {endPoint.Address.Address} {endPoint.Port}";
+                    return $"+connect_router_lobby {endPoint.Address.Address} {endPoint.Port} +lobby_password {password}";
+                return $"+connect_router_lobby {endPoint.Address.Address} {endPoint.Port}";
             }
         }
 
@@ -71,7 +79,7 @@ namespace RainMeadow
         
         public override OnlinePlayer CreateMePlayer()
         {
-            return new OnlinePlayer(new RouterPlayerId(ushort.MaxValue)
+            return new OnlinePlayer(new RouterPlayerId(0)
                 { name = RainMeadow.rainMeadowOptions.LanUserName.Value })
                 { isMe = true };
         }
@@ -89,7 +97,7 @@ namespace RainMeadow
             var player = OnlineManager.players.FirstOrDefault(p =>
             {
                 if (p.id is RouterPlayerId route)
-                    if (route.routingID != ushort.MaxValue) return route.routingID == routingID;
+                    if (route.routingID != 0) return route.routingID == routingID;
                 return false;
             });
 
@@ -115,9 +123,27 @@ namespace RainMeadow
             // NetworkDomain.OnLobbyJoinedEvent(true, "");
         }
 
-        public void LobbyAcknoledgedUs(OnlinePlayer owner)
+        public void LobbyAcknoledgedUs(ushort mePlayerid)
         {
             RainMeadow.DebugMe();
+            if (((RouterPlayerId)OnlineManager.mePlayer.id).routingID == 0)
+            {
+                OnlineManager.players.Remove(OnlineManager.mePlayer);
+                OnlineManager.mePlayer = GetPlayerRouter(mePlayerid, false);
+                if (OnlineManager.mePlayer is null)
+                {
+                    OnlineManager.QuitWithError("Recieved connection packets out of order");
+                }
+
+                OnlineManager.mePlayer.isMe = true;
+            }
+
+            foreach (var player in OnlineManager.players)
+            {
+                RainMeadow.Debug($"{player}, {((RouterPlayerId)player.id).routingID}");
+            }
+
+            var owner = OnlineManager.players.First();
             if (OnlineManager.lobby is null)
             {
                 OnlineManager.lobby = new Lobby(
@@ -137,7 +163,7 @@ namespace RainMeadow
             OnPlayerListReceivedEvent(OnlineManager.players.Select(x => x.id).ToArray());
         }
 
-        public void RemoveLANPlayer(OnlinePlayer leavingPlayer)
+        public void RemoveRouterPlayer(OnlinePlayer leavingPlayer)
         {
             StackTrace stackTrace = new();
             RainMeadow.Debug(stackTrace.ToString());
@@ -149,24 +175,37 @@ namespace RainMeadow
             ForgetPlayer(leavingPlayer);
             OnPlayerListReceivedEvent(OnlineManager.players.Select(x => x.id).ToArray());
         }
+
+        public override LobbyInfo GenerateDCLobbyInfo(string connectstr)
+        {
+            var endpoint = UDPPeerManager.GetEndPointByName(connectstr);
+            if (endpoint != null)
+            {
+                return new RouterLobbyInfo(endpoint, "Direct Connection", "Meadow", 0, true, 2);
+            }
+            else
+            {
+                throw new FormatException("IP Address format should be xxx.xxx.xxx.xxx:port");
+            }
+        }
+
         string lobbyPassword = "";
         public override void RequestJoinLobby(LobbyInfo lobby, string? password)
         {
             RainMeadow.DebugMe();
-            if (lobby is  lobbyinfo)
+            if (lobby is RouterLobbyInfo routerLobbyInfo)
             {
                 lobbyPassword = password ?? "";
                 OnlineManager.currentlyJoiningLobby = lobby;
-                var lobbyInfo = (LANLobbyInfo)lobby;
-                if (lobbyInfo.endPoint == null)
+                hostPeer = routerLobbyInfo.endPoint;
+                if (routerLobbyInfo.endPoint == null)
                 {
                     RainMeadow.Debug("Failed to join local game...");
                     return;
                 }
 
                 RainMeadow.Debug("Sending Request to join lobby...");
-                SendP2P(new OnlinePlayer(new LANPlayerId(lobbyInfo.endPoint)),
-                    new RequestJoinPacket(OnlineManager.mePlayer.id.name), UDPPeerManager.PacketType.Reliable, true);
+                Send(hostPeer, new BeginRouterSession(false), UDPPeerManager.PacketType.Reliable, true);
             }
             else
             {
@@ -194,7 +233,7 @@ namespace RainMeadow
             if (args.Length >= 2 && long.TryParse(args[0], out var address) && int.TryParse(args[1], out var port))
             {
                 RainMeadow.Debug($"joining lobby with address {address} and port {port} from the command line");
-                RequestJoinLobby(new LANLobbyInfo(new IPEndPoint(address, port), "", "", 0, false, 4), args.Length > 2 ? args[2] : null);
+                RequestJoinLobby(new RouterLobbyInfo(new IPEndPoint(address, port), "", "", 0, false, 4), args.Length > 2 ? args[2] : null);
             }
             else
                 RainMeadow.Error($"invalid address and port: {string.Join(" ", args)}");
@@ -202,18 +241,6 @@ namespace RainMeadow
 
         public override void HandleLeavingLobby()
         {
-            if (OnlineManager.players is not null)
-            {
-                if (OnlineManager.players.Count > 1)
-                {
-                    foreach (OnlinePlayer p in OnlineManager.players)
-                    {
-                        SendP2P(p,
-                            new SessionEndPacket(),
-                                UDPPeerManager.PacketType.Unreliable);
-                    }
-                }
-            }
             ForgetEverything();
         }
 
@@ -239,14 +266,14 @@ namespace RainMeadow
 
         public override MeadowPlayerId GetEmptyId()
         {
-            return new LANPlayerId(null);
+            return new RouterPlayerId(0);
         }
 
         public override string GetLobbyID()
         {
             if (OnlineManager.lobby != null)
             {
-                return (OnlineManager.lobby.owner.id as LANPlayerId)?.GetPersonaName() ?? Utils.Translate("Nobody");
+                return (OnlineManager.lobby.owner.id as RouterPlayerId)?.GetPersonaName() ?? Utils.Translate("Nobody");
             }
 
             return "Unknown Lan Lobby";

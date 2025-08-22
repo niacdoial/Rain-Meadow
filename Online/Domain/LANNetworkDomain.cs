@@ -182,6 +182,19 @@ namespace RainMeadow
             }
         }
 
+        public override LobbyInfo GenerateDCLobbyInfo(string connectstr)
+        {
+            var endpoint = UDPPeerManager.GetEndPointByName(connectstr);
+            if (endpoint != null)
+            {
+                return new LANNetworkDomain.LANLobbyInfo(endpoint, "Direct Connection", "Meadow", 0, true, 2);
+            }
+            else
+            {
+                throw new FormatException("IP Address format should be xxx.xxx.xxx.xxx:port");
+            }
+        }
+
         public OnlinePlayer? GetPlayerLAN(IPEndPoint other, bool create = false)
         {
             var player = OnlineManager.players.FirstOrDefault(p =>

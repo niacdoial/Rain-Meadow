@@ -156,9 +156,9 @@ namespace RainMeadow
             var directConnectButton = new SimplerButton(this, mainPage, Translate("Direct Connect"), new Vector2(where.x, where.y), new Vector2(160f, 30f));
             directConnectButton.OnClick += (_) =>
             {   
-                if (NetworkDomain.currentDomain != NetworkDomain.NetworkDomainType.LAN)
+                if (NetworkDomain.currentInstance.canDirectConnect)
                 {
-                    ShowErrorDialog("Direct Connection is only available in the Local Matchmaker");
+                    ShowErrorDialog("Direct Connection is only available in the Local / Router Network Domains");
                     return;
                 }
                 ShowDirectConnectionDialogue();
@@ -462,32 +462,40 @@ namespace RainMeadow
                     var password = (popupDialog as CustomInputDialogueBox).textBox.value;
                     StartJoiningLobby(lastClickedLobby, password);
                     break;
-                case "DIRECT_JOIN": 
-                    var dialogue = popupDialog as DirectConnectionDialogue;
-                    var endpoint = UDPPeerManager.GetEndPointByName(dialogue?.IPBox?.value ?? "");
-                    if (endpoint != null) {
-                        var fakelobbyinfo = new LANNetworkDomain.LANLobbyInfo(endpoint, "Direct Connection", "Meadow", 0, true, 2);
-                        Action join = () => {
-                            GreyOutLobbyCards(true);
-                            StartJoiningLobby(fakelobbyinfo,
-                                    dialogue.passwordCheckBox.Checked? dialogue.passwordBox.value : null,
-                                    false);
-                        };
-                        
-                        if (VerifyPlay(fakelobbyinfo))
-                        if (!UDPPeerManager.isEndpointLocal(endpoint)) {
+                case "DIRECT_JOIN":
+                    GreyOutLobbyCards(true);
+                    var dialogue = (DirectConnectionDialogue)popupDialog;
+                    LobbyInfo lobbyinfo = null!;
+                    try
+                    {
+                        lobbyinfo = NetworkDomain.currentInstance.GenerateDCLobbyInfo(dialogue?.IPBox?.value ?? "");
+                    }
+                    catch (FormatException except)
+                    {
+                        ShowErrorDialog($"Invalid Format, {except.Message}");
+                    }
+
+                    Action join = () =>
+                    {
+                        StartJoiningLobby(lobbyinfo,
+                                dialogue.passwordCheckBox.Checked ? dialogue.passwordBox.value : null,
+                                false);
+                    };
+
+                    if (VerifyPlay(lobbyinfo))
+                    {
+                        if (lobbyinfo is LANNetworkDomain.LANLobbyInfo laninfo && !UDPPeerManager.isEndpointLocal(laninfo.endPoint))
+                        {
                             ShowNotLocalDialogue(
-                                                Translate("This address is possibly not local to your current network.") + Environment.NewLine +
-                                                Translate("If so, This is very unstable and will most likely NOT work") + Environment.NewLine +
-                                                Translate("Are you SURE you know what you're doing?"),
+                                Translate("This address is possibly not local to your current network.") + Environment.NewLine +
+                                Translate("If so, This is very unstable and will most likely NOT work") + Environment.NewLine +
+                                Translate("Are you SURE you know what you're doing?"),
                                 join);
                             mainPage.subObjects.Add(popupDialog);
-                        } else join.Invoke();
-
-
-                    } else {
-                        ShowErrorDialog("Invalid Address, IP Address format should be xxx.xxx.xxx.xxx:port");
+                        }
+                        else join.Invoke();
                     }
+
                     break;
             }
         }

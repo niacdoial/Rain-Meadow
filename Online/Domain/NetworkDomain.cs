@@ -16,7 +16,7 @@ namespace RainMeadow
             public NetworkDomainType(string name, bool register) : base(name, register) { }
 
             public static NetworkDomainType LAN = new NetworkDomainType("Local", true);
-            // public static MatchMakingDomain Router = new MatchMakingDomain("Router", true);
+            public static NetworkDomainType Router = new NetworkDomainType("Router", true);
             public static NetworkDomainType Steam = new NetworkDomainType("Steam", true);
 
 
@@ -24,12 +24,12 @@ namespace RainMeadow
 
         static partial void PlatformSteamAvailable(ref bool val);
         static partial void PlatformLanAvailable(ref bool val);
-        // static partial void PlatformRouterAvailable(ref bool val);
+        static partial void PlatformRouterAvailable(ref bool val);
 
 
         public static bool isSteamAvailable { get { bool val = false; PlatformSteamAvailable(ref val); return val; } }
         public static bool isLANAvailable { get { bool val = false; PlatformLanAvailable(ref val); return val; } }
-        // public static bool isRouterAvailable { get { bool val = false; PlatformRouterAvailable(ref val); return val; } }
+        public static bool isRouterAvailable { get { bool val = false; PlatformRouterAvailable(ref val); return val; } }
         public static UDPPeerManager? PlatformUDPManager { get; private set; }
 
 
@@ -70,7 +70,7 @@ namespace RainMeadow
         public static int MAX_LOBBY = 4;
 
         static public readonly List<NetworkDomainType> supportedDomains = new();
-
+        static public RouterNetworkDomain? Router => instances.GetValueSafe(NetworkDomainType.Router) as RouterNetworkDomain;
         static public LANNetworkDomain? LAN => instances.GetValueSafe(NetworkDomainType.LAN) as LANNetworkDomain;
         static public SteamNetworkDomain? Steam => instances.GetValueSafe(NetworkDomainType.Steam) as SteamNetworkDomain;
 
@@ -116,11 +116,11 @@ namespace RainMeadow
                 currentDomain = NetworkDomainType.LAN;
             }
 
-            // if (isRouterAvailable) {
-            //     supported_matchmakers.Add(MatchMakingDomain.Router);
-            //     instances.Add(MatchMakingDomain.Router, new RouterMatchmakingManager());
-            //     currentDomain = MatchMakingDomain.Router;
-            // }
+            if (isRouterAvailable) {
+                supportedDomains.Add(NetworkDomainType.Router);
+                instances.Add(NetworkDomainType.Router, new RouterNetworkDomain());
+                currentDomain = NetworkDomainType.Router;
+            }
 
             if (isSteamAvailable)
             {
@@ -155,6 +155,13 @@ namespace RainMeadow
         public abstract void RequestLobbyList();
 
         public abstract void CreateLobby(LobbyVisibility visibility, string gameMode, string? password, int? maxPlayerCount);
+
+        public virtual bool canDirectConnect => false;
+        public virtual LobbyInfo GenerateDCLobbyInfo(string connectstr) // throws FormatException or NotImplementedException
+        {
+            throw new NotImplementedException();
+        } 
+
 
         public abstract void RequestJoinLobby(LobbyInfo lobby, string? password);
         public abstract void JoinLobby(bool success);
