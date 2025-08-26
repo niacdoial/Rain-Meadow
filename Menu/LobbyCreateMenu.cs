@@ -18,6 +18,7 @@ public class LobbyCreateMenu : SmartMenu
     private SimplerButton createButton;
     private OpComboBox2 modeDropDown;
     private ProperlyAlignedMenuLabel modeDescriptionLabel;
+    private OpComboBox2 domainDropdown; 
     private OpTextBox passwordInputBox;
     private MenuDialogBox? popupDialog;
     public override MenuScene.SceneID GetScene => ModManager.MMF ? manager.rainWorld.options.subBackground : MenuScene.SceneID.Landscape_SU;
@@ -88,6 +89,19 @@ public class LobbyCreateMenu : SmartMenu
         };
         new UIelementWrapper(this.tabWrapper, lobbyLimitNumberTextBox);
         where.y += 5;
+        where.x -= 80;
+
+        where.y -= 45;
+        limitNumberLabel = new ProperlyAlignedMenuLabel(this, mainPage, Translate("Domain:"), where, new Vector2(400, 20f), false);
+        mainPage.subObjects.Add(limitNumberLabel);
+        
+
+        where.x += 80;
+        where.y -= 5;
+        domainDropdown = new OpComboBox2(new Configurable<string>(
+                NetworkDomain.supportedDomains.Last().value), where, 160f - 35f, NetworkDomain.supportedDomains.Select(x => new ListItem(x.value, Utils.Translate(x.value))).ToList()) { colorEdge = MenuColorEffect.rgbWhite };
+        new UIelementWrapper(this.tabWrapper, domainDropdown);
+        
 
         // display version
         MenuLabel versionLabel = new MenuLabel(this, pages[0], $"{Utils.Translate("Rain Meadow Version:")} {RainMeadow.MeadowVersionStr}", new Vector2((1336f - manager.rainWorld.screenSize.x) / 2f + 20f, manager.rainWorld.screenSize.y - 768f), new Vector2(200f, 20f), false, null);
@@ -122,10 +136,11 @@ public class LobbyCreateMenu : SmartMenu
 
     private void RequestLobbyCreate()
     {
+        var domain = (NetworkDomain.NetworkDomainType)ExtEnumBase.Parse(typeof(NetworkDomain.NetworkDomainType), domainDropdown.value, true); ;
         RainMeadow.DebugMe();
         Enum.TryParse<NetworkDomain.LobbyVisibility>(visibilityDropDown.value, out var value);
         string? password = passwordInputBox.value.IsNullOrWhiteSpace() ? null : passwordInputBox.value;
-        NetworkDomain.currentInstance.CreateLobby(value, modeDropDown.value, password, maxPlayerCount);
+        NetworkDomain.instances[domain].CreateLobby(value, modeDropDown.value, password, maxPlayerCount);
     }
 
     private void ShowLoadingDialog(string text)

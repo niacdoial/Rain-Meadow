@@ -153,6 +153,7 @@ namespace RainMeadow
 
         public override void CreateLobby(LobbyVisibility visibility, string gameMode, string? password, int? maxPlayerCount)
         {
+            NetworkDomain.currentDomain = NetworkDomainType.Steam;
             creatingWithMode = gameMode;
             lobbyPassword = password;
             MAX_LOBBY = (int)maxPlayerCount;

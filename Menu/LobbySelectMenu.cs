@@ -174,9 +174,9 @@ namespace RainMeadow
 
             mainPage.subObjects.Add(directConnectButton);
             
-            domainDropDown = new OpComboBox2(new Configurable<NetworkDomain.NetworkDomainType>(
-                NetworkDomain.currentDomain), where, 160f - 35f, 
-                NetworkDomain.supportedDomains.Select(x => new ListItem(x.value, Utils.Translate(x.value))).Prepend(new ListItem("Any", Utils.Translate("Any"))).ToList()) { colorEdge = MenuColorEffect.rgbWhite };
+            domainDropDown = new OpComboBox2(new Configurable<string>(
+                "Any"), where, 160f - 35f, 
+                NetworkDomain.supportedDomains.Select(x => new ListItem(x.value, Utils.Translate(x.value))).Reverse().Prepend(new ListItem("Any", Utils.Translate("Any"))).ToList()) { colorEdge = MenuColorEffect.rgbWhite };
             domainDropDown.OnChange += () => {
                 UpdateLobbyFilter();
             };
