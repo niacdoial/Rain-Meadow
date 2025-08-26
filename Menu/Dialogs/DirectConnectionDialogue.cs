@@ -14,6 +14,7 @@ namespace RainMeadow
         public SymbolButton cancelButton;
         public SimpleButton continueButton;
         public OpTextBox IPBox;
+        public OpComboBox domainDropDown;
 
         public CheckBox passwordCheckBox;
         public OpTextBox passwordBox;
@@ -52,10 +53,6 @@ namespace RainMeadow
             textBoxWrapper = new UIelementWrapper(this.tabWrapper, IPBox);
 
             Vector2 where = new Vector2((center.x - 55f), 20f);
-
-            Vector2 passwordpos = center + new Vector2(-80f, 30f);
-
-
             passwordLabelWrapper = new UIelementWrapper(this.tabWrapper, new OpLabel(center + new Vector2(-80f, -40f), new Vector2(100f, 20f), menu.Translate("Password:")));
             passwordBox = new OpTextBox(new Configurable<string>(""), center + new Vector2(-80f, -60f), 160f);
             passwordBox.greyedOut = true;
@@ -66,6 +63,10 @@ namespace RainMeadow
             passwordCheckBox = new CheckBox(menu, this, this, center + new Vector2(-110f, -60f), 0, "", "");
             subObjects.Add(passwordCheckBox);
 
+            domainDropDown = new OpComboBox2(new Configurable<NetworkDomain.NetworkDomainType>(
+                NetworkDomain.currentDomain), new Vector2((center.x - 55f), 70f), 160f - 35f, 
+                NetworkDomain.supportedDomains.Where(x => NetworkDomain.instances[x].canDirectConnect).Select(x => new ListItem(x.value, Utils.Translate(x.value))).ToList()) { colorEdge = MenuColorEffect.rgbWhite };
+            subObjects.Add(new UIelementWrapper(this.tabWrapper, domainDropDown));
 
             continueButton = new SimpleButton(menu, this, menu.Translate("CONFIRM"), "DIRECT_JOIN", where, new Vector2(110f, 30f));
             subObjects.Add(continueButton);

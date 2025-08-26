@@ -125,6 +125,7 @@ public class LobbyCardsList : RectangularMenuObject, Slider.ISliderOwner
         public string gameMode;
         public string requiredMods;
         public bool publicLobby;
+        public NetworkDomain.NetworkDomainType? domainType;
 
         public enum SortingOrder
         {
@@ -156,6 +157,7 @@ public class LobbyCardsList : RectangularMenuObject, Slider.ISliderOwner
             gameMode = "All";
             requiredMods = "Any";
             publicLobby = false;
+            domainType = null;
         }
 
         public void CycleSortOrder()
@@ -332,11 +334,13 @@ public class LobbyCardsList : RectangularMenuObject, Slider.ISliderOwner
 
         foreach (var lobby in allLobbies)
         {
-            if (filter.lobbyName != "" && !lobby.name.ToLower().Contains(filter.lobbyName)) continue;
             if (filter.enabled)
             {
+                if (filter.lobbyName != "" && !lobby.name.ToLower().Contains(filter.lobbyName)) continue;
                 if (filter.gameMode != "All" && lobby.mode != filter.gameMode) continue;
                 if (filter.publicLobby && lobby.hasPassword) continue;
+                if (filter.domainType != null && lobby.domain != filter.domainType) continue;
+
                 // DLC checks
                 var hasMsc = lobby.requiredMods.Contains("moreslugcats");
                 var hasWatcher = lobby.requiredMods.Contains("watcher");

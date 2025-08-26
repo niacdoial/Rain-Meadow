@@ -176,10 +176,9 @@ namespace RainMeadow
             
             domainDropDown = new OpComboBox2(new Configurable<NetworkDomain.NetworkDomainType>(
                 NetworkDomain.currentDomain), where, 160f - 35f, 
-                NetworkDomain.supportedDomains.Select(x => new ListItem(x.value, Utils.Translate(x.value))).ToList()) { colorEdge = MenuColorEffect.rgbWhite };
+                NetworkDomain.supportedDomains.Select(x => new ListItem(x.value, Utils.Translate(x.value))).Prepend(new ListItem("Any", Utils.Translate("Any"))).ToList()) { colorEdge = MenuColorEffect.rgbWhite };
             domainDropDown.OnChange += () => {
-                NetworkDomain.currentDomain = new NetworkDomain.NetworkDomainType(domainDropDown.value, false);
-                RefreshLobbyList();
+                UpdateLobbyFilter();
             };
 
 
@@ -260,6 +259,10 @@ namespace RainMeadow
 
         private void UpdateLobbyFilter()
         {
+            if (domainDropDown.value == "Any") lobbyList.filter.domainType = null;
+            else lobbyList.filter.domainType = (NetworkDomain.NetworkDomainType)ExtEnumBase.Parse(typeof(NetworkDomain.NetworkDomainType), domainDropDown.value, true);
+            
+
             lobbyList.filter.gameMode = filterModeDropDown.value;
             lobbyList.filter.requiredMods = filterModsDropDown.value;
             lobbyList.filter.publicLobby = filterPublicLobbiesOnly.GetValueBool();
@@ -475,7 +478,8 @@ namespace RainMeadow
                     LobbyInfo lobbyinfo = null!;
                     try
                     {
-                        lobbyinfo = NetworkDomain.currentInstance.GenerateDCLobbyInfo(dialogue?.IPBox?.value ?? "");
+                        var domain = (NetworkDomain.NetworkDomainType)ExtEnumBase.Parse(typeof(NetworkDomain.NetworkDomainType), dialogue.domainDropDown.value, true);
+                        lobbyinfo = NetworkDomain.instances[domain].GenerateDCLobbyInfo(dialogue?.IPBox?.value ?? "");
                     }
                     catch (FormatException except)
                     {
