@@ -15,17 +15,19 @@ namespace RainMeadow
     {
         public class SteamLobbyInfo : LobbyInfo
         {
+            public override NetworkDomainType domain => NetworkDomainType.Steam;
+            public override string directJoinCode => iD.m_SteamID.ToString();
+
             public CSteamID iD;
             public SteamLobbyInfo(CSteamID id, string name, string mode, int playerCount, bool hasPassword, int? maxPlayerCount, string highImpactMods = "", string bannedMods = "") :
                 base(name, mode, playerCount, hasPassword, maxPlayerCount, highImpactMods, bannedMods)
             {
                 iD = id;
             }
-            public override string GetLobbyJoinCode(string? password = null)
+            public override bool Equals(LobbyInfo other)
             {
-                if (password != null)
-                    return $"+connect_lobby {iD.m_SteamID} +lobby_password {password}";
-                return $"+connect_lobby {iD.m_SteamID}";
+                if (other is SteamLobbyInfo othersteam) return iD == othersteam.iD;
+                return false;
             }
         }
 
@@ -166,10 +168,25 @@ namespace RainMeadow
 
         public override void RequestJoinLobby(LobbyInfo lobby, string? password)
         {
+            NetworkDomain.currentDomain = NetworkDomainType.Steam;
             lobbyPassword = password;
             m_JoinLobbyCall.Set(SteamMatchmaking.JoinLobby((lobby as SteamLobbyInfo).iD));
         }
 
+
+        public override bool canDirectConnect => true;
+        public override LobbyInfo GenerateDCLobbyInfo(string connectstr)
+        {
+            if (ulong.TryParse(connectstr, out var result))
+            {
+                return new SteamLobbyInfo(new CSteamID(result), "Direct Connection", "Meadow", 0, true, 2);
+            }
+            else
+            {
+                throw new FormatException("IP Address format should be xxx.xxx.xxx.xxx:port");
+            }
+        }
+            
         public override void JoinLobby(bool success)
         {
             if (success)
@@ -182,17 +199,6 @@ namespace RainMeadow
                 RainMeadow.Debug("Failed to join local game. Wrong Password");
                 OnLobbyJoinedEvent(false, Utils.Translate("Wrong password!"));
             }
-        }
-
-        public override void JoinLobbyUsingArgs(params string?[] args)
-        {
-            if (args.Length >= 1 && ulong.TryParse(args[0], out var id))
-            {
-                RainMeadow.Debug($"joining lobby with id {id} from the command line");
-                RequestJoinLobby(new SteamLobbyInfo(new CSteamID(id), "", "", 0, false, 4), args.Length > 1 ? args[1] : null);
-            }
-            else
-                RainMeadow.Error($"failed to parse id: {string.Join(" ", args)}");
         }
 
         private static string creatingWithMode;
@@ -475,10 +481,6 @@ namespace RainMeadow
             return OnlineManager.players.FirstOrDefault(p => (p.id as SteamPlayerId).steamID.m_SteamID == steamID);
         }
 
-        public override string GetLobbyID()
-        {
-            return lobbyID.ToString();
-        }
 
         public override bool canOpenInvitations => true;
         public override void OpenInvitationOverlay()

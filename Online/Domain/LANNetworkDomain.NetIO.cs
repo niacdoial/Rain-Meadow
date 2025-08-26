@@ -52,7 +52,7 @@ namespace RainMeadow
 
                     for (int i = 0; i < 4; i++)
                         PlatformUDPManager.Send(memory.GetBuffer(), point,
-                            UDPPeerManager.PacketType.UnreliableBroadcast, true);
+                            UDPPeerManager.PacketType.UnreliableBroadcast, false);
                 }
             }
         }

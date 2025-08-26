@@ -14,8 +14,9 @@ using static RainMeadow.RainMeadowModManager;
 
 namespace RainMeadow
 {
-    public class LobbySelectMenu : SmartMenu
+    public class LobbySelectMenu : SmartMenu, OnlineManager.INetworkUpdator
     {
+        bool OnlineManager.INetworkUpdator.updateALLDomains => true;
         private SimplerButton createButton;
         private OpComboBox2 filterModsDropDown;
         private OpComboBox2 domainDropDown;
@@ -38,7 +39,8 @@ namespace RainMeadow
             this.backTarget = ProcessManager.ProcessID.MainMenu;
 
             lobbyList = new LobbyCardsList(this, mainPage, new Vector2(518, 100f), new Vector2(330f, 490f));
-            lobbyList.RefreshButton.OnClick += RefreshLobbyList;
+            lobbyList.ClickedLobbyCard += (x) => Play(x.lobbyInfo);
+            lobbyList.RefreshButton.OnClick += (x) => RefreshLobbyList();
             mainPage.subObjects.Add(lobbyList);
 
             // title at the top
@@ -156,7 +158,7 @@ namespace RainMeadow
             var directConnectButton = new SimplerButton(this, mainPage, Translate("Direct Connect"), new Vector2(where.x, where.y), new Vector2(160f, 30f));
             directConnectButton.OnClick += (_) =>
             {   
-                if (NetworkDomain.currentInstance.canDirectConnect)
+                if (!NetworkDomain.currentInstance.canDirectConnect)
                 {
                     ShowErrorDialog("Direct Connection is only available in the Local / Router Network Domains");
                     return;
@@ -177,16 +179,14 @@ namespace RainMeadow
                 NetworkDomain.supportedDomains.Select(x => new ListItem(x.value, Utils.Translate(x.value))).ToList()) { colorEdge = MenuColorEffect.rgbWhite };
             domainDropDown.OnChange += () => {
                 NetworkDomain.currentDomain = new NetworkDomain.NetworkDomainType(domainDropDown.value, false);
-                lobbyList.ClearLobbies();
-                lobbyList.CreateCards();
-                RefreshLobbyList(null);
+                RefreshLobbyList();
             };
 
 
 
 
             new UIelementWrapper(this.tabWrapper, domainDropDown);
-    
+
 
             // if (OnlineManager.currentlyJoiningLobby != default)
             // {
@@ -194,13 +194,16 @@ namespace RainMeadow
             // }
 
             // // Lobby machine go!
-            NetworkDomain.OnLobbyListReceived += OnlineManager_OnLobbyListReceived;
+            NetworkDomain.OnLobbyListReceived += OnLobbyListReceived;
             NetworkDomain.OnLobbyJoined += OnlineManager_OnLobbyJoined;
-            if (NetworkDomain.supportedDomains.Contains(NetworkDomain.NetworkDomainType.Steam)) {
-                SteamNetworkingUtils.InitRelayNetworkAccess();
-            }   
-            
-            NetworkDomain.currentInstance.RequestLobbyList();
+            RefreshLobbyList();
+
+            if (RainMeadow.argumentsAutoConnect is not null)
+            {
+                ShowLoadingDialog("Joining lobby...");
+                RequestLobbyJoin(RainMeadow.argumentsAutoConnect, RainMeadow.autoConnectPassword);
+                RainMeadow.argumentsAutoConnect = null;
+            }
 
             manager.musicPlayer?.MenuRequestsSong("Establish", 1, 0);
         }
@@ -252,7 +255,6 @@ namespace RainMeadow
 
         public override void GrafUpdate(float timeStacker)
         {
-
             base.GrafUpdate(timeStacker);
         }
 
@@ -263,6 +265,7 @@ namespace RainMeadow
             lobbyList.filter.publicLobby = filterPublicLobbiesOnly.GetValueBool();
 
             lobbyList.FilterLobbies();
+            lobbyList.CreateCards();
         }
 
         public bool VerifyPlay(LobbyInfo lobbyInfo, bool care_about_lobby_size = true) {
@@ -309,9 +312,13 @@ namespace RainMeadow
             }
         }
 
-        private void RefreshLobbyList(SymbolButton obj)
+        private void RefreshLobbyList()
         {
-            NetworkDomain.currentInstance.RequestLobbyList();
+            lobbyList.ClearLobbies();
+            foreach (NetworkDomain.NetworkDomainType supportedDomain in NetworkDomain.supportedDomains)
+            {
+                NetworkDomain.instances[supportedDomain].RequestLobbyList();
+            }
         }
 
         public void StartJoiningLobby(LobbyInfo lobby, string? password = null, bool checkMods = true)
@@ -323,7 +330,7 @@ namespace RainMeadow
                     {
                         ShowLoadingDialog("Joining lobby...");
                         RequestLobbyJoin(lobby, password);
-                    }, false, lobby.GetLobbyJoinCode(password));
+                    }, false, $"+connect_lobby {lobby.directJoinCode} +connect_domain {lobby.domain}" + (string.IsNullOrWhiteSpace(password)? "" : $" +connect_password {password}" ));
             }
             else
             {
@@ -335,15 +342,15 @@ namespace RainMeadow
         public void RequestLobbyJoin(LobbyInfo lobby, string? password = null)
         {
             RainMeadow.DebugMe();
-            NetworkDomain.currentInstance.RequestJoinLobby(lobby, password);
+            NetworkDomain.instances[lobby.domain].RequestJoinLobby(lobby, password);
         }
 
-        private void OnlineManager_OnLobbyListReceived(bool ok, LobbyInfo[] lobbies)
+        private void OnLobbyListReceived(bool ok, LobbyInfo[] lobbies)
         {
             RainMeadow.Debug(ok);
             if (ok)
             {
-                lobbyList.allLobbies = lobbies.ToList();
+                lobbyList.AddLobbies(lobbies);
                 lobbyList.FilterLobbies();
                 UpdateStats(lobbyList);
             }
@@ -370,7 +377,7 @@ namespace RainMeadow
 
         public override void ShutDownProcess()
         {
-            NetworkDomain.OnLobbyListReceived -= OnlineManager_OnLobbyListReceived;
+            NetworkDomain.OnLobbyListReceived -= OnLobbyListReceived;
             NetworkDomain.OnLobbyJoined -= OnlineManager_OnLobbyJoined;
             base.ShutDownProcess();
         }

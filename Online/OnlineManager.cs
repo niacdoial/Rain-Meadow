@@ -13,6 +13,11 @@ namespace RainMeadow
     // is a mainloopprocess so update bound to game update? worth it? idk
     public class OnlineManager : MainLoopProcess
     {
+        public interface INetworkUpdator
+        {
+            abstract bool updateALLDomains { get; } 
+        }
+
         public static OnlineManager instance;
         public static Serializer serializer = new Serializer(65536);
         public static List<ResourceSubscription> subscriptions;
@@ -113,7 +118,18 @@ namespace RainMeadow
         public override void RawUpdate(float dt)
         {
             myTimeStacker += dt * (float)framesPerSecond;
-            NetworkDomain.currentInstance?.RecieveData(); // incoming data
+            if (OnlineManager.instance.manager.currentMainLoop is INetworkUpdator networkUpdator && networkUpdator.updateALLDomains)
+            {
+                foreach (var domain in NetworkDomain.supportedDomains)
+                {
+                    NetworkDomain.instances[domain].RecieveData();
+                }
+            }
+            else
+            {
+                NetworkDomain.currentInstance.RecieveData();
+            }
+
             lastReceive = UnityEngine.Time.realtimeSinceStartup;
 
             if (myTimeStacker >= 1f)

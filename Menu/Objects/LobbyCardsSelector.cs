@@ -11,10 +11,13 @@ using Menu.Remix;
 using Menu.Remix.MixedUI;
 using RWCustom;
 using UnityEngine;
+using UnityEngine.PlayerLoop;
 
 namespace RainMeadow;
 public class LobbyCardsList : RectangularMenuObject, Slider.ISliderOwner
 {
+    public event Action<LobbyCard> ClickedLobbyCard = delegate { };
+
     /// <summary>
     /// A SimplerButton containing and displaying LobbyInfo.
     /// </summary>
@@ -45,6 +48,11 @@ public class LobbyCardsList : RectangularMenuObject, Slider.ISliderOwner
             }
         }
 
+        ProperlyAlignedMenuLabel? hasPasswordLabel;
+        ProperlyAlignedMenuLabel maxPlayerCountLabel;
+        ProperlyAlignedMenuLabel playerCountLabel;
+        ProperlyAlignedMenuLabel modeLabel;
+
         public LobbyCard(Menu.Menu menu, MenuObject owner, LobbyInfo lobbyInfo) : base(menu, owner, "", new Vector2(0, 0), new Vector2(300f, 60f), Utils.Translate("Click to join") + " " + lobbyInfo.name)
         {
             this.fade = 1f;
@@ -52,17 +60,36 @@ public class LobbyCardsList : RectangularMenuObject, Slider.ISliderOwner
 
             this.menuLabel.RemoveSprites();
             this.RemoveSubObject(menuLabel);
-            this.menuLabel = new ProperlyAlignedMenuLabel(menu, this, lobbyInfo.name, new Vector2(5f, 30f), new(10f, 50f), true);
+            this.menuLabel = new ProperlyAlignedMenuLabel(menu, this, "", new Vector2(5f, 30f), new(10f, 50f), true);
             subObjects.Add(menuLabel);
 
-            if (lobbyInfo.hasPassword) subObjects.Add(new ProperlyAlignedMenuLabel(menu, this, Utils.Translate("Private"), new(256, 20), new(10, 50), false));
-            subObjects.Add(new ProperlyAlignedMenuLabel(menu, this, $"{lobbyInfo.maxPlayerCount} {Utils.Translate("max")}", new(256, 5), new(10, 50), false));
-            subObjects.Add(new ProperlyAlignedMenuLabel(menu, this, Utils.Translate(lobbyInfo.mode), new(5, 20), new(10, 50), false));
+            subObjects.Add(maxPlayerCountLabel = new ProperlyAlignedMenuLabel(menu, this, "", new(256, 5), new(10, 50), false));
+            subObjects.Add(modeLabel = new ProperlyAlignedMenuLabel(menu, this, "", new(5, 20), new(10, 50), false));
+            var playerWord = lobbyInfo.playerCount == 1 ? Utils.Translate("player") : Utils.Translate("players");
+            subObjects.Add(playerCountLabel = new ProperlyAlignedMenuLabel(menu, this, "", new(5, 5), new(10, 50), false));
+            lobbyInfoUpdated();
+        }
+
+        public void lobbyInfoUpdated()
+        {
+            menuLabel.text = lobbyInfo.name + $" ({lobbyInfo.domain.value})";
+
+            if (hasPasswordLabel is null && lobbyInfo.hasPassword)
+            {
+                subObjects.Add(hasPasswordLabel = new ProperlyAlignedMenuLabel(menu, this, Utils.Translate("Private"), new(256, 20), new(10, 50), false));
+            }
+            else if (hasPasswordLabel is not null && !lobbyInfo.hasPassword)
+            {
+                this.hasPasswordLabel.RemoveSprites();
+                this.RemoveSubObject(hasPasswordLabel);
+                hasPasswordLabel = null;
+            }
+
+            maxPlayerCountLabel.text = $"{lobbyInfo.maxPlayerCount} {Utils.Translate("max")}";
+            modeLabel.text = Utils.Translate(lobbyInfo.mode);
 
             var playerWord = lobbyInfo.playerCount == 1 ? Utils.Translate("player") : Utils.Translate("players");
-            subObjects.Add(new ProperlyAlignedMenuLabel(menu, this, lobbyInfo.playerCount + " " + playerWord, new(5, 5), new(10, 50), false));
-
-            OnClick += (obj) => (menu as LobbySelectMenu).Play(lobbyInfo);
+            playerCountLabel.text = lobbyInfo.playerCount + " " + playerWord;
         }
 
         public override void Update()
@@ -268,12 +295,40 @@ public class LobbyCardsList : RectangularMenuObject, Slider.ISliderOwner
         lobbyCards.Clear();
     }
 
+    public void AddLobbies(IEnumerable<LobbyInfo> lobbies)
+    {
+        foreach (LobbyInfo lobbyInfo in lobbies)
+        {
+            var lobbyinfoindex = allLobbies.Count;
+
+            var firstsimilarlobby = allLobbies.FirstOrDefault(x => x.Equals(lobbyInfo));
+            if (firstsimilarlobby is not null)
+            {
+                lobbyinfoindex = allLobbies.IndexOf(firstsimilarlobby);
+                allLobbies.RemoveAll(x => x.Equals(lobbyInfo)); // remove old
+            }
+
+            allLobbies.Insert(lobbyinfoindex, lobbyInfo);
+        }
+
+        var oldfilteredLobbies = filteredLobbies;
+        FilterLobbies();
+
+        int diff = 0;
+        for (; diff < Math.Min(filteredLobbies.Count, oldfilteredLobbies.Count); diff++) if (!oldfilteredLobbies[diff].Equals(filteredLobbies[diff])) break;
+        CreateCards(diff);
+    }
+
     public void FilterLobbies()
     {
         filteredLobbies = new List<LobbyInfo>();
-
-        string[] requiredMods = RainMeadowModManager.GetRequiredMods();
-        string requiredModsString = RainMeadowModManager.ModArrayToString(requiredMods); //used for unused "Exact" filter
+        filteredLobbies = filter.sortingOrder switch
+        {
+            "ZtoA" => filteredLobbies.OrderByDescending(lobby => lobby.name).ToList(),
+            "FullestLobby" => filteredLobbies.OrderByDescending(lobby => lobby.playerCount).ToList(),
+            "EmptiestLobby" => filteredLobbies.OrderBy(lobby => lobby.playerCount).ToList(),
+            _ => filteredLobbies.OrderBy(lobby => lobby.name).ToList()
+        };
 
         foreach (var lobby in allLobbies)
         {
@@ -296,9 +351,10 @@ public class LobbyCardsList : RectangularMenuObject, Slider.ISliderOwner
                     case "MSC + Watcher": missingMod = !(hasMsc && hasWatcher); break;
                     //
                     case "Exact": //currently unused filter
-                        missingMod = lobby.requiredMods != requiredModsString;
+                        missingMod = lobby.requiredMods != RainMeadowModManager.ModArrayToString(RainMeadowModManager.GetRequiredMods());
                         break;
                     case "All":
+                        var requiredMods = RainMeadowModManager.GetRequiredMods();
                         string[] lobbyMods = RainMeadowModManager.ModStringToArray(lobby.requiredMods);
                         if (lobbyMods.Length != requiredMods.Length) { missingMod = true; break; }
                         foreach (string m in lobbyMods)
@@ -315,8 +371,6 @@ public class LobbyCardsList : RectangularMenuObject, Slider.ISliderOwner
 
             filteredLobbies.Add(lobby);
         }
-
-        CreateCards();
     }
 
     public void ToggleFilterEnabled(SymbolButton obj)
@@ -333,32 +387,38 @@ public class LobbyCardsList : RectangularMenuObject, Slider.ISliderOwner
         FilterLobbies();
     }
 
+    public void OnCardClicked(SimplerButton card)
+    {
+        if (card is LobbyCard lc) ClickedLobbyCard.Invoke(lc);
+    }
+
     /// <summary>
     /// Reorders filteredLobbies according to filter.sortingOrder and recreates all lobby cards. Call FilterLobbies instead of CreateCards so that filters also apply
     /// </summary>
     // TODO implement sort by ping
-    public void CreateCards()
+    public void CreateCards(int diff = 0)
     {
-        filteredLobbies = filter.sortingOrder switch
-        {
-            "ZtoA" => filteredLobbies.OrderByDescending(lobby => lobby.name).ToList(),
-            "FullestLobby" => filteredLobbies.OrderByDescending(lobby => lobby.playerCount).ToList(),
-            "EmptiestLobby" => filteredLobbies.OrderBy(lobby => lobby.playerCount).ToList(),
-            _ => filteredLobbies.OrderBy(lobby => lobby.name).ToList()
-        };
-
-        foreach (var card in lobbyCards)
+        foreach (var card in lobbyCards.Skip(diff))
         {
             if (card == null) continue;
+            card.OnClick -= OnCardClicked;
             card.RemoveSprites();
             owner.RemoveSubObject(card);
         }
 
-        lobbyCards = new List<LobbyCard>();
+        lobbyCards.RemoveRange(diff, lobbyCards.Count - diff);
 
-        for (int i = 0; i < filteredLobbies.Count; i++)
+        // update old cards
+        for (int i = 0; i < diff; i++)
         {
-            var card = new LobbyCard(menu, this, filteredLobbies[i]);
+            lobbyCards[i].lobbyInfo = filteredLobbies[i];
+            lobbyCards[i].lobbyInfoUpdated();
+        }
+
+        foreach (LobbyInfo info in filteredLobbies.Skip(diff))
+        {
+            var card = new LobbyCard(menu, this, info);
+            card.OnClick += OnCardClicked;
 
             card.pos.x = 15f;
             card.pos.y = IdealYPosForItem(filteredLobbies.Count);

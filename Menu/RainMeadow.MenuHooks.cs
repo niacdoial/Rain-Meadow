@@ -384,6 +384,83 @@ namespace RainMeadow
             });
         }
 
+        public static bool attemptedAutoConnect = false;
+        public static LobbyInfo? argumentsAutoConnect = null;
+        public static string? autoConnectPassword = null;
+
+        private LobbyInfo? ConnectWithArguments()
+        {
+            string[] args = System.Environment.GetCommandLineArgs();
+            RainMeadow.Debug(string.Join(" ", args));
+            int connect_idx = Array.IndexOf(args, "+connect_lobby");
+            int connect_domain_idx = Array.IndexOf(args, "+connect_domain");
+            int connect_password_idx = Array.IndexOf(args, "+connect_password");
+
+            if (args.Length <= (connect_idx + 1))
+            {
+                RainMeadow.Error("Expected argument after \"+connect_lobby\"");
+                return null;
+            }
+
+            if (args.Length <= (connect_domain_idx + 1))
+            {
+                RainMeadow.Error("Expected argument after \"+connect_domain\"");
+                return null;
+            }
+
+            if (args.Length <= (connect_password_idx + 1))
+            {
+                RainMeadow.Error("Expected argument after \"+connect_password_idx\"");
+                return null;
+            }
+
+
+            //connect to lobby
+            if (connect_idx >= 0)
+            {
+                NetworkDomain.NetworkDomainType type;
+                if (connect_domain_idx >= 0)
+                {
+                    if (ExtEnumBase.TryParse(typeof(NetworkDomain.NetworkDomainType), args[connect_domain_idx + 1], true, out var t))
+                    {
+                        type = (NetworkDomain.NetworkDomainType)t;
+                    }
+                    else
+                    {
+                        RainMeadow.Error($"{args[connect_domain_idx + 1]} is NOT a valid network domain. ");
+                        return null;
+                    }
+                }
+                else
+                {
+                    type = NetworkDomain.NetworkDomainType.Steam;
+                }
+
+                if (connect_password_idx >= 0)
+                {
+                    autoConnectPassword = args[connect_password_idx + 1];
+                }
+
+                if (!NetworkDomain.supportedDomains.Contains(type))
+                {
+                    RainMeadow.Error($"{args[connect_domain_idx + 1]} is NOT a supported network domain.");
+                    return null;
+                }
+
+                try
+                {
+                    LobbyInfo info = NetworkDomain.instances[type].GenerateDCLobbyInfo(args[connect_idx + 1]);
+                    return info;
+                }
+                catch (FormatException except)
+                {
+                    RainMeadow.Error($"Invalid format, {except}");
+                    return null;
+                }                
+            }
+            return null;
+        }
+
         private void ProcessManager_RequestMainProcessSwitch_ProcessID(On.ProcessManager.orig_RequestMainProcessSwitch_ProcessID orig, ProcessManager self, ProcessManager.ProcessID ID)
         {
             if (OnlineManager.lobby?.gameMode is OnlineGameMode gameMode and not MeadowGameMode)
@@ -408,6 +485,21 @@ namespace RainMeadow
                 }
             }
 
+            if (ID == ProcessManager.ProcessID.MainMenu && fullyInit && !attemptedAutoConnect)
+            {
+                attemptedAutoConnect = true;
+                try
+                {
+                    argumentsAutoConnect = ConnectWithArguments();
+                    if (argumentsAutoConnect is not null) ID = Ext_ProcessID.LobbySelectMenu;
+                }
+                catch (Exception ex)
+                {
+                    RainMeadow.Error(ex);
+                }
+                
+            }
+
             orig(self, ID);
         }
 
@@ -419,25 +511,10 @@ namespace RainMeadow
             if (ID == Ext_ProcessID.MeadowMenu) self.currentMainLoop = new MeadowMenu(self);
             if (ID == Ext_ProcessID.StoryMenu) self.currentMainLoop = new StoryOnlineMenu(self);
             if (ID == Ext_ProcessID.MeadowCredits) self.currentMainLoop = new MeadowCredits(self);
-
-            if (ID == ProcessManager.ProcessID.IntroRoll)
-            {
-                try
-                {
-                    var args = System.Environment.GetCommandLineArgs();
-
-                    NetworkDomain.JoinLobbyUsingCode(string.Join(" ", args));
-                }
-                catch (Exception ex)
-                {
-                    RainMeadow.Debug(ex);
-                }
-            }
             orig(self, ID);
         }
 
         private bool showed_no_steam_warning = false;
-
         private void MainMenu_ctor(On.Menu.MainMenu.orig_ctor orig, MainMenu self, ProcessManager manager, bool showRegionSpecificBkg)
         {
             orig(self, manager, showRegionSpecificBkg);

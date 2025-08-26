@@ -1,10 +1,12 @@
-﻿using System.Net;
+﻿using System;
+using System.Net;
 
 namespace RainMeadow
 {
     // trimmed down version for listing lobbies in menus
-    public abstract class LobbyInfo
+    public abstract class LobbyInfo : IEquatable<LobbyInfo>
     {
+        public abstract NetworkDomain.NetworkDomainType domain { get; }
         public string name;
         public string mode;
         public int playerCount;
@@ -24,7 +26,8 @@ namespace RainMeadow
             this.bannedMods = bannedMods;
         }
 
-        public abstract string GetLobbyJoinCode(string? password = null);
-        
+        public abstract string directJoinCode { get; }
+        public override bool Equals(object obj) => obj is LobbyInfo other ? this.Equals(other) : false;
+        public abstract bool Equals(LobbyInfo other);
     }
 }

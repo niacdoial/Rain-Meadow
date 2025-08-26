@@ -55,14 +55,9 @@ namespace RainMeadow
 
         public override void Process()
         {
-            if (NetworkDomain.currentDomain != NetworkDomain.NetworkDomainType.LAN) return;
-            if (OnlineManager.instance != null && OnlineManager.lobby != null) {
-                if (OnlineManager.lobby.isOwner) {
-                    RainMeadow.DebugMe();
-                    var lobbyinfo = MakeLobbyInfo();
-                    NetworkDomain.LAN?.AddLobby(lobbyinfo);
-                }
-            }
+            RainMeadow.DebugMe();
+            var lobbyinfo = MakeLobbyInfo();
+            NetworkDomain.LAN?.AddLobby(lobbyinfo);
         }
 
         public LANNetworkDomain.LANLobbyInfo MakeLobbyInfo()

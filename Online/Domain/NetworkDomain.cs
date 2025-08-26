@@ -18,8 +18,6 @@ namespace RainMeadow
             public static NetworkDomainType LAN = new NetworkDomainType("Local", true);
             public static NetworkDomainType Router = new NetworkDomainType("Router", true);
             public static NetworkDomainType Steam = new NetworkDomainType("Steam", true);
-
-
         };
 
         static partial void PlatformSteamAvailable(ref bool val);
@@ -152,7 +150,7 @@ namespace RainMeadow
         public delegate void LobbyJoined_t(bool ok, string error = "");
 
         public abstract OnlinePlayer CreateMePlayer();
-        public abstract void RequestLobbyList();
+        public abstract void RequestLobbyList(); // todo custom filters?
 
         public abstract void CreateLobby(LobbyVisibility visibility, string gameMode, string? password, int? maxPlayerCount);
 
@@ -165,65 +163,6 @@ namespace RainMeadow
 
         public abstract void RequestJoinLobby(LobbyInfo lobby, string? password);
         public abstract void JoinLobby(bool success);
-
-        public abstract void JoinLobbyUsingArgs(params string?[] args);
-        public static void JoinLobbyUsingCode(string code)
-        {
-            RainMeadow.Debug($"Attempting to join lobby with code: {code}");
-
-            string[] args = code.Split(' ');
-
-            int connect_steam_idx = Array.IndexOf(args, "+connect_lobby"),
-                connect_lan_idx = Array.IndexOf(args, "+connect_lan_lobby"),
-                password_idx = Array.IndexOf(args, "+lobby_password");
-
-            //find password, if it exists
-            string? password = null;
-            if (password_idx >= 0 && args.Length > password_idx + 1)
-                password = args[password_idx + 1];
-
-            //connect to lobby
-            if (connect_steam_idx >= 0)
-            {
-                if (args.Length > connect_steam_idx + 1)
-                {
-                    foreach (var domain in supportedDomains)
-                    {
-                        if (domain == NetworkDomainType.Steam)
-                        {
-                            //switch domain if necessary
-                            if (currentDomain != domain)
-                                currentDomain = domain;
-                            instances[domain].JoinLobbyUsingArgs(args[connect_steam_idx + 1], password);
-                            return;
-                        }
-                    }
-                }
-                else
-                    RainMeadow.Error("found +connect_lobby but no valid lobby id in the command line");
-            }
-            else if (connect_lan_idx >= 0)
-            {
-                if (args.Length > connect_lan_idx + 2)
-                {
-                    foreach (var domain in supportedDomains)
-                    {
-                        if (domain == NetworkDomainType.LAN)
-                        {
-                            //switch domain if necessary
-                            if (currentDomain != domain)
-                                currentDomain = domain;
-                            instances[domain].JoinLobbyUsingArgs(args[connect_lan_idx + 1], args[connect_lan_idx + 2], password);
-                            return;
-                        }
-                    }
-                }
-                else
-                    RainMeadow.Error("found +connect_lan_lobby but no valid lobby address and port in the command line");
-            }
-            RainMeadow.Debug("No lobby found in that code.");
-        }
-
         public abstract void HandleLeavingLobby();
 
         public abstract OnlinePlayer? GetLobbyOwner();
@@ -232,7 +171,6 @@ namespace RainMeadow
         {
             return OnlineManager.players.FirstOrDefault(p => p.id == id);
         }
-
 
         // the idea here was to decide by ping some day
         public virtual OnlinePlayer BestTransferCandidate(OnlineResource onlineResource, List<OnlinePlayer> subscribers)
@@ -251,7 +189,6 @@ namespace RainMeadow
 
         public abstract MeadowPlayerId GetEmptyId();
 
-        public abstract string GetLobbyID();
 
         public abstract bool canOpenInvitations { get; }
         public virtual void OpenInvitationOverlay()

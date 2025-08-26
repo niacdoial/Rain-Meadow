@@ -16,17 +16,20 @@ namespace RainMeadow
     {
         public class LANLobbyInfo : LobbyInfo
         {
+            public override NetworkDomainType domain => NetworkDomainType.LAN;
+
+            public override string directJoinCode => endPoint.ToString();
+
             public IPEndPoint endPoint;
             public LANLobbyInfo(IPEndPoint endPoint, string name, string mode, int playerCount, bool hasPassword, int maxPlayerCount, string highImpactMods = "", string bannedMods = "") :
                 base(name, mode, playerCount, hasPassword, maxPlayerCount, highImpactMods, bannedMods)
             {
                 this.endPoint = endPoint;
             }
-            public override string GetLobbyJoinCode(string? password = null)
+            public override bool Equals(LobbyInfo other)
             {
-                if (password != null)
-                    return $"+connect_lan_lobby {endPoint.Address.Address} {endPoint.Port} +lobby_password {password}";
-                return $"+connect_lan_lobby {endPoint.Address.Address} {endPoint.Port}";
+                if (other is LANLobbyInfo otherlan) return UDPPeerManager.CompareIPEndpoints(endPoint, otherlan.endPoint);
+                return false;
             }
         }
 
@@ -128,18 +131,21 @@ namespace RainMeadow
         }
         public override OnlinePlayer CreateMePlayer()
         {
-            return new OnlinePlayer(new LANPlayerId(new IPEndPoint(
-                UDPPeerManager.getInterfaceAddresses()[0], PlatformUDPManager.port))
-                { name = RainMeadow.rainMeadowOptions.LanUserName.Value })
-                { isMe = true };
+            var op = new OnlinePlayer(new LANPlayerId(new IPEndPoint(
+                UDPPeerManager.getInterfaceAddresses()[0], PlatformUDPManager.port)))
+            { isMe = true };
+
+            if (!string.IsNullOrWhiteSpace(RainMeadow.rainMeadowOptions.LanUserName.Value))
+            {
+                op.id.name = RainMeadow.rainMeadowOptions.LanUserName.Value;
+            }
+            
+            return op;
         }
 
 
-        static List<LANLobbyInfo> lobbyinfo = new();
         public override void RequestLobbyList()
         {
-            lobbyinfo.Clear();
-
             // To create a proper list, we need to send a message to the broadcast endpoint.
             // and wait for responces from possible hosts.
             for (int i = 0; i < 8; i++)
@@ -154,14 +160,7 @@ namespace RainMeadow
 
         public void AddLobby(LANLobbyInfo lobby)
         {
-            var updating_lobby = lobbyinfo.FirstOrDefault(x => UDPPeerManager.CompareIPEndpoints(x.endPoint, lobby.endPoint));
-            if (updating_lobby is not null)
-            {
-                lobbyinfo.Remove(updating_lobby);
-            }
-
-            lobbyinfo.Add(lobby);
-            OnLobbyListReceivedEvent(true, lobbyinfo.ToArray());
+            OnLobbyListReceivedEvent(true, [ lobby ]);
         }
 
 
@@ -177,11 +176,12 @@ namespace RainMeadow
                 using (BinaryWriter writer = new BinaryWriter(memory))
                 {
                     Packet.Encode(packet, writer, endPoint);
-                    PlatformUDPManager.Send(memory.GetBuffer(), endPoint, UDPPeerManager.PacketType.Unreliable, true);
+                    PlatformUDPManager.Send(memory.GetBuffer(), endPoint, UDPPeerManager.PacketType.UnreliableBroadcast, false);
                 }
             }
         }
 
+        public override bool canDirectConnect => true;
         public override LobbyInfo GenerateDCLobbyInfo(string connectstr)
         {
             var endpoint = UDPPeerManager.GetEndPointByName(connectstr);
@@ -310,6 +310,7 @@ namespace RainMeadow
         string lobbyPassword = "";
         public override void RequestJoinLobby(LobbyInfo lobby, string? password)
         {
+            NetworkDomain.currentDomain = NetworkDomainType.LAN;
             RainMeadow.DebugMe();
             if (lobby is LANLobbyInfo lobbyinfo)
             {
@@ -345,17 +346,6 @@ namespace RainMeadow
                 RainMeadow.Debug("Failed to join local game. Wrong Password");
                 OnLobbyJoinedEvent(false, Utils.Translate("Wrong password!"));
             }
-        }
-
-        public override void JoinLobbyUsingArgs(params string?[] args)
-        {
-            if (args.Length >= 2 && long.TryParse(args[0], out var address) && int.TryParse(args[1], out var port))
-            {
-                RainMeadow.Debug($"joining lobby with address {address} and port {port} from the command line");
-                RequestJoinLobby(new LANLobbyInfo(new IPEndPoint(address, port), "", "", 0, false, 4), args.Length > 2 ? args[2] : null);
-            }
-            else
-                RainMeadow.Error($"invalid address and port: {string.Join(" ", args)}");
         }
 
         public override void HandleLeavingLobby()
@@ -400,15 +390,7 @@ namespace RainMeadow
             return new LANPlayerId(null);
         }
 
-        public override string GetLobbyID()
-        {
-            if (OnlineManager.lobby != null)
-            {
-                return (OnlineManager.lobby.owner.id as LANPlayerId)?.GetPersonaName() ?? Utils.Translate("Nobody");
-            }
 
-            return "Unknown Lan Lobby";
-        }
         public override void OpenInvitationOverlay()
         {
             OnlineManager.instance.manager.ShowDialog(new DialogNotify(Utils.Translate("You cannot use this feature here."), OnlineManager.instance.manager, null));
