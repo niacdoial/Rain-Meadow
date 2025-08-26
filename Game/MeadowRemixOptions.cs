@@ -130,7 +130,7 @@ public class RainMeadowOptions : OptionInterface
         PickedIntroRoll = config.Bind("PickedIntroRoll", IntroRoll.Meadow);
         LanUserName = config.Bind("LanUserName", "");
         UdpTimeout = config.Bind("UdpTimeout", 3000);
-        UdpHeartbeat = config.Bind("UdpHeartbeat", 500);
+        UdpHeartbeat = config.Bind("UdpHeartbeat", 50);
 
         DisableMeadowPauseAnimation = config.Bind("DisableMeadowPauseAnimation", false);
         StopMovementWhileSpectateOverlayActive = config.Bind("StopMovementWhileSpectateOverlayActive", false);
