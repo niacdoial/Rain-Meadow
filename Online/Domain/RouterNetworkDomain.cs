@@ -45,10 +45,12 @@ namespace RainMeadow
         {
             // TODO IPEndpoint and NAT stuff
             public ushort routingID;
+            public IPEndPoint endPoint;
             public RouterPlayerId(ushort routingID) : base(
                     UsernameGenerator.GenerateRandomUsername(routingID))
             {
                 this.routingID = routingID;
+                endPoint = SharedPlatform.BlackHole;
             }
 
             public override void OpenProfileLink()
@@ -88,6 +90,7 @@ namespace RainMeadow
             return new OnlinePlayer(new RouterPlayerId(0)
                 { name = RainMeadow.rainMeadowOptions.LanUserName.Value })
                 { isMe = true };
+            // note: we don't set our IP here, because it's not useful to anyone else (because NAT)
         }
 
 
@@ -214,7 +217,8 @@ namespace RainMeadow
                 }
 
                 RainMeadow.Debug("Sending Request to join lobby...");
-                Send(serverPeer, new BeginRouterSession(false), UDPPeerManager.PacketType.Reliable, true);
+                string meName = OnlineManager.mePlayer.id.name;
+                Send(serverPeer, new BeginRouterSession(false, meName), UDPPeerManager.PacketType.Reliable, true);
             }
             else
             {

@@ -36,6 +36,30 @@ namespace RainMeadow
             return true;
         }
 
+        public OnlinePlayer? GetValidatedSenderPlayer(Packet packet, ushort fromRouterID)
+        {
+            if (NetworkDomain.currentDomain != NetworkDomain.NetworkDomainType.Router) return null;
+
+            if (GetPlayerRouter(fromRouterID, false) is OnlinePlayer player
+                && player.id is RouterPlayerId senderID
+            ) {
+                if (UDPPeerManager.CompareIPEndpoints(packet.processingEndpoint, senderID.endPoint)) {
+                    return player;
+                } else if (UDPPeerManager.CompareIPEndpoints(packet.processingEndpoint, serverPeer)) {
+                    // we also tolerate players switching to server-proxying halfway
+                    return player;
+                } else {
+                    RainMeadow.Error(
+                        "Possible impersonation: player " + fromRouterID.ToString()
+                        + " can't come from endpoint " + packet.processingEndpoint.ToString()
+                    );
+                    return null;
+                }
+            } else {
+                return null;
+            }
+        }
+
 
         public void HandleJoinRouterLobby(JoinRouterLobby packet)
         {
@@ -63,22 +87,17 @@ namespace RainMeadow
 
         public void HandleRouteSessionData(RouteSessionData packet)
         {
-            if (!ValidateIsFromServer(packet)) return;  // TODO: change once P2P is enabled
-
-            if (packet.toRouterID != ((RouterPlayerId)OnlineManager.mePlayer.id).routingID) {
-                RainMeadow.Error("mis-received a packet meant for " + packet.toRouterID.ToString());
-                return;
-            }
-            if (OnlineManager.lobby is not null)
+            var maybePlayer = GetValidatedSenderPlayer(packet, packet.fromRouterID);
+            if (OnlineManager.lobby is not null && maybePlayer is OnlinePlayer player)
             {
-
-                if (NetworkDomain.currentDomain != NetworkDomain.NetworkDomainType.Router) return;
-                if (NetworkDomain.Router?.GetPlayerRouter(packet.fromRouterID, false) is OnlinePlayer p)
-                {
-                    var size = packet.size;
-                    Buffer.BlockCopy(packet.data, 0, OnlineManager.serializer.buffer, 0, size);
-                    OnlineManager.serializer.ReadData(p, size);
+                if (packet.toRouterID != ((RouterPlayerId)OnlineManager.mePlayer.id).routingID) {
+                    RainMeadow.Error("mis-received a packet meant for " + packet.toRouterID.ToString());
+                    return;
                 }
+
+                var size = packet.size;
+                Buffer.BlockCopy(packet.data, 0, OnlineManager.serializer.buffer, 0, size);
+                OnlineManager.serializer.ReadData(player, size);
             }
         }
 
@@ -92,7 +111,11 @@ namespace RainMeadow
                 case RouterModifyPlayerListPacket.Operation.Add:
                     for (int i = 0; i < packet.routerIds.Count; i++)
                     {
-                        NetworkDomain.Router.AcknoledgeRouterPlayer(NetworkDomain.Router.GetPlayerRouter(packet.routerIds[i], true));
+                        OnlinePlayer player = NetworkDomain.Router.GetPlayerRouter(packet.routerIds[i], true);
+                        RouterPlayerId playerID = (RouterPlayerId)player.id;
+                        playerID.endPoint = packet.endPoints[i];
+                        playerID.name = packet.userNames[i];
+                        NetworkDomain.Router.AcknoledgeRouterPlayer(player);
                     }
                     break;
 
