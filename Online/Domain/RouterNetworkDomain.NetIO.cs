@@ -14,7 +14,7 @@ namespace RainMeadow
     {
         static partial void PlatformRouterAvailable(ref bool val) { val = NetworkDomain.PlatformUDPManager is not null; }
     }
-    
+
     public partial class RouterNetworkDomain
     {
 
@@ -24,19 +24,23 @@ namespace RainMeadow
             JoinRouterLobby.ProcessAction += HandleJoinRouterLobby;
             RouteSessionData.ProcessAction += HandleRouteSessionData;
             RouterModifyPlayerListPacket.ProcessAction += HandleModifyPlayerList;
+        }
 
+        bool ValidateIsFromServer(Packet packet) {
+            if (serverPeer is null) return false;
+            if (!UDPPeerManager.CompareIPEndpoints(packet.processingEndpoint, serverPeer))
+            {
+                RainMeadow.Error($"Recieved host packet not from server: {packet.processingEndpoint}, server: {serverPeer}");
+                return false;
+            }
+            return true;
         }
 
 
         public void HandleJoinRouterLobby(JoinRouterLobby packet)
         {
             RainMeadow.DebugMe();
-            if (hostPeer is null) return;
-            if (!UDPPeerManager.CompareIPEndpoints(packet.processingEndpoint, hostPeer))
-            {
-                RainMeadow.Error($"Recieved host packet from non host peer: {packet.processingEndpoint}, host: {hostPeer}");
-                return;
-            }
+            if (!ValidateIsFromServer(packet)) return;
 
             if (NetworkDomain.currentDomain != NetworkDomain.NetworkDomainType.Router) return;
             var newLobbyInfo = new RouterLobbyInfo(packet.processingEndpoint, packet.name, packet.mode, 1, packet.passwordprotected, packet.maxplayers, packet.mods, packet.bannedMods);
@@ -50,7 +54,7 @@ namespace RainMeadow
                     if (UDPPeerManager.CompareIPEndpoints(oldLobbyInfo.endPoint, newLobbyInfo.endPoint))
                     {
                         OnlineManager.currentlyJoiningLobby = newLobbyInfo;
-                        NetworkDomain.Router.LobbyAcknoledgedUs(packet.yourRoutingID);
+                        NetworkDomain.Router.LobbyAcknoledgedUs(packet.assignedRoutingID);
                     }
                 }
             }
@@ -59,14 +63,20 @@ namespace RainMeadow
 
         public void HandleRouteSessionData(RouteSessionData packet)
         {
-            if (hostPeer is null) return;
+            if (!ValidateIsFromServer(packet)) return;  // TODO: change once P2P is enabled
+
+            if (packet.toRouterID != ((RouterPlayerId)OnlineManager.mePlayer.id).routingID) {
+                RainMeadow.Error("mis-received a packet meant for " + packet.toRouterID.ToString());
+                return;
+            }
             if (OnlineManager.lobby is not null)
             {
+
                 if (NetworkDomain.currentDomain != NetworkDomain.NetworkDomainType.Router) return;
-                var size = packet.size - sizeof(ushort);
-                Buffer.BlockCopy(packet.data, 0, OnlineManager.serializer.buffer, 0, size);
-                if (NetworkDomain.Router?.GetPlayerRouter(packet.processingRouterID, false) is OnlinePlayer p)
+                if (NetworkDomain.Router?.GetPlayerRouter(packet.fromRouterID, false) is OnlinePlayer p)
                 {
+                    var size = packet.size;
+                    Buffer.BlockCopy(packet.data, 0, OnlineManager.serializer.buffer, 0, size);
                     OnlineManager.serializer.ReadData(p, size);
                 }
             }
@@ -75,12 +85,7 @@ namespace RainMeadow
         public void HandleModifyPlayerList(RouterModifyPlayerListPacket packet)
         {
             if (NetworkDomain.currentDomain != NetworkDomain.NetworkDomainType.Router) return;
-            if (hostPeer is null) return;
-            if (!UDPPeerManager.CompareIPEndpoints(packet.processingEndpoint, hostPeer))
-            {
-                RainMeadow.Error($"Recieved host packet from non host peer: {packet.processingEndpoint}, host: {hostPeer}");
-                return;
-            }
+            if (!ValidateIsFromServer(packet)) return;
 
             switch (packet.operation)
             {
@@ -101,17 +106,23 @@ namespace RainMeadow
         }
 
 
-        IPEndPoint? hostPeer = null;
+        IPEndPoint? serverPeer = null;
         public override void SendSessionData(OnlinePlayer toPlayer)
         {
             if (PlatformUDPManager is null) return;
-            if (hostPeer is null) throw new InvalidProgrammerException("No host");
+            if (serverPeer is null) throw new InvalidProgrammerException("No lobby server");
             try
             {
                 OnlineManager.serializer.WriteData(toPlayer);
                 // todo nat stuff
                 var playerID = (RouterPlayerId)toPlayer.id;
-                Send(hostPeer, new RouteSessionData(playerID.routingID, OnlineManager.serializer.buffer, (ushort)OnlineManager.serializer.Position), UDPPeerManager.PacketType.Unreliable);
+                var myId = (RouterPlayerId)OnlineManager.mePlayer.id;
+                Send(serverPeer, new RouteSessionData(
+                    playerID.routingID,
+                    myId.routingID,
+                    OnlineManager.serializer.buffer,
+                    (ushort)OnlineManager.serializer.Position
+                ), UDPPeerManager.PacketType.Unreliable);
                 OnlineManager.serializer.EndWrite();
             }
             catch (Exception e)
@@ -173,7 +184,7 @@ namespace RainMeadow
         {
             if (PlatformUDPManager is null) return;
             PlatformUDPManager.ForgetAllPeers();
-            hostPeer = null;
+            serverPeer = null;
         }
     }
 }

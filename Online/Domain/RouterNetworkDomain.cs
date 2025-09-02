@@ -54,6 +54,9 @@ namespace RainMeadow
             public override void OpenProfileLink()
             {
                 string dialogue = "RoutingID: " + routingID.ToString();
+                if (routingID == (((RouterPlayerId)OnlineManager.mePlayer.id)?.routingID ?? 0)) {
+                    dialogue = "my " + dialogue;
+                }
                 OnlineManager.instance.manager.ShowDialog(
                     new DialogNotify(dialogue, new Vector2(478.1f, 115.200005f * (1 + 0.2f * 8)),
                         OnlineManager.instance.manager, null));
@@ -79,7 +82,7 @@ namespace RainMeadow
                 return false;
             }
         }
-        
+
         public override OnlinePlayer CreateMePlayer()
         {
             return new OnlinePlayer(new RouterPlayerId(0)
@@ -135,9 +138,10 @@ namespace RainMeadow
                 OnlineManager.mePlayer = GetPlayerRouter(mePlayerid, false);
                 if (OnlineManager.mePlayer is null)
                 {
-                    OnlineManager.QuitWithError("Recieved connection packets out of order");
+                    OnlineManager.QuitWithError("Recieved connection packets out of order:"+
+                        "list of players (with just our player ID inside) should arrive before arrival ack");
                 }
-
+                OnlineManager.mePlayer.id.name = RainMeadow.rainMeadowOptions.LanUserName.Value;
                 OnlineManager.mePlayer.isMe = true;
             }
 
@@ -202,7 +206,7 @@ namespace RainMeadow
             {
                 lobbyPassword = password ?? "";
                 OnlineManager.currentlyJoiningLobby = lobby;
-                hostPeer = routerLobbyInfo.endPoint;
+                serverPeer = routerLobbyInfo.endPoint;
                 if (routerLobbyInfo.endPoint == null)
                 {
                     RainMeadow.Debug("Failed to join local game...");
@@ -210,7 +214,7 @@ namespace RainMeadow
                 }
 
                 RainMeadow.Debug("Sending Request to join lobby...");
-                Send(hostPeer, new BeginRouterSession(false), UDPPeerManager.PacketType.Reliable, true);
+                Send(serverPeer, new BeginRouterSession(false), UDPPeerManager.PacketType.Reliable, true);
             }
             else
             {
@@ -243,8 +247,8 @@ namespace RainMeadow
             if (OnlineManager.lobby == null) return null;
             if (OnlineManager.lobby.owner is null || OnlineManager.lobby.owner.hasLeft)
             {
-                // select a new owner. 
-                // The order of players should be 
+                // select a new owner.
+                // The order of players should be
                 for (int i = 0; i < OnlineManager.players.Count; i++)
                 {
                     OnlinePlayer onlinePlayer = OnlineManager.players[i];
