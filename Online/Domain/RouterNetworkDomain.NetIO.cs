@@ -113,7 +113,11 @@ namespace RainMeadow
                     {
                         OnlinePlayer player = NetworkDomain.Router.GetPlayerRouter(packet.routerIds[i], true);
                         RouterPlayerId playerID = (RouterPlayerId)player.id;
-                        playerID.endPoint = packet.endPoints[i];
+                        if (UDPPeerManager.CompareIPEndpoints(packet.endPoints[i], SharedPlatform.BlackHole)) {
+                            playerID.endPoint = serverPeer;
+                        } else {
+                            playerID.endPoint = packet.endPoints[i];
+                        }
                         playerID.name = packet.userNames[i];
                         NetworkDomain.Router.AcknoledgeRouterPlayer(player);
                     }
@@ -165,6 +169,12 @@ namespace RainMeadow
                 Packet.Encode(packet, writer, endPoint);
                 PlatformUDPManager.Send(memory.GetBuffer(), endPoint, sendType, start_conversation);
             }
+        }
+
+        public void SendEmptyPacket(IPEndPoint endPoint, UDPPeerManager.PacketType sendType, bool start_conversation = false)
+        {
+            if (PlatformUDPManager is null) return;
+            PlatformUDPManager.Send(Array.Empty<byte>(), endPoint, sendType, start_conversation);
         }
 
         public override void RecieveData()

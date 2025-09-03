@@ -167,6 +167,16 @@ namespace RainMeadow
         public void AcknoledgeRouterPlayer(OnlinePlayer joiningPlayer)
         {
             RainMeadow.DebugMe();
+            if (joiningPlayer.id is RouterPlayerId joiningId) {
+                // if all two players send unprompted packets to their respective endpoints, it should pierce NAT layers on both sides,
+                // allowing them to communicate.
+                if (joiningId.endPoint != serverPeer) {
+                    RainMeadow.Debug("piercing for peer " + joiningId.routingID.ToString() + " at " + joiningId.endPoint.ToString());
+                    SendEmptyPacket(joiningId.endPoint, UDPPeerManager.PacketType.Reliable, true);
+                } else {
+                    RainMeadow.Debug("peer " + joiningId.routingID.ToString() + " hidden by router");
+                }
+            }
             if (OnlineManager.players.Contains(joiningPlayer)) { return; }
             OnlineManager.AddPlayer(joiningPlayer);
             RainMeadow.Debug($"Added {joiningPlayer} to the lobby matchmaking player list");
