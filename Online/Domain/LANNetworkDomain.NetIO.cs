@@ -14,9 +14,33 @@ namespace RainMeadow
     {
         static partial void PlatformLanAvailable(ref bool val) { val = NetworkDomain.PlatformUDPManager is not null; }
     }
-    
+
     public partial class LANNetworkDomain
     {
+        void PacketFactory(Packet.Type type, ref Packet? packet)
+        {
+            if (packet is null)
+            {
+                packet = type switch
+                {
+                    Packet.Type.RequestJoin => new RequestJoinPacket(),
+                    Packet.Type.ModifyPlayerList => new ModifyPlayerListPacket(),
+                    Packet.Type.JoinLobby => new JoinLobbyPacket(),
+                    Packet.Type.Session => new SessionPacket(),
+                    Packet.Type.SessionEnd => new SessionEndPacket(),
+                    Packet.Type.RequestLobby => new RequestLobbyPacket(),
+                    Packet.Type.InformLobby => new InformLobbyPacket(),
+                    Packet.Type.ChatMessage => new ChatMessagePacket(),
+
+                    _ => null
+                };
+            }
+        }
+
+        public void InitializePackets() {
+            Packet.packetFactory += PacketFactory;
+        }
+
         public override void SendSessionData(OnlinePlayer toPlayer)
         {
             if (PlatformUDPManager is null) return;

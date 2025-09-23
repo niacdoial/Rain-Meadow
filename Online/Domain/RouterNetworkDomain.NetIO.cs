@@ -150,13 +150,15 @@ namespace RainMeadow
                     OnlineManager.serializer.buffer,
                     (ushort)OnlineManager.serializer.Position
                 ), UDPPeerManager.PacketType.Unreliable);
-                OnlineManager.serializer.EndWrite();
             }
             catch (Exception e)
             {
                 RainMeadow.Error(e);
-                OnlineManager.serializer.EndWrite();
                 throw;
+            }
+            finally
+            {
+                OnlineManager.serializer.EndWrite();
             }
         }
 

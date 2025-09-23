@@ -14,6 +14,11 @@ namespace RainMeadow
 
     public partial class LANNetworkDomain : NetworkDomain
     {
+        public LANNetworkDomain()
+        {
+            InitializePackets();
+        }
+
         public class LANLobbyInfo : LobbyInfo
         {
             public override NetworkDomainType domain => NetworkDomainType.LAN;
@@ -129,6 +134,7 @@ namespace RainMeadow
                 return false;
             }
         }
+
         public override OnlinePlayer CreateMePlayer()
         {
             var op = new OnlinePlayer(new LANPlayerId(new IPEndPoint(
@@ -139,7 +145,7 @@ namespace RainMeadow
             {
                 op.id.name = RainMeadow.rainMeadowOptions.LanUserName.Value;
             }
-            
+
             return op;
         }
 
@@ -371,8 +377,8 @@ namespace RainMeadow
             if (OnlineManager.lobby == null) return null;
             if (OnlineManager.lobby.owner is null || OnlineManager.lobby.owner.hasLeft)
             {
-                // select a new owner. 
-                // The order of players should be 
+                // select a new owner.
+                // The order of players should be
                 for (int i = 0; i < OnlineManager.players.Count; i++)
                 {
                     OnlinePlayer onlinePlayer = OnlineManager.players[i];

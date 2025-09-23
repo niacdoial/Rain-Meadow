@@ -89,26 +89,6 @@ namespace RainMeadow
 
             if (isLANAvailable)
             {
-                Packet.packetFactory += (Packet.Type type, ref Packet? packet) =>
-                {
-                    if (packet is null)
-                    {
-                        packet = type switch
-                        {
-                            Packet.Type.RequestJoin => new RequestJoinPacket(),
-                            Packet.Type.ModifyPlayerList => new ModifyPlayerListPacket(),
-                            Packet.Type.JoinLobby => new JoinLobbyPacket(),
-                            Packet.Type.Session => new SessionPacket(),
-                            Packet.Type.SessionEnd => new SessionEndPacket(),
-                            Packet.Type.RequestLobby => new RequestLobbyPacket(),
-                            Packet.Type.InformLobby => new InformLobbyPacket(),
-                            Packet.Type.ChatMessage => new ChatMessagePacket(),
-
-                            _ => null
-                        };
-                    }
-                };
-
                 supportedDomains.Add(NetworkDomainType.LAN);
                 instances.Add(NetworkDomainType.LAN, new LANNetworkDomain());
                 currentDomain = NetworkDomainType.LAN;
@@ -158,7 +138,7 @@ namespace RainMeadow
         public virtual LobbyInfo GenerateDCLobbyInfo(string connectstr) // throws FormatException or NotImplementedException
         {
             throw new NotImplementedException();
-        } 
+        }
 
 
         public abstract void RequestJoinLobby(LobbyInfo lobby, string? password);
