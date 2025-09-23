@@ -141,10 +141,9 @@ namespace RainMeadow
             try
             {
                 OnlineManager.serializer.WriteData(toPlayer);
-                // todo nat stuff
                 var playerID = (RouterPlayerId)toPlayer.id;
                 var myId = (RouterPlayerId)OnlineManager.mePlayer.id;
-                Send(serverPeer, new RouteSessionData(
+                Send(playerID.endPoint, new RouteSessionData(
                     playerID.routingID,
                     myId.routingID,
                     OnlineManager.serializer.buffer,
@@ -212,7 +211,12 @@ namespace RainMeadow
 
         public override void ForgetPlayer(OnlinePlayer player)
         {
-            // todo NAT stuff
+            if (PlatformUDPManager is null) return;
+            if (player.id is RouterNetworkDomain.RouterPlayerId routid)
+            {
+                if (routid.endPoint == serverPeer) { return; }  // do not forget the server accidentally!
+                PlatformUDPManager.ForgetPeer(routid.endPoint);
+            }
         }
 
         public override void ForgetEverything()

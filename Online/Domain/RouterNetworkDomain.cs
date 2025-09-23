@@ -17,6 +17,24 @@ namespace RainMeadow
         public RouterNetworkDomain()
         {
             InitializePackets();
+            NetworkDomain.PlatformUDPManager.OnPeerForgotten += (IPEndPoint endPoint) => {
+                if (endPoint == serverPeer) {
+                    RainMeadow.Error("Lost contact with the lobby server. Shutting down...");
+                    OnlineManager.LeaveLobby();
+                }
+
+                // first, check if this endpoint is managed by the current NetworkDomain
+                // then, check if the peer timed out or if we booted them already
+                // if it's just a timeout, then fall back on proxied communication
+                OnlinePlayer? maybePeer = GetPlayerRouter(endPoint);
+                if (maybePeer is OnlinePlayer peer) {
+                    if (!OnlineManager.players.Contains(peer)) { return; }
+                    RouterPlayerId peerId = (RouterPlayerId)peer.id;
+                    RainMeadow.Error("Peer " + peerId.routingID.ToString() + " lost direct connection, falling back to proxied connection");
+                    RainMeadow.Error("Note: some Reliable packets may have been lost. Enjoy the jank!");
+                    peerId.endPoint = serverPeer;
+                }
+            };
         }
 
 
@@ -117,6 +135,18 @@ namespace RainMeadow
             }
 
             return player;
+        }
+
+        public OnlinePlayer? GetPlayerRouter(IPEndPoint endPoint)
+        {
+            return OnlineManager.players.FirstOrDefault(p =>
+            {
+                if (p.id is RouterPlayerId route) {
+                    if (route.endPoint != SharedPlatform.BlackHole)
+                        return UDPPeerManager.CompareIPEndpoints(route.endPoint, endPoint);
+                }
+                return false;
+            });
         }
 
         public override bool canSendChatMessages => false; // TODO: Chat Messages in router domain

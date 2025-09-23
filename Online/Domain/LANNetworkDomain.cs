@@ -17,6 +17,14 @@ namespace RainMeadow
         public LANNetworkDomain()
         {
             InitializePackets();
+            NetworkDomain.PlatformUDPManager.OnPeerForgotten += (IPEndPoint endPoint) => {
+                // first, check if this endpoint is managed by the current NetworkDomain
+                // then, check if the peer timed out or if we booted them already (done in the callee)
+                OnlinePlayer? maybePeer = GetPlayerLAN(endPoint);
+                if (maybePeer is OnlinePlayer peer) {
+                    RemoveLANPlayer(peer);
+                }
+            };
         }
 
         public class LANLobbyInfo : LobbyInfo
