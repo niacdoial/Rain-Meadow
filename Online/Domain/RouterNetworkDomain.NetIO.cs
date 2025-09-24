@@ -22,6 +22,7 @@ namespace RainMeadow
         {
             Packet.packetFactory += Packet.RouterFactory;
             JoinRouterLobby.ProcessAction += HandleJoinRouterLobby;
+            LobbyIsEmpty.ProcessAction += OnLobbyServerEmpty;
             RouteSessionData.ProcessAction += HandleRouteSessionData;
             RouterModifyPlayerListPacket.ProcessAction += HandleModifyPlayerList;
         }
@@ -78,7 +79,7 @@ namespace RainMeadow
                     if (UDPPeerManager.CompareIPEndpoints(oldLobbyInfo.endPoint, newLobbyInfo.endPoint))
                     {
                         OnlineManager.currentlyJoiningLobby = newLobbyInfo;
-                        NetworkDomain.Router.LobbyAcknoledgedUs(packet.assignedRoutingID);
+                        LobbyAcknoledgedUs(packet.assignedRoutingID);
                     }
                 }
             }

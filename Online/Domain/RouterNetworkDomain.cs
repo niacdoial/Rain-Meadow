@@ -155,12 +155,12 @@ namespace RainMeadow
             return;
         }
 
-        public override void CreateLobby(LobbyVisibility visibility, string gameMode, string? password, int? maxPlayerCount)
-        {
-            // maxplayercount = maxPlayerCount ?? 0;
-            // OnlineManager.lobby = new Lobby(new OnlineGameMode.OnlineGameModeType(gameMode), OnlineManager.mePlayer, password);
-            // NetworkDomain.OnLobbyJoinedEvent(true, "");
-        }
+        // public override void CreateLobby(LobbyVisibility visibility, string gameMode, string? password, int? maxPlayerCount)
+        // {
+        //     maxplayercount = maxPlayerCount ?? 0;
+        //     OnlineManager.lobby = new Lobby(new OnlineGameMode.OnlineGameModeType(gameMode), OnlineManager.mePlayer, password);
+        //     NetworkDomain.OnLobbyJoinedEvent(true, "");
+        // }
 
         public void LobbyAcknoledgedUs(ushort mePlayerid)
         {
@@ -249,12 +249,12 @@ namespace RainMeadow
             {
                 lobbyPassword = password ?? "";
                 OnlineManager.currentlyJoiningLobby = lobby;
-                serverPeer = routerLobbyInfo.endPoint;
                 if (routerLobbyInfo.endPoint == null)
                 {
                     RainMeadow.Debug("Failed to join local game...");
                     return;
                 }
+                serverPeer = routerLobbyInfo.endPoint;
 
                 RainMeadow.Debug("Sending Request to join lobby...");
                 string meName = OnlineManager.mePlayer.id.name;
