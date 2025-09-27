@@ -31,6 +31,7 @@ namespace RainMeadow
                     Packet.Type.RequestLobby => new RequestLobbyPacket(),
                     Packet.Type.InformLobby => new InformLobbyPacket(),
                     Packet.Type.ChatMessage => new ChatMessagePacket(),
+                    Packet.Type.CustomPacket => new CustomPacket(),
 
                     _ => null
                 };
@@ -58,6 +59,21 @@ namespace RainMeadow
             }
 
         }
+
+        public override void SendCustomData(OnlinePlayer toPlayer, string key, byte[] data, ushort size, UDPPeerManager.PacketType sendType)
+        {
+            try
+            {
+                SendP2P(toPlayer, new CustomPacket(key, data, size), sendType);
+            }
+
+            catch (Exception e)
+            {
+                RainMeadow.Error(e);
+                throw;
+            }
+        }
+
 
         public void SendBroadcast(Packet packet)
         {
@@ -125,6 +141,14 @@ namespace RainMeadow
                     RainMeadow.Error(e);
                     OnlineManager.serializer.EndRead();
                 }
+            }
+        }
+
+        public override void RecieveCustomPacket(IPEndPoint endPoint, CustomPacket packet)
+        {
+            var maybePlayer = GetPlayerLAN(endPoint);
+            if (maybePlayer is OnlinePlayer player) {
+                CustomManager.HandlePacket(player, packet);
             }
         }
 

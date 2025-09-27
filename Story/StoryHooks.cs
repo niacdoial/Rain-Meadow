@@ -66,7 +66,6 @@ namespace RainMeadow
             On.MoreSlugcats.MSCRoomSpecificScript.LC_FINAL.TriggerBossFight += MoreSlugcats_MSCRoomSpecificScript_LC_FINAL_TriggerBossFight;
             On.MoreSlugcats.MSCRoomSpecificScript.LC_FINAL.TriggerFadeToEnding += MoreSlugcats_MSCRoomSpecificScript_LC_FINAL_TriggerFadeToEnding;
             On.MoreSlugcats.MSCRoomSpecificScript.LC_FINAL.SummonScavengers += MoreSlugcats_MSCRoomSpecificScript_LC_FINAL_SummonScavengers;
-
             IL.RegionGate.Update += RegionGate_Update;
             On.RegionGate.PlayersInZone += RegionGate_PlayersInZone;
             On.RegionGate.PlayersStandingStill += RegionGate_PlayersStandingStill;
@@ -131,7 +130,9 @@ namespace RainMeadow
             On.Watcher.SpinningTop.SpawnWarpPoint += SpinningTop_SpawnWarpPoint;
             On.Watcher.SpinningTop.RaiseRippleLevel += SpinningTop_RaiseRippleLevel;
             On.Watcher.SpinningTop.Update += SpinningTop_Update;
-            On.Watcher.SpinningTop.VanillaRegionSpinningTopEncounter += (On.Watcher.SpinningTop.orig_VanillaRegionSpinningTopEncounter orig, Watcher.SpinningTop self) => {
+
+            On.Watcher.SpinningTop.VanillaRegionSpinningTopEncounter += (On.Watcher.SpinningTop.orig_VanillaRegionSpinningTopEncounter orig, Watcher.SpinningTop self) =>
+            {
                 orig(self);
                 if (OnlineManager.lobby != null && !OnlineManager.lobby.isOwner)
                 {
@@ -148,16 +149,21 @@ namespace RainMeadow
                 }
             };
             On.RainWorldGame.ForceSaveNewDenLocation += RainWorldGame_ForceSaveNewDenLocation;
-            
-            On.Conversation.InitalizePrefixColor += (On.Conversation.orig_InitalizePrefixColor orig) => {
-                try {
+
+            On.Conversation.InitalizePrefixColor += (On.Conversation.orig_InitalizePrefixColor orig) =>
+            {
+                try
+                {
                     orig();
-                } catch(System.IndexOutOfRangeException e) {
+                }
+                catch (System.IndexOutOfRangeException e)
+                {
                     RainMeadow.Error($"conversation error (watcher echo likely) {e}");
                     //throw; nonfatal
                 }
             };
         }
+
 
         private void RainWorldGame_ForceSaveNewDenLocation(On.RainWorldGame.orig_ForceSaveNewDenLocation orig, RainWorldGame game, string roomName, bool saveWorldStates)
         {
@@ -412,12 +418,15 @@ namespace RainMeadow
             {
                 IntVector2 intVector = SlugcatStats.SlugcatFoodMeter(storyGameMode.currentCampaign);
                 self.slugcatStats.maxFood = intVector.x;
-                if (self.abstractCreature.world.game.GetStorySession.saveState.malnourished) {
+                if (self.abstractCreature.world.game.GetStorySession.saveState.malnourished)
+                {
                     self.slugcatStats.foodToHibernate = intVector.x;
-                } else {
-                    self.slugcatStats.foodToHibernate = intVector.y; 
                 }
-                
+                else
+                {
+                    self.slugcatStats.foodToHibernate = intVector.y;
+                }
+
             }
         }
 
@@ -1753,7 +1762,7 @@ namespace RainMeadow
         {
             orig(self);
 
-            if (isStoryMode(out var storyGameMode) && self.continueButton != null)
+            if (isStoryMode(out var storyGameMode) && self.continueButton != null && self.ID != ProcessManager.ProcessID.Statistics)
             {
                 if (OnlineManager.lobby.isOwner)
                 {
@@ -1925,7 +1934,7 @@ namespace RainMeadow
                 foreach (var playerAvatar in OnlineManager.lobby.playerAvatars.Select(kv => kv.Value))
                 {
                     if (playerAvatar.type == (byte)OnlineEntity.EntityId.IdType.none) continue; // not in game
-                    if (playerAvatar.FindEntity(true) is OnlinePhysicalObject opo && opo.apo is AbstractCreature ac)
+                    if (playerAvatar.FindEntity(true) is OnlinePhysicalObject opo && opo.apo is AbstractCreature ac && ac.realizedObject is not null)
                     {
                         // do things with the AbstractCreature we found
                         if (!ac.IsLocal() && opo.apo.realizedObject.Submersion > 0.5f)
@@ -1947,6 +1956,7 @@ namespace RainMeadow
                     }
                 }
             }
+
         }
     }
 }

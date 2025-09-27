@@ -214,6 +214,17 @@ namespace RainMeadow
             }
         }
 
+        public static void SendCustomData(OnlinePlayer toPlayer, string key, byte[] data, ushort size, UDPPeerManager.PacketType sendType)
+        {
+            if (toPlayer.isMe)
+                return;
+            if (!lobby.clientSettings.TryGetValue(toPlayer, out var settings) || !settings.TryGetData<CustomClientSettings>(out var customSettings))
+                return;
+            if (!customSettings.keys.Contains(key))
+                return;
+            NetworkDomain.currentInstance?.SendCustomData(toPlayer, key, data, size, sendType);
+        }
+
         public void ProcessSelfEvents()
         {
             // Stuff mePlayer set to itself, events from the distributed lease system

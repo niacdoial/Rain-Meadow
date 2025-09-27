@@ -26,6 +26,7 @@ namespace RainMeadow
             RouteSessionData.ProcessAction += HandleRouteSessionData;
             RouterModifyPlayerListPacket.ProcessAction += HandleModifyPlayerList;
             RouterChatMessage.ProcessAction += HandleChatMessage;
+            RouterCustomPacket.ProcessAction += HandleCustomData;
         }
 
         bool ValidateIsFromServer(Packet packet) {
@@ -141,6 +142,26 @@ namespace RainMeadow
             }
         }
 
+        public void HandleCustomData(RouterCustomPacket packet) {
+            if (packet.key == "" || packet.data == null)
+            {
+                return;
+            }
+            if (packet.key.Length > 16 || packet.data.Length > 32768)
+            {
+                RainMeadow.Error($"Custom Packet was too large, the maximum size is 32768");
+                return;
+            }
+            var maybePlayer = GetValidatedSenderPlayer(packet, packet.fromRouterID);
+            if (maybePlayer is OnlinePlayer player) {
+                if (packet.toRouterID != ((RouterPlayerId)OnlineManager.mePlayer.id).routingID) {
+                    RainMeadow.Error("mis-received a packet meant for " + packet.toRouterID.ToString());
+                    return;
+                }
+                // convert the RouterCustomPacket into a CustomPacket to process it further
+                CustomManager.HandlePacket(player, new CustomPacket(packet.key, packet.data, (ushort)packet.data.Length));
+            }
+        }
 
         IPEndPoint? serverPeer = null;
         public override void SendSessionData(OnlinePlayer toPlayer)
@@ -167,6 +188,22 @@ namespace RainMeadow
             finally
             {
                 OnlineManager.serializer.EndWrite();
+            }
+        }
+
+        public override void SendCustomData(OnlinePlayer toPlayer, string key, byte[] data, ushort size, UDPPeerManager.PacketType sendType)
+        {
+            try
+            {
+                RouterPlayerId playerID = (RouterPlayerId)toPlayer.id;
+                RouterPlayerId meID = (RouterPlayerId)OnlineManager.mePlayer.id;
+                Send(playerID.endPoint, new RouterCustomPacket(playerID.routingID, meID.routingID, key, data, size), sendType);
+            }
+
+            catch (Exception e)
+            {
+                RainMeadow.Error(e);
+                throw;
             }
         }
 

@@ -95,7 +95,7 @@ public partial class RainMeadow
         On.Player.CamoUpdate += Player_CamoUpdate;
 
 
-        
+
         On.Player.SetMalnourished += Player_SetMalnourished;
         new Hook(typeof(Player).GetProperty(nameof(Player.Malnourished)).GetGetMethod(), Player_get_Malnourished);
 
@@ -113,7 +113,7 @@ public partial class RainMeadow
         new Hook(typeof(Player).GetProperty(nameof(Player.CanRetrieveSpearFromBack)).GetGetMethod(), DisablePutOnBackWithSpearMasterAbility);
         new Hook(typeof(Player).GetProperty(nameof(Player.CanRetrieveSpearFromBack)).GetGetMethod(), DisablePutOnBackWithSpearMasterAbility);
 
-        
+
         // IL.Player.GrabUpdate += Player_SynchronizeSocialEventDrop;
         // IL.Player.TossObject += Player_SynchronizeSocialEventDrop;
         // IL.Player.ReleaseObject += Player_SynchronizeSocialEventDrop;
@@ -122,8 +122,8 @@ public partial class RainMeadow
     {
         user = null!;
         if (OnlineManager.lobby == null) return false;
-        if (!ModManager.MSC) return false; 
-        if (spearmaster.SlugCatClass != MoreSlugcats.MoreSlugcatsEnums.SlugcatStatsName.Spear) return false; 
+        if (!ModManager.MSC) return false;
+        if (spearmaster.SlugCatClass != MoreSlugcats.MoreSlugcatsEnums.SlugcatStatsName.Spear) return false;
 
         if (GetBottomPlayer(spearmaster, MoreSlugcats.MoreSlugcatsEnums.SlugcatStatsName.Spear, out var bottom))
         {
@@ -136,7 +136,7 @@ public partial class RainMeadow
 
         return false;
     }
-    
+
     public bool DisablePutOnBackWithSpearMasterAbility(Func<Player, bool> orig, Player self)
     {
         bool orig_result = orig(self);
@@ -346,9 +346,12 @@ public partial class RainMeadow
     }
     delegate bool orig_get_Malnourished(Player self);
 
-    bool Player_get_Malnourished(orig_get_Malnourished orig, Player self) {
-        if (OnlineManager.lobby != null && !self.isNPC) {
-            if (slugcatStatsPerPlayer.TryGetValue(self, out var stats)) {
+    bool Player_get_Malnourished(orig_get_Malnourished orig, Player self)
+    {
+        if (OnlineManager.lobby != null && !self.isNPC)
+        {
+            if (slugcatStatsPerPlayer.TryGetValue(self, out var stats))
+            {
                 return stats.malnourished;
             }
         }
@@ -359,9 +362,11 @@ public partial class RainMeadow
 
 
 
-    void Player_SetMalnourished(On.Player.orig_SetMalnourished orig, Player self, bool m) {
+    void Player_SetMalnourished(On.Player.orig_SetMalnourished orig, Player self, bool m)
+    {
         orig(self, m);
-        if (OnlineManager.lobby != null && !self.isNPC) {
+        if (OnlineManager.lobby != null && !self.isNPC)
+        {
             slugcatStatsPerPlayer.Remove(self);
             slugcatStatsPerPlayer.Add(self, new SlugcatStats(self.SlugCatClass, m));
         }
@@ -422,20 +427,25 @@ public partial class RainMeadow
         }
 
     }
-    private void Player_UpdateMSC(On.Player.orig_UpdateMSC orig, Player self) {
+    private void Player_UpdateMSC(On.Player.orig_UpdateMSC orig, Player self)
+    {
         orig(self);
-        if (OnlineManager.lobby != null && HasSlugcatClassOnBack(self, MoreSlugcats.MoreSlugcatsEnums.SlugcatStatsName.Saint, out Player saint_player)) {
-            if (self.tongue is not null && self.tongue.Attached) {
+        if (OnlineManager.lobby != null && HasSlugcatClassOnBack(self, MoreSlugcats.MoreSlugcatsEnums.SlugcatStatsName.Saint, out Player saint_player))
+        {
+            if (self.tongue is not null && self.tongue.Attached)
+            {
                 self.tongue.Release();
             }
 
 
-            if (self.IsLocal() && self.onBack == null) {
-                if (!saint_player!.tongue.Attached) {
-                    if (!MoreSlugcats.MMF.cfgOldTongue.Value && self.input[0].jmp && !self.input[1].jmp && !self.input[0].pckp && self.canJump <= 0 && self.bodyMode != Player.BodyModeIndex.Crawl && self.animation != Player.AnimationIndex.ClimbOnBeam && self.animation != Player.AnimationIndex.AntlerClimb && self.animation != Player.AnimationIndex.HangFromBeam 
-                            && saint_player!.SaintTongueCheck() && 
-                            self.bodyMode != Player.BodyModeIndex.CorridorClimb && !self.corridorDrop && 
-                            self.bodyMode != Player.BodyModeIndex.ClimbIntoShortCut && self.bodyMode != Player.BodyModeIndex.WallClimb && 
+            if (self.IsLocal() && self.onBack == null)
+            {
+                if (!saint_player!.tongue.Attached)
+                {
+                    if (!MoreSlugcats.MMF.cfgOldTongue.Value && self.input[0].jmp && !self.input[1].jmp && !self.input[0].pckp && self.canJump <= 0 && self.bodyMode != Player.BodyModeIndex.Crawl && self.animation != Player.AnimationIndex.ClimbOnBeam && self.animation != Player.AnimationIndex.AntlerClimb && self.animation != Player.AnimationIndex.HangFromBeam
+                            && saint_player!.SaintTongueCheck() &&
+                            self.bodyMode != Player.BodyModeIndex.CorridorClimb && !self.corridorDrop &&
+                            self.bodyMode != Player.BodyModeIndex.ClimbIntoShortCut && self.bodyMode != Player.BodyModeIndex.WallClimb &&
                             self.bodyMode != Player.BodyModeIndex.Swimming && self.animation != Player.AnimationIndex.VineGrab &&
                             self.animation != Player.AnimationIndex.ZeroGPoleGrab)
                     {
@@ -451,9 +461,10 @@ public partial class RainMeadow
                 }
 
 
-                if (saint_player!.tongue.Attached) {
+                if (saint_player!.tongue.Attached)
+                {
                     if (self.input[0].jmp && !self.input[1].jmp && saint_player!.tongueAttachTime >= 2)
-					{
+                    {
                         float num = Mathf.Lerp(1f, 1.15f, self.Adrenaline);
                         if (self.grasps[0] != null && self.HeavyCarry(self.grasps[0].grabbed) && !(self.grasps[0].grabbed is Cicada))
                         {
@@ -463,7 +474,7 @@ public partial class RainMeadow
                         self.bodyChunks[0].vel.y = 8f * num;
                         self.bodyChunks[1].vel.y = 7f * num;
                         self.jumpBoost = 8f;
-						saint_player!.tongue.Release();
+                        saint_player!.tongue.Release();
                     }
 
 
@@ -472,7 +483,8 @@ public partial class RainMeadow
                         saint_player!.tongue.decreaseRopeLength(3f);
                     }
 
-                    if (saint_player!.input[0].x == 0) {
+                    if (saint_player!.input[0].x == 0)
+                    {
                         saint_player!.input[0].x = self.input[0].x;
                     }
 
@@ -485,9 +497,11 @@ public partial class RainMeadow
         }
     }
 
-    private void GourmandOnBackMechanics(ILContext ctx) {
+    private void GourmandOnBackMechanics(ILContext ctx)
+    {
         // generic hook for when somebody has gourmand on there back
-        try {
+        try
+        {
             ILCursor c = new(ctx);
 
             // converts all 
@@ -496,36 +510,46 @@ public partial class RainMeadow
 
             Mono.Cecil.MethodReference comparison = null!;
             int overriden_count = 0;
-            while (c.TryGotoNext(MoveType.After, 
+            while (c.TryGotoNext(MoveType.After,
                 x => x.MatchLdarg(0),
                 x => x.MatchLdfld<Player>(nameof(Player.SlugCatClass)),
                 x => x.MatchLdsfld<MoreSlugcats.MoreSlugcatsEnums.SlugcatStatsName>(nameof(MoreSlugcats.MoreSlugcatsEnums.SlugcatStatsName.Gourmand)),
                 x => x.MatchCall(out comparison)
-            )) {
+            ))
+            {
                 overriden_count++;
-                if (comparison.Name == "op_Equality") {
+                if (comparison.Name == "op_Equality")
+                {
                     c.Emit(OpCodes.Ldarg, 0);
-                    c.EmitDelegate(static (bool result, Player p) => {
+                    c.EmitDelegate(static (bool result, Player p) =>
+                    {
                         return result || ((OnlineManager.lobby != null) && HasSlugcatClassOnBack(p, MoreSlugcats.MoreSlugcatsEnums.SlugcatStatsName.Gourmand, out _));
                     });
-                } else if (comparison.Name == "op_Inequality") {
+                }
+                else if (comparison.Name == "op_Inequality")
+                {
                     c.Emit(OpCodes.Ldarg, 0);
-                    c.EmitDelegate(static (bool result, Player p) => {
+                    c.EmitDelegate(static (bool result, Player p) =>
+                    {
                         return result && !((OnlineManager.lobby != null) && HasSlugcatClassOnBack(p, MoreSlugcats.MoreSlugcatsEnums.SlugcatStatsName.Gourmand, out _));
                     });
-                } else {
+                }
+                else
+                {
                     RainMeadow.Error($"No comparison implementation for {comparison.Name}");
                 }
             }
 
             RainMeadow.Debug($"Overriden {overriden_count} comparisons in {ctx.Method.Name}");
-        } catch (Exception except) {
+        }
+        catch (Exception except)
+        {
             RainMeadow.Error(except);
         }
 
 
 
-        
+
     }
 
     public static bool HasSlugcatClassOnBack(Player player, SlugcatStats.Name name, out Player? onback)
@@ -551,7 +575,8 @@ public partial class RainMeadow
         return onback != null;
     }
 
-    public static bool GetBottomPlayer(Player player, SlugcatStats.Name? Ignoreclass, out Player bottom) {
+    public static bool GetBottomPlayer(Player player, SlugcatStats.Name? Ignoreclass, out Player bottom)
+    {
         bottom = null;
         int i = 25;
         var tempBottom = player;
@@ -573,7 +598,7 @@ public partial class RainMeadow
 
         return bottom != null;
     }
-    
+
 
     private Vector2 Player_GetHeldItemDirection(On.Player.orig_GetHeldItemDirection orig, Player self, int hand)
     {
@@ -581,7 +606,9 @@ public partial class RainMeadow
         {
             // scary math below
             var vector = Custom.DegToVec(Custom.AimFromOneVectorToAnother(self.firstChunk.pos, playerGraphics.hands[hand].pos));
-            return Vector3.Slerp(vector, Custom.DegToVec(90f + (80f + Mathf.Cos((float)(self.animationFrame + (self.leftFoot ? 9 : 3)) / 12f * 2f * (float)Math.PI) * 4f * playerGraphics.spearDir) * playerGraphics.spearDir), Mathf.Abs(playerGraphics.spearDir));
+            return vector;
+            //Old second-step vector math. I believe this is supposed to be a basic rotation interpolate, but spearDir does *not* appear to do what it says on the tin, so it just breaks when walking. Keeping a copy commented in case I've misdiagnosed and it needs a revert.
+            //return Vector3.Slerp(vector, Custom.DegToVec(90f + (80f + Mathf.Cos((float)(self.animationFrame + (self.leftFoot ? 9 : 3)) / 12f * 2f * (float)Math.PI) * 4f * playerGraphics.spearDir) * playerGraphics.spearDir), Mathf.Abs(playerGraphics.spearDir));
         }
         return orig(self, hand);
     }
@@ -669,10 +696,15 @@ public partial class RainMeadow
         {
             return;
         }
-        if (isArenaMode(out var arena) && arena.countdownInitiatedHoldFire)
+        if (isArenaMode(out var arena))
         {
-            return;
+            if (arena.countdownInitiatedHoldFire)
+            {
+                return;
+            }
         }
+
+
 
         float range = 26 + self.bodyChunks[1].rad;
         if (self.input[0].pckp && !self.input[1].pckp && self.onBack == null && self.room != null &&
@@ -970,7 +1002,7 @@ public partial class RainMeadow
                 {
                     self.input[0].pckp = true;
                 }
-            } 
+            }
 
             if (!self.isNPC)
             {
@@ -1053,7 +1085,11 @@ public partial class RainMeadow
     public class PlayerExtras
     {
         public bool afkSleep;
+        public int manualSleepDownCounter;
+        public int timeSinceShelterWakeup;
     }
+    public int afkSleepRequiredTime = 1200;
+    public int manualSleepRequiredTime = 200;
 
     private void Player_Update1(On.Player.orig_Update orig, Player self, bool eu)
     {
@@ -1152,29 +1188,44 @@ public partial class RainMeadow
         //Sleeping when AFK
         if (OnlineManager.lobby != null)
         {
-            var extas = playerExtras.GetOrCreateValue(self); 
-            if (self.IsLocal())
+            var extras = playerExtras.GetOrCreateValue(self);
+            if (self.IsLocal() && !self.inShortcut) //When entering a shortcut, Player.Update() *should* exit way before it gets here, but, occasionally it just decides not to I guess.
             {
-                if (self.sleepCounter == 0 && //Check we're not already sleeping in a shelter; otherwise waking up from a shelter can trigger AFK sleep instantly.
-                    ( //Check if we can fit a sleeping animation.
+                if (self.sleepCounter > 0) { extras.timeSinceShelterWakeup = 0; }
+                else                       { extras.timeSinceShelterWakeup++;   }
+                if (self.input[0].y < 0)   { extras.manualSleepDownCounter++;   }
+                else if ( //Reset if we press anything but down, or if we release down before entering the animation.
+                    (self.input[0].y > 0 || self.input[0].x != 0 || self.input[0].jmp || self.input[0].thrw || self.input[0].pckp || self.input[0].spec) ||
+                    (self.input[0].y == 0 && extras.manualSleepDownCounter < manualSleepRequiredTime)
+                )
+                { extras.manualSleepDownCounter = 0; }
+
+                if ((extras.timeSinceShelterWakeup > afkSleepRequiredTime || extras.timeSinceShelterWakeup > manualSleepRequiredTime) && //touchedNoInputCounter and stillInStartShelter are liars. STOP FALLING ASLEEP WHEN WAKING UP.
+                    self.onBack == null && //Check we're not piggybacked onto someone else (hilarious but looked very wrong).
+                    ( //Check if we can fit a sleeping animation (the animation checks double as a consiousness check).
                         (self.bodyMode == Player.BodyModeIndex.Stand && self.IsTileSolid(1, -1, -1) && self.IsTileSolid(1, 0, -1) && self.IsTileSolid(1, 1, -1)) ||
                         (self.bodyMode == Player.BodyModeIndex.Crawl && self.IsTileSolid(0, 0, -1) && self.IsTileSolid(1, 0, -1))
                     )
-                    && self.touchedNoInputCounter > 1200
-                   )
-                {
-                    extas.afkSleep = true;
-                }
+                    && (self.touchedNoInputCounter > afkSleepRequiredTime || extras.manualSleepDownCounter > manualSleepRequiredTime)
+                )
+                { extras.afkSleep = true; }
                 else
-                {
-                    extas.afkSleep = false;
-                }
+                { extras.afkSleep = false; }
             }
-            if (extas.afkSleep)
+            if (extras.afkSleep)
             {
                 self.standing = false;
                 self.sleepCurlUp = Mathf.Max(wasSleepCurlUp, self.sleepCurlUp); // prevent decay
                 self.sleepCurlUp = Mathf.Min(1f, self.sleepCurlUp + 0.02f); // add up
+            }
+            if (self.sleepCurlUp > 0 && !self.Consious) //When stunned or dead, the vanilla code stops decaying sleepCurlUp so we need to handle it ourselves. Technically this fixes an esoteric vanilla bug too.
+            {
+                //RainMeadow.Debug("Wake up and smell the PAIN, slugcat!");
+                self.sleepCurlUp = 0f;
+            }
+            if (ModManager.MSC && self.SlugCatClass == MoreSlugcats.MoreSlugcatsEnums.SlugcatStatsName.Spear && extras.afkSleep && self.sleepCurlUp == 1f)
+            { //For reasons beyond my comprehension, PlayerBlink() has a weird, possibly unintended "else" that makes specifically Spearmaster *not* close their eyes during sleepCurlUp.
+                self.Blink(2); //Vanilla only avoids this issue because sleepCounter also closes eyes directly using Blink(). We're not using sleepCounter, so Spearmaster needs this insomnia cure.
             }
         }
     }
@@ -1268,7 +1319,8 @@ public partial class RainMeadow
                 i => i.MatchNewobj<AbstractSpear>()
                 );
             c.Emit(OpCodes.Ldarg_0);
-            c.EmitDelegate((Player self) => {
+            c.EmitDelegate((Player self) =>
+            {
                 if (BottomPlayerUsingSpearmasterAbility(self, out var bottom))
                 {
                     return bottom.IsLocal();
@@ -1342,7 +1394,7 @@ public partial class RainMeadow
                 x => x.MatchCall<Player>(nameof(Player.FreeHand)));
             var delegate_givespeartobottomplayer = (Player self) =>
             {
-                
+
                 if (OnlineManager.lobby != null)
                 {
                     if (BottomPlayerUsingSpearmasterAbility(self, out var bottom))
@@ -1370,11 +1422,11 @@ public partial class RainMeadow
                                 bottomplayer.SlugcatGrab(spear.realizedObject, freehand);
                         }
                         return -1;
-                    }   
+                    }
                 }
 
                 return freehand;
-                
+
             });
         }
         catch (Exception e)
@@ -1413,7 +1465,7 @@ public partial class RainMeadow
             var newFood = state.foodInStomach * 4 + state.quarterFoodPoints;
             if (newFood != origFood) OnlineManager.lobby.owner.InvokeRPC(StoryRPCs.ChangeFood, (short)(newFood - origFood));
         }
-        
+
         // hack
         if (self.slugcatStats.malnourished && state.foodInStomach >= ((self.redsIllness != null) ? self.redsIllness.FoodToBeOkay : self.slugcatStats.maxFood))
         {
@@ -1461,7 +1513,7 @@ public partial class RainMeadow
             var newFood = state.foodInStomach * 4 + state.quarterFoodPoints;
             if (newFood != origFood) OnlineManager.lobby.owner.InvokeRPC(StoryRPCs.ChangeFood, (short)(newFood - origFood));
         }
-        
+
         // hack
         if (self.slugcatStats.malnourished && state.foodInStomach >= ((self.redsIllness != null) ? self.redsIllness.FoodToBeOkay : self.slugcatStats.maxFood))
         {
@@ -1614,21 +1666,21 @@ public partial class RainMeadow
         {
             if (self.abstractPhysicalObject.GetOnlineObject(out var oe))
             {
-		if (oe.TryGetData<SlugcatCustomization>(out var customization))
-		{
-		    bool malnourished;
-		    if (isStoryMode(out var _))
-		    {
-		        if (self.isNPC) malnourished = self.State is MoreSlugcats.PlayerNPCState state && state.Malnourished;
-		        else malnourished = self.abstractCreature.world.game.GetStorySession.saveState.malnourished;
-		    }
-		    else
-		    {
-		        malnourished = self.slugcatStats?.malnourished ?? false;
-		    }
-		    slugcatStatsPerPlayer.Add(self, new SlugcatStats(customization.playingAs, malnourished));
-		    self.SlugCatClass = customization.playingAs;
-		}
+                if (oe.TryGetData<SlugcatCustomization>(out var customization))
+                {
+                    bool malnourished;
+                    if (isStoryMode(out var _))
+                    {
+                        if (self.isNPC) malnourished = self.State is MoreSlugcats.PlayerNPCState state && state.Malnourished;
+                        else malnourished = self.abstractCreature.world.game.GetStorySession.saveState.malnourished;
+                    }
+                    else
+                    {
+                        malnourished = self.slugcatStats?.malnourished ?? false;
+                    }
+                    slugcatStatsPerPlayer.Add(self, new SlugcatStats(customization.playingAs, malnourished));
+                    self.SlugCatClass = customization.playingAs;
+                }
                 else
                 {
                     RainMeadow.Debug("no SlugcatCustomization for " + oe);
@@ -1642,14 +1694,17 @@ public partial class RainMeadow
     }
 
     private ConditionalWeakTable<SlugcatStats, GourmandDecorator> gourmand_decorators = new();
-    class GourmandDecorator : SlugcatStats {
+    class GourmandDecorator : SlugcatStats
+    {
         SlugcatStats origin;
-        public GourmandDecorator(SlugcatStats slugcatStats) : base(slugcatStats.name, slugcatStats.malnourished) {
+        public GourmandDecorator(SlugcatStats slugcatStats) : base(slugcatStats.name, slugcatStats.malnourished)
+        {
             origin = slugcatStats;
             Update();
         }
 
-        public void Update() {
+        public void Update()
+        {
             this.throwingSkill = origin.throwingSkill;
             this.generalVisibilityBonus = origin.generalVisibilityBonus;
             this.visualStealthInSneakMode = origin.visualStealthInSneakMode;
@@ -1669,13 +1724,15 @@ public partial class RainMeadow
             this.poleClimbSpeedFac = 0.8f;
             this.corridorClimbSpeedFac = 0.86f;
             this.runspeedFac = 0.9f;
-        }   
+        }
     }
 
 
-    private SlugcatStats Player_slugcatStatsGourmandBack(Func<Player, SlugcatStats> orig, Player self) {
-        SlugcatStats stats =  orig(self);
-        if (OnlineManager.lobby != null && HasSlugcatClassOnBack(self, MoreSlugcats.MoreSlugcatsEnums.SlugcatStatsName.Gourmand, out _)) {
+    private SlugcatStats Player_slugcatStatsGourmandBack(Func<Player, SlugcatStats> orig, Player self)
+    {
+        SlugcatStats stats = orig(self);
+        if (OnlineManager.lobby != null && HasSlugcatClassOnBack(self, MoreSlugcats.MoreSlugcatsEnums.SlugcatStatsName.Gourmand, out _))
+        {
             var gourmstats = gourmand_decorators.GetValue(stats, _stats => new GourmandDecorator(stats));
             gourmstats.Update();
             stats = gourmstats;

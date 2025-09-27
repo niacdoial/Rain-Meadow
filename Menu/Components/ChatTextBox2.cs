@@ -20,6 +20,7 @@ namespace RainMeadow.UI.Components
         public int VisibleTextLimit => visibleTextLimit ?? Mathf.FloorToInt(menuLabel.size.x / Mathf.Max(LabelTest.GetWidth(currentMessage) / Mathf.Max(currentMessage.Length, 1), 1));
         public bool SelectionActive => selectionStartPos != -1;
         public bool IgnoreSelect => (focused && !menu.manager.menuesMouseMode);
+        public bool TypingOnOtherObjects = CanBeTypedExt._handler?._focused != null;
         public bool Focused
         {
             get => focused;
@@ -84,7 +85,7 @@ namespace RainMeadow.UI.Components
             base.Update();
             if (previouslySubmittedText) previouslySubmittedText = previouslySubmittedText && menu.selectedObject == this;
             buttonBehav.Update();
-            if ((menu.pressButton && menu.manager.menuesMouseMode && !buttonBehav.clicked) || buttonBehav.greyedOut) SetFocused(false, menu.selectedObject == null || buttonBehav.greyedOut ? null : SoundID.None);
+            if (Focused) CheckToUnfocus();
             if (menu.allowSelectMove) menu.allowSelectMove = !Focused;
             UpdateSelection();
             roundedRect.fillAlpha = 1.0f;
@@ -118,7 +119,7 @@ namespace RainMeadow.UI.Components
             if (cursorIsInMiddle)
             {
                 if (cursorSprite.element.name != "pixel") cursorSprite.SetElementByName("pixel");
-                cursorSprite.x = cursorPosition + 10 + screenPos.x;
+                cursorSprite.x = cursorPosition + 11 + screenPos.x;
                 cursorSprite.height = 13;
             }
             else
@@ -143,11 +144,21 @@ namespace RainMeadow.UI.Components
                 float width = LabelTest.GetWidth(menuLabel.text.Substring(start, Mathf.Min(Mathf.Abs(selectionStartPos - cursorPos), maxVisibleLength - start)), false);
                 cursorSprite.isVisible = false;
                 selectionSprite.isVisible = true;
-                selectionSprite.x = cursorPosition + screenPos.x + 10;
+                selectionSprite.x = cursorPosition + screenPos.x + 11;
                 selectionSprite.y = screenPos.y + size.y / 2;
                 selectionSprite.width = width;
             }
 
+        }
+        public void CheckToUnfocus()
+        {
+            if ((menu.pressButton && menu.manager.menuesMouseMode && !buttonBehav.clicked) || buttonBehav.greyedOut)
+            {
+                SetFocused(false, menu.selectedObject == null || buttonBehav.greyedOut ? null : SoundID.None);
+                return;
+            }
+            if (TypingOnOtherObjects)
+                SetFocused(false, SoundID.None);
         }
         public void CaptureInputs(char input)
         {
@@ -157,7 +168,7 @@ namespace RainMeadow.UI.Components
             {
                 Player.InputPackage currentInput = RWInput.PlayerUIInput(-1); //race conditions when update isnt called on time
                 bool shouldActuallyGetInput = menu.selectedObject == null || (!menu.pressButton && !menu.holdButton && !menu.lastHoldButton && !menu.modeSwitch && !currentInput.jmp);
-                if (Input.GetKeyDown(RainMeadow.rainMeadowOptions.ChatButtonKey.Value) && shouldActuallyGetInput)
+                if (Input.GetKeyDown(RainMeadow.rainMeadowOptions.ChatButtonKey.Value) && shouldActuallyGetInput && !TypingOnOtherObjects)
                 {
                     SetFocused(true);
                     forceMenuMouseMode = forceMenuMouseMode || lastMenuMouseMode;
@@ -189,6 +200,10 @@ namespace RainMeadow.UI.Components
                 }
                 else if ((input == '\n' || input == '\r'))
                 {
+                    if (OnlineManager.lobby.clientSettings.TryGetValue(OnlineManager.mePlayer, out var cs))
+                    {
+                        cs.isInteracting = false;
+                    }
                     if (msg.Length > 0 && !string.IsNullOrWhiteSpace(msg))
                     {
                         // /n is type a new line, not supported and usually its ENTER, so we sending message. sending to players if messg has one letter
@@ -281,17 +296,17 @@ namespace RainMeadow.UI.Components
                 else
                 {
                     backspaceHeld = 0;
-                    if (Input.GetKeyDown(KeyCode.Home))
+                    if (Input.GetKey(KeyCode.Home))
                     {
                         cursorPos = 0;
                         selectionStartPos = -1;
                     }
-                    else if (Input.GetKeyDown(KeyCode.End) && cursorPos < len)
+                    else if (Input.GetKey(KeyCode.End) && cursorPos < len)
                     {
                         cursorPos = len;
                         selectionStartPos = -1;
                     }
-                    else if (Input.GetKeyDown(KeyCode.A) && (Input.GetKey(KeyCode.LeftControl) || Input.GetKey(KeyCode.RightControl)))
+                    else if (Input.GetKey(KeyCode.A) && (Input.GetKey(KeyCode.LeftControl) || Input.GetKey(KeyCode.RightControl)))
                     {
                         cursorPos = msg.Length;
                         selectionStartPos = 0;

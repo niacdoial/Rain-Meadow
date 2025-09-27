@@ -1,3 +1,4 @@
+using Menu;
 using RainMeadow.Arena.ArenaOnlineGameModes.TeamBattle;
 using System;
 using System.Collections.Generic;
@@ -44,6 +45,11 @@ namespace RainMeadow
         public float rippleLevel;
 
         public List<AbstractCreature> pups;
+
+        public StoryLobbyData.MenuSaveStateState? menuSaveState;
+        public SlugcatSelectMenu.SaveGameData? menuSaveGameData;
+        public bool needMenuSaveUpdate = false;
+
 
         public bool itemSteal = RainMeadow.rainMeadowOptions.StoryItemSteal.Value;
 
@@ -140,6 +146,7 @@ namespace RainMeadow
         public override bool ShouldSyncAPOInRoom(RoomSession rs, AbstractPhysicalObject apo)
         {
             if (unsyncedAbstractObjectTypes.Contains(apo.type)) return false;
+            if (apo.type == AbstractPhysicalObject.AbstractObjectType.SSOracleSwarmer) return false;
             return true;
         }
 
@@ -154,9 +161,9 @@ namespace RainMeadow
             return currentCampaign;
         }
 
-        public override SlugcatStats.Name LoadWorldAs(RainWorldGame game)
+        public override SlugcatStats.Timeline LoadWorldIn(RainWorldGame game)
         {
-            return currentCampaign;
+            return game.GetStorySession.saveState.currentTimelinePosition;
         }
 
         public override bool ShouldSpawnFly(FliesWorldAI self, int spawnRoom)
@@ -227,6 +234,13 @@ namespace RainMeadow
                         readyForTransition = ReadyForTransition.Closed;
                     }
                 }
+            }
+
+            if (OnlineManager.lobby.isOwner && menuSaveState != null)
+            {
+                menuSaveState = null;
+                menuSaveGameData = null;
+                needMenuSaveUpdate = true;
             }
         }
 

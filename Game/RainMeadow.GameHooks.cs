@@ -23,7 +23,6 @@ namespace RainMeadow
             On.RainWorldGame.ShutDownProcess += RainWorldGame_ShutDownProcess;
             IL.ShortcutHandler.SuckInCreature += ShortcutHandler_SuckInCreature;
 
-            On.Options.GetSaveFileName_SavOrExp += Options_GetSaveFileName_SavOrExp;
             On.PlayerProgression.CopySaveFile += PlayerProgression_CopySaveFile;
             On.Menu.BackupManager.RestoreSaveFile += BackupManager_RestoreSaveFile;
 
@@ -45,6 +44,8 @@ namespace RainMeadow
 
             On.FliesWorldAI.AddFlyToSwarmRoom += FliesWorldAI_AddFlyToSwarmRoom;
 
+            On.Options.GetSaveFileName_SavOrExp += Options_GetSaveFileName_SavOrExp;
+
             // can't pause it's online mom
             new Hook(typeof(RainWorldGame).GetProperty("GamePaused").GetGetMethod(), this.RainWorldGame_GamePaused);
 
@@ -53,11 +54,25 @@ namespace RainMeadow
 
             // Arena specific
             On.GameSession.AddPlayer += GameSession_AddPlayer;
-        
+
             IL.Menu.SleepAndDeathScreen.GetDataFromGame += SleepAndDeathScreen_FixNullKarmaLadder;
         }
 
-        private void SleepAndDeathScreen_FixNullKarmaLadder(ILContext il) {
+        private string Options_GetSaveFileName_SavOrExp(On.Options.orig_GetSaveFileName_SavOrExp orig, Options self)
+        {
+            if (OnlineManager.lobby == null)
+            {
+                return orig(self);
+            }
+
+            if (self.saveSlot != 0)
+            {
+                return "online_sav" + (self.saveSlot + 1);
+            }
+            return "online_sav";
+        }
+        private void SleepAndDeathScreen_FixNullKarmaLadder(ILContext il)
+        {
             try
             {
                 var c = new ILCursor(il);
@@ -216,7 +231,7 @@ namespace RainMeadow
                                 state.quarterFoodPoints = first_state.quarterFoodPoints;
                             }
                         }
-                        
+
 
                         if (avatar?.abstractCreature?.realizedCreature is Player p && first_player is not null)
                         {
@@ -256,14 +271,6 @@ namespace RainMeadow
             orig(self);
         }
 
-        private string Options_GetSaveFileName_SavOrExp(On.Options.orig_GetSaveFileName_SavOrExp orig, Options self)
-        {
-            if (OnlineManager.lobby != null)
-            {
-                return "online_" + orig(self);
-            }
-            return orig(self);
-        }
 
         private void PlayerProgression_CopySaveFile(On.PlayerProgression.orig_CopySaveFile orig, PlayerProgression self, string sourceName, string destinationDirectory)
         {
@@ -391,7 +398,7 @@ namespace RainMeadow
             }
             orig(self, dt);
             // riskier chat stuff is run after orig, to minimize chances of orig not being run if things go wrong
-            if(closeChat)
+            if (closeChat)
             {
                 self.cameras[0]?.hud.PlaySound(SoundID.MENY_Already_Selected_MultipleChoice_Clicked);
                 ChatTextBox.InvokeShutDownChat();
@@ -503,6 +510,7 @@ namespace RainMeadow
         // Prevent gameplay items
         private void Room_ctor(On.Room.orig_ctor orig, Room self, RainWorldGame game, World world, AbstractRoom abstractRoom, bool devUI)
         {
+            if (abstractRoom.GetResource() is RoomSession rs) rs.loadedPending = false;
             orig(self, game, world, abstractRoom, devUI);
             if (game != null && OnlineManager.lobby != null)
             {
@@ -546,10 +554,33 @@ namespace RainMeadow
         {
             try
             {
+                var c = new ILCursor(il);
+                c.Emit(OpCodes.Ldarg_0);
+                c.EmitDelegate((Room self) =>
+                {
+                    if (OnlineManager.lobby != null)
+                    {
+                        if (RoomSession.map.TryGetValue(self.abstractRoom, out RoomSession rs))
+                        {
+                            if (!rs.isAvailable)
+                            {
+                                rs.Needed();
+                                rs.loadedPending = true;
+                                return false;
+                            }
+                        }
+                    }
+                    return true;
+                });
+                ILLabel label = c.DefineLabel();
+                c.Emit(OpCodes.Brtrue, label);
+                c.Emit(OpCodes.Ret);
+                c.MarkLabel(label);
+
+
                 // if (this.world != null && this.game != null && this.abstractRoom.firstTimeRealized && (!this.game.IsArenaSession || this.game.GetArenaGameSession.GameTypeSetup.levelItems))
                 //becomes
                 // if (this.world != null && this.game != null && this.abstractRoom.firstTimeRealized && (OnlineManager.lobby == null || gameMode.ShouldSpawnRoomItems()) && (!this.game.IsArenaSession || this.game.GetArenaGameSession.GameTypeSetup.levelItems))
-                var c = new ILCursor(il);
                 var skip = il.DefineLabel();
                 c.GotoNext(moveType: MoveType.After,
                     i => i.MatchLdarg(0),
@@ -581,7 +612,7 @@ namespace RainMeadow
                     );
                     //c.MoveAfterLabels();
                     c.Emit(OpCodes.Ldarg_0);
-                    c.EmitDelegate((Room self) => OnlineManager.lobby == null || OnlineManager.lobby.isOwner); //roomsession not available yet
+                    c.EmitDelegate((Room self) => self.abstractRoom.GetResource().isOwner);
                     c.Emit(OpCodes.Brfalse, skipApo);
                 }
             }

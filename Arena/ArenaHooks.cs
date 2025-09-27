@@ -469,7 +469,7 @@ namespace RainMeadow
                     // Make a skip label
                     var skip = il.DefineLabel();
 
-                    // Get caller type
+                    // Get caller typ                   
                     c.Emit(OpCodes.Ldtoken, original.DeclaringType);
                     c.Emit(OpCodes.Call, typeof(Type).GetMethod(nameof(Type.GetTypeFromHandle)));
 
@@ -483,6 +483,7 @@ namespace RainMeadow
                         c.Emit(OpCodes.Ldarg_0);
                     }
 
+
                     // Replace creature.Violence with a delegate that calls our event first.
                     c.EmitDelegate((Creature self, BodyChunk source, Vector2? directionAndMomentum, BodyChunk hitChunk, PhysicalObject.Appendage.Pos hitAppendage, Creature.DamageType type, float damage, float stunBonus, Type callerType, object caller) =>
                     {
@@ -494,6 +495,7 @@ namespace RainMeadow
                                 (onlineCreature as OnlineCreature).RPCCreatureViolence(source.owner.abstractPhysicalObject.GetOnlineObject(), hitChunk.index, hitAppendage, directionAndMomentum, type, damage, stunBonus);
                             }
                         }
+                        self.Violence(source, directionAndMomentum, hitChunk, hitAppendage, type, damage, stunBonus);
                     });
                     c.Emit(OpCodes.Br, skip);
                     c.GotoNext(moveType: MoveType.After,
@@ -1502,7 +1504,7 @@ namespace RainMeadow
                             }
                             else
                             {
-                                arena.localAllKills[absPlayerCreature.owner.inLobbyId].Add(iconSymbolData);
+                                arena.localAllKills[absPlayerCreature.owner.inLobbyId] = self.arenaSitting.players[i].allKills;
                             }
                             if (OnlineManager.lobby.isOwner)
                             {
@@ -1596,10 +1598,11 @@ namespace RainMeadow
 
         private void PlayerResultBox_ctor(On.Menu.PlayerResultBox.orig_ctor orig, Menu.PlayerResultBox self, Menu.Menu menu, Menu.MenuObject owner, Vector2 pos, Vector2 size, ArenaSitting.ArenaPlayer player, int index)
         {
-            bool playingAsRandom = false;
+
             // for random class players.
             if (isArenaMode(out var aren))
             {
+                bool playingAsRandom = false;
                 var onlinePlayer = ArenaHelpers.FindOnlinePlayerByFakePlayerNumber(aren, player.playerNumber);
                 if (onlinePlayer is not null)
                 {
@@ -1661,6 +1664,10 @@ namespace RainMeadow
                     self.portrait = new(menu, self, "", SlugcatColorableButton.GetFileForSlugcat(portraitcat, arenaclientSettings != null && arenaclientSettings.slugcatColor != Color.black, self.DeadPortraint), new(size.y / 2, size.y / 2), true, true);
                     self.subObjects.Add(self.portrait);
                 }
+            }
+            else
+            {
+                orig(self, menu, owner, pos, size, player, index);
             }
 
         }

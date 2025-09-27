@@ -76,15 +76,19 @@ namespace RainMeadow.Arena.ArenaOnlineGameModes.TeamBattle
                             OnlinePhysicalObject? onlineP = acPlayer.GetOnlineObject();
                             if (onlineP != null)
                             {
-                                bool gotPlayerTeam = OnlineManager.lobby.clientSettings[onlineP.owner].TryGetData<ArenaTeamClientSettings>(out var playerTeam);
+                                bool gotPlayerTeam = OnlineManager.lobby.clientSettings.TryGetValue(onlineP.owner, out var onlineClientP);
                                 if (gotPlayerTeam)
                                 {
-                                    if (acPlayer.realizedCreature != null)
+                                    onlineClientP.TryGetData<ArenaTeamClientSettings>(out var playerTeam);
+                                    if (gotPlayerTeam)
                                     {
-
-                                        if (acPlayer.realizedCreature.State.alive)
+                                        if (acPlayer.realizedCreature != null)
                                         {
-                                            aliveTeams.Add(playerTeam.team);
+
+                                            if (acPlayer.realizedCreature.State.alive)
+                                            {
+                                                aliveTeams.Add(playerTeam.team);
+                                            }
                                         }
                                     }
                                 }
@@ -437,7 +441,9 @@ namespace RainMeadow.Arena.ArenaOnlineGameModes.TeamBattle
                             self.creatureCommunities.SetLikeOfPlayer(CreatureCommunities.CommunityID.Lizards, -1, 0, 1f);
                             AbstractCreature bringTheTrain = new AbstractCreature(room.world, StaticWorld.GetCreatureTemplate("Red Lizard"), null, room.GetWorldCoordinate(shortCutVessel.pos), shortCutVessel.room.world.game.GetNewID()); // Train too big :( 
                             room.abstractRoom.AddEntity(bringTheTrain);
-                            bringTheTrain.RealizeInRoom();
+                            bringTheTrain.Realize();
+                            bringTheTrain.realizedCreature.PlaceInRoom(room);
+
 
                             self.room.world.GetResource().ApoEnteringWorld(bringTheTrain);
                             self.room.abstractRoom.GetResource()?.ApoEnteringRoom(bringTheTrain, bringTheTrain.pos);
@@ -493,27 +499,36 @@ namespace RainMeadow.Arena.ArenaOnlineGameModes.TeamBattle
 
         public override string AddIcon(ArenaOnlineGameMode arena, PlayerSpecificOnlineHud owner, SlugcatCustomization customization, OnlinePlayer player)
         {
+            if (OnlineManager.lobby.clientSettings.TryGetValue(key: player, out _) == false)
+            {
+                return "";
+            }
 
             if (OnlineManager.lobby.clientSettings[player].TryGetData<ArenaTeamClientSettings>(out var tb2))
             {
-                
                 return teamIcons[tb2.team];
             }
             return "";
         }
 
-        public override Color IconColor(ArenaOnlineGameMode arena, OnlinePlayerDisplay display, PlayerSpecificOnlineHud owner,  SlugcatCustomization customization, OnlinePlayer player)
+        public override Color IconColor(ArenaOnlineGameMode arena, OnlinePlayerDisplay display, PlayerSpecificOnlineHud owner, SlugcatCustomization customization, OnlinePlayer player)
         {
+            if (OnlineManager.lobby.clientSettings.TryGetValue(key: player, out _) == false)
+            {
+                return customization.bodyColor;
+            }
+
             if (owner.PlayerConsideredDead)
             {
                 return Color.grey;
             }
 
+
             if (OnlineManager.lobby.clientSettings[player].TryGetData<ArenaTeamClientSettings>(out var tb2))
             {
                 return teamColors[tb2.team];
             }
- 
+
             return customization.bodyColor;
         }
 
