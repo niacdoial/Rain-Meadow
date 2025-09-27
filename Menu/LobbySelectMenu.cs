@@ -157,7 +157,7 @@ namespace RainMeadow
 
             var directConnectButton = new SimplerButton(this, mainPage, Translate("Direct Connect"), new Vector2(where.x, where.y), new Vector2(160f, 30f));
             directConnectButton.OnClick += (_) =>
-            {   
+            {
                 if (!NetworkDomain.currentInstance.canDirectConnect)
                 {
                     ShowErrorDialog("Direct Connection is only available in the Local / Router Network Domains");
@@ -173,9 +173,9 @@ namespace RainMeadow
 
 
             mainPage.subObjects.Add(directConnectButton);
-            
+
             domainDropDown = new OpComboBox2(new Configurable<string>(
-                "Any"), where, 160f - 35f, 
+                "Any"), where, 160f - 35f,
                 NetworkDomain.supportedDomains.Select(x => new ListItem(x.value, Utils.Translate(x.value))).Reverse().Prepend(new ListItem("Any", Utils.Translate("Any"))).ToList()) { colorEdge = MenuColorEffect.rgbWhite };
             domainDropDown.OnChange += () => {
                 UpdateLobbyFilter();
@@ -261,7 +261,7 @@ namespace RainMeadow
         {
             if (domainDropDown.value == "Any") lobbyList.filter.domainType = null;
             else lobbyList.filter.domainType = (NetworkDomain.NetworkDomainType)ExtEnumBase.Parse(typeof(NetworkDomain.NetworkDomainType), domainDropDown.value, true);
-            
+
 
             lobbyList.filter.gameMode = filterModeDropDown.value;
             lobbyList.filter.requiredMods = filterModsDropDown.value;
@@ -341,7 +341,7 @@ namespace RainMeadow
                 RequestLobbyJoin(lobby, password);
             }
         }
-        
+
         public void RequestLobbyJoin(LobbyInfo lobby, string? password = null)
         {
             RainMeadow.DebugMe();
@@ -407,7 +407,7 @@ namespace RainMeadow
             if (popupDialog != null) HideDialog();
 
             popupDialog = new DirectConnectionDialogue(this, mainPage,
-                new Vector2(manager.rainWorld.options.ScreenSize.x / 2f - 240f + (1366f - manager.rainWorld.options.ScreenSize.x) / 2f, 224f), 
+                new Vector2(manager.rainWorld.options.ScreenSize.x / 2f - 240f + (1366f - manager.rainWorld.options.ScreenSize.x) / 2f, 224f),
                 new Vector2(480f, 320f));
             mainPage.subObjects.Add(popupDialog);
 
@@ -429,9 +429,9 @@ namespace RainMeadow
             if (popupDialog != null) HideDialog();
 
             text = Translate(text);
-            
+
             popupDialog = new NotLocalWarningDialog(this, mainPage,
-                new Vector2(manager.rainWorld.options.ScreenSize.x / 2f - 240f + (1366f - manager.rainWorld.options.ScreenSize.x) / 2f, 224f), 
+                new Vector2(manager.rainWorld.options.ScreenSize.x / 2f - 240f + (1366f - manager.rainWorld.options.ScreenSize.x) / 2f, 224f),
                 new Vector2(480f, 320f), text, false, ok, () => HideDialog());
             mainPage.subObjects.Add(popupDialog);
             GreyOutLobbyCards(true);
@@ -484,6 +484,7 @@ namespace RainMeadow
                     catch (FormatException except)
                     {
                         ShowErrorDialog($"Invalid Format, {except.Message}");
+                        return;
                     }
 
                     Action join = () =>

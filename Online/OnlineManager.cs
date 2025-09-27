@@ -15,7 +15,7 @@ namespace RainMeadow
     {
         public interface INetworkUpdator
         {
-            abstract bool updateALLDomains { get; } 
+            abstract bool updateALLDomains { get; }
         }
 
         public static OnlineManager instance;
@@ -56,7 +56,11 @@ namespace RainMeadow
             }
             else
             {
-                OnlineManager.LeaveLobby();
+                // assume that lobby==null means the cleanup either has already been done,
+                // or it doesn't need to be
+                if (lobby != null) {
+                    LeaveLobby();
+                }
             }
         }
 
@@ -94,7 +98,6 @@ namespace RainMeadow
         {
             ChatLogManager.ResetPlayerColors();
             NetworkDomain.currentInstance.HandleLeavingLobby();
-            NetworkDomain.currentInstance.ForgetEverything();
             lobby = null;
 
             subscriptions = new();

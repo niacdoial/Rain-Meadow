@@ -187,7 +187,7 @@ namespace RainMeadow
                 throw new FormatException("IP Address format should be xxx.xxx.xxx.xxx:port");
             }
         }
-            
+
         public override void JoinLobby(bool success)
         {
             if (success)
@@ -262,7 +262,7 @@ namespace RainMeadow
                 else
                 {
                     RainMeadow.Debug("failure");
-                    OnlineManager.lobby = null;
+                    OnlineManager.LeaveLobby();
                     OnLobbyJoinedEvent(false, ((EChatRoomEnterResponse)param.m_EChatRoomEnterResponse).ToString());
                 }
             }
@@ -465,6 +465,7 @@ namespace RainMeadow
             }
             lobbyID = default;
             SteamFriends.ClearRichPresence();
+            ForgetEverything();
         }
 
         public override OnlinePlayer GetPlayer(MeadowPlayerId id)
