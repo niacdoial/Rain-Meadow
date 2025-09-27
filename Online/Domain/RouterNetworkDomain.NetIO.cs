@@ -25,6 +25,7 @@ namespace RainMeadow
             LobbyIsEmpty.ProcessAction += OnLobbyServerEmpty;
             RouteSessionData.ProcessAction += HandleRouteSessionData;
             RouterModifyPlayerListPacket.ProcessAction += HandleModifyPlayerList;
+            RouterChatMessage.ProcessAction += HandleChatMessage;
         }
 
         bool ValidateIsFromServer(Packet packet) {
@@ -131,6 +132,13 @@ namespace RainMeadow
                         NetworkDomain.Router.RemoveRouterPlayer(NetworkDomain.Router.GetPlayerRouter(packet.routerIds[i], true));
                     }
                     break;
+            }
+        }
+
+        public void HandleChatMessage(RouterChatMessage packet) {
+            var maybePlayer = GetValidatedSenderPlayer(packet, packet.fromRouterID);
+            if (maybePlayer is OnlinePlayer player) {
+                RecieveChatMessage(player, packet.message);
             }
         }
 

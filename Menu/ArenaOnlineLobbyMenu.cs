@@ -295,7 +295,7 @@ public class ArenaOnlineLobbyMenu : SmartMenu
         }
         else
         {
-            
+
             if (Arena.hasPermissionToRejoin && !initiateStartGameAfterCountDown && Arena.arenaClientSettings.ready)
             {
                 initiateStartGameAfterCountDown = true;

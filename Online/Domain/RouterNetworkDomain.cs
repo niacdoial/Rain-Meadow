@@ -64,7 +64,6 @@ namespace RainMeadow
 
         public class RouterPlayerId : MeadowPlayerId
         {
-            // TODO IPEndpoint and NAT stuff
             public ushort routingID;
             public IPEndPoint endPoint;
             public RouterPlayerId(ushort routingID) : base(
@@ -152,10 +151,30 @@ namespace RainMeadow
             });
         }
 
-        public override bool canSendChatMessages => false; // TODO: Chat Messages in router domain
+        public override bool canSendChatMessages => true;
         public override void SendChatMessage(string message)
         {
-            return;
+            bool needSendToServer = false;
+            var packet = new RouterChatMessage(
+                ((RouterPlayerId)OnlineManager.mePlayer.id).routingID,
+                message
+            );
+
+            foreach (OnlinePlayer player in OnlineManager.players)
+            {
+                if (player.isMe) continue;
+                RouterPlayerId playerId = (RouterPlayerId)player.id;
+                if (UDPPeerManager.CompareIPEndpoints(playerId.endPoint, serverPeer)) {
+                    needSendToServer = true;
+                } else {
+                    Send(playerId.endPoint, packet, UDPPeerManager.PacketType.Reliable, false);
+                }
+            }
+            if (needSendToServer) {
+                Send(serverPeer, packet, UDPPeerManager.PacketType.Reliable, false);
+            }
+
+            RecieveChatMessage(OnlineManager.mePlayer, message);
         }
 
         // public override void CreateLobby(LobbyVisibility visibility, string gameMode, string? password, int? maxPlayerCount)
