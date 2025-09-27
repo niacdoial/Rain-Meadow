@@ -18,7 +18,10 @@ namespace RainMeadow
         {
             InitializePackets();
             NetworkDomain.PlatformUDPManager.OnPeerForgotten += (IPEndPoint endPoint) => {
-                if (endPoint == serverPeer) {
+                // ignore player removal / recursive call if we are leaving the lobby
+                if (serverPeer == null) { return; }
+
+                if (UDPPeerManager.CompareIPEndpoints(endPoint, serverPeer)) {
                     RainMeadow.Error("Lost contact with the lobby server. Shutting down...");
                     OnlineManager.LeaveLobby();
                 }
@@ -285,6 +288,17 @@ namespace RainMeadow
 
         public override void HandleLeavingLobby()
         {
+            if (serverPeer != null)  // because this also gets called on startup
+            {
+                RainMeadow.Debug("Telling lobby server we're leavin'");
+                Send(
+                    serverPeer,
+                    new EndRouterSession(),
+                    UDPPeerManager.PacketType.Reliable,
+                    false
+                );
+                serverPeer = null;  // prevent infinite recursion
+            }
             ForgetEverything();
         }
 

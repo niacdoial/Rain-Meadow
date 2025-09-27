@@ -107,7 +107,7 @@ namespace RainMeadow
         {
             if (self is StoryOnlineMenu sOM)
             {
-                if (sOM.jollyToggleConfigMenu is not null) return; // jolly has it's own coloring system. 
+                if (sOM.jollyToggleConfigMenu is not null) return; // jolly has it's own coloring system.
                 if (sOM.colorInterface == null)
                 {
                     sOM.SetupSelectableSlugcats();
@@ -456,7 +456,7 @@ namespace RainMeadow
                 {
                     RainMeadow.Error($"Invalid format, {except}");
                     return null;
-                }                
+                }
             }
             return null;
         }
@@ -497,7 +497,7 @@ namespace RainMeadow
                 {
                     RainMeadow.Error(ex);
                 }
-                
+
             }
 
             orig(self, ID);

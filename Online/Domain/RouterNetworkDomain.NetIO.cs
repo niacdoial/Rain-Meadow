@@ -216,7 +216,7 @@ namespace RainMeadow
             if (PlatformUDPManager is null) return;
             if (player.id is RouterNetworkDomain.RouterPlayerId routid)
             {
-                if (routid.endPoint == serverPeer) { return; }  // do not forget the server accidentally!
+                if (UDPPeerManager.CompareIPEndpoints(routid.endPoint, serverPeer)) { return; }  // do not forget the server accidentally!
                 PlatformUDPManager.ForgetPeer(routid.endPoint);
             }
         }
