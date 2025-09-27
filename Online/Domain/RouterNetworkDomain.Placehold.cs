@@ -15,10 +15,15 @@ namespace RainMeadow
     {
         void OnLobbyServerEmpty(LobbyIsEmpty packet)
         {
+            RainMeadow.Debug("Received LobbyEmpty");
             if (!ValidateIsFromServer(packet)) return;
             // serverPeer has been set by the original RequestJoinLobby
+            // we have been chosen to be the lobby host, set our routingID to 1 now so that we don't get confused by the ModifyPlayerList packet
+            ((RouterPlayerId)OnlineManager.mePlayer.id).routingID = 1;
+
             // the user can create the lobby now, and it will be published to the server.
-            OnlineManager.instance.manager.ShowDialog(new DialogNotify("No lobby in this server: you can create one.", OnlineManager.instance.manager, null));
+            OnLobbyJoinedEvent(false, Utils.Translate("No lobby in this server: you can create one."));
+            //OnlineManager.instance.manager.ShowDialog(new DialogNotify("No lobby in this server: you can create one.", OnlineManager.instance.manager, null));
         }
 
         public override void CreateLobby(LobbyVisibility visibility, string gameMode, string? password, int? maxPlayerCount)

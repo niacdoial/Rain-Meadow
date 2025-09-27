@@ -130,7 +130,7 @@ namespace RainMeadow
 
             if (player is null && create)
             {
-                RainMeadow.Debug($"Couldn't find player with endpoint {routingID}. Creating one...");
+                RainMeadow.Debug($"Couldn't find player with routing ID {routingID}. Creating one...");
                 player = new OnlinePlayer(new RouterPlayerId(routingID));
             }
 
@@ -200,8 +200,10 @@ namespace RainMeadow
             if (joiningPlayer.id is RouterPlayerId joiningId) {
                 // if all two players send unprompted packets to their respective endpoints, it should pierce NAT layers on both sides,
                 // allowing them to communicate.
-                if (joiningId.endPoint != serverPeer) {
-                    RainMeadow.Debug("piercing for peer " + joiningId.routingID.ToString() + " at " + joiningId.endPoint.ToString());
+                if (joiningId.routingID == ((RouterPlayerId)OnlineManager.mePlayer.id).routingID) {
+                    RainMeadow.Debug("No NAT-piercing needed for self");
+                } else if (joiningId.endPoint != serverPeer) {
+                    RainMeadow.Debug("Piercing for peer " + joiningId.routingID.ToString() + " at " + joiningId.endPoint.ToString());
                     SendEmptyPacket(joiningId.endPoint, UDPPeerManager.PacketType.Reliable, true);
                 } else {
                     RainMeadow.Debug("peer " + joiningId.routingID.ToString() + " hidden by router");

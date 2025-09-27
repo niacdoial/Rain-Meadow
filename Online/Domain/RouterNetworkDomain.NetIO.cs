@@ -96,9 +96,8 @@ namespace RainMeadow
                     return;
                 }
 
-                var size = packet.size;
-                Buffer.BlockCopy(packet.data, 0, OnlineManager.serializer.buffer, 0, size);
-                OnlineManager.serializer.ReadData(player, size);
+                Buffer.BlockCopy(packet.data, 0, OnlineManager.serializer.buffer, 0, packet.data.Length);
+                OnlineManager.serializer.ReadData(player, packet.data.Length);
             }
         }
 
@@ -114,12 +113,14 @@ namespace RainMeadow
                     {
                         OnlinePlayer player = NetworkDomain.Router.GetPlayerRouter(packet.routerIds[i], true);
                         RouterPlayerId playerID = (RouterPlayerId)player.id;
+                        RainMeadow.Debug("Raw endpoint for player " + playerID.routingID.ToString() + " : " + packet.endPoints[i].ToString());
                         if (UDPPeerManager.CompareIPEndpoints(packet.endPoints[i], SharedPlatform.BlackHole)) {
                             playerID.endPoint = serverPeer;
                         } else {
                             playerID.endPoint = packet.endPoints[i];
                         }
                         playerID.name = packet.userNames[i];
+                        RainMeadow.Debug(String.Format("new player to acknowledge: {0}, endpoint {1}, name {2}", playerID.routingID, playerID.endPoint, playerID.name));
                         NetworkDomain.Router.AcknoledgeRouterPlayer(player);
                     }
                     break;
@@ -224,7 +225,7 @@ namespace RainMeadow
         {
             if (PlatformUDPManager is null) return;
             PlatformUDPManager.ForgetAllPeers();
-            serverPeer = null;
+            //serverPeer = null;  // do not reset server, it can be re-used in "knocking" lobby setup.
         }
     }
 }
