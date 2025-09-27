@@ -53,7 +53,7 @@ namespace RainMeadow
                 } else {
                     RainMeadow.Error(
                         "Possible impersonation: player " + fromRouterID.ToString()
-                        + " can't come from endpoint " + packet.processingEndpoint.ToString()
+                        + " can't come from that endpoint!"
                     );
                     return null;
                 }
@@ -114,14 +114,13 @@ namespace RainMeadow
                     {
                         OnlinePlayer player = NetworkDomain.Router.GetPlayerRouter(packet.routerIds[i], true);
                         RouterPlayerId playerID = (RouterPlayerId)player.id;
-                        RainMeadow.Debug("Raw endpoint for player " + playerID.routingID.ToString() + " : " + packet.endPoints[i].ToString());
                         if (UDPPeerManager.CompareIPEndpoints(packet.endPoints[i], SharedPlatform.BlackHole)) {
                             playerID.endPoint = serverPeer;
                         } else {
                             playerID.endPoint = packet.endPoints[i];
                         }
                         playerID.name = packet.userNames[i];
-                        RainMeadow.Debug(String.Format("new player to acknowledge: {0}, endpoint {1}, name {2}", playerID.routingID, playerID.endPoint, playerID.name));
+                        RainMeadow.Debug(String.Format("new player to acknowledge: {0}, name {1}", playerID.routingID, playerID.name));
                         NetworkDomain.Router.AcknoledgeRouterPlayer(player);
                     }
                     break;
