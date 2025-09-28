@@ -19,7 +19,7 @@ public class LobbyCreateMenu : SmartMenu
     private SimplerButton createButton;
     private OpComboBox2 modeDropDown;
     private ProperlyAlignedMenuLabel modeDescriptionLabel;
-    private OpComboBox2 domainDropdown; 
+    private OpComboBox2 domainDropdown;
     private OpTextBox passwordInputBox;
     private MenuDialogBox? popupDialog;
     public override MenuScene.SceneID GetScene => ModManager.MMF ? manager.rainWorld.options.subBackground : MenuScene.SceneID.Landscape_SU;
@@ -57,7 +57,7 @@ public class LobbyCreateMenu : SmartMenu
         visibilityDropDown = new OpComboBox2(new Configurable<NetworkDomain.LobbyVisibility>(NetworkDomain.LobbyVisibility.Public), where, 160, OpResourceSelector.GetEnumNames(null, typeof(NetworkDomain.LobbyVisibility)).Select(li => { li.displayName = Translate(li.displayName); return li; }).ToList()) { colorEdge = MenuColorEffect.rgbWhite };
         new UIelementWrapper(this.tabWrapper, visibilityDropDown);
 
-        
+
         where.y -= 45;
         where.x -= 80;
         mainPage.subObjects.Add(
@@ -95,14 +95,14 @@ public class LobbyCreateMenu : SmartMenu
         where.y -= 45;
         limitNumberLabel = new ProperlyAlignedMenuLabel(this, mainPage, Translate("Domain:"), where, new Vector2(400, 20f), false);
         mainPage.subObjects.Add(limitNumberLabel);
-        
+
 
         where.x += 80;
         where.y -= 5;
         domainDropdown = new OpComboBox2(new Configurable<string>(
                 NetworkDomain.supportedDomains.Last().value), where, 160f - 35f, NetworkDomain.supportedDomains.Select(x => new ListItem(x.value, Utils.Translate(x.value))).ToList()) { colorEdge = MenuColorEffect.rgbWhite };
         new UIelementWrapper(this.tabWrapper, domainDropdown);
-        
+
 
         // display version
         MenuLabel versionLabel = new MenuLabel(this, pages[0], $"{Utils.Translate("Rain Meadow Version:")} {RainMeadow.MeadowVersionStr}", new Vector2((1336f - manager.rainWorld.screenSize.x) / 2f + 20f, manager.rainWorld.screenSize.y - 768f), new Vector2(200f, 20f), false, null);
@@ -113,6 +113,7 @@ public class LobbyCreateMenu : SmartMenu
 
         UpdateModeDescription();
         CreateElementBindings();
+        NetworkDomain.OnLobbyJoined += OnlineManager_OnLobbyJoined;
     }
     public override void Init()
     {
@@ -193,5 +194,19 @@ public class LobbyCreateMenu : SmartMenu
     {
         base.Singal(sender, message);
         if (message == "HIDE_DIALOG") HideDialog();
+    }
+
+    public override void ShutDownProcess()
+    {
+        NetworkDomain.OnLobbyJoined -= OnlineManager_OnLobbyJoined;
+        base.ShutDownProcess();
+    }
+
+    private void OnlineManager_OnLobbyJoined(bool ok, string error)
+    {
+        if (!ok)
+        {
+            ShowErrorDialog(Translate("Failed to create lobby.<LINE>") + error);
+        }
     }
 }

@@ -40,9 +40,9 @@ namespace RainMeadow
                 RequestPublishLobby(lobbyInfo);
 
                 OnlineManager.lobby = new Lobby(new OnlineGameMode.OnlineGameModeType(gameMode), OnlineManager.mePlayer, password);
-                NetworkDomain.OnLobbyJoinedEvent(true, "");
+                OnLobbyJoinedEvent(true, "");
             } else {
-                NetworkDomain.OnLobbyJoinedEvent(false, "You need attempt a direct-connect to the lobby server first, and if it is empty you can create the lobby.");
+                OnLobbyJoinedEvent(false, Utils.Translate("You need attempt a direct-connect to the lobby server first, and if it is empty you can create the lobby."));
             }
         }
 
