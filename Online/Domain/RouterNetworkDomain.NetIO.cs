@@ -115,7 +115,9 @@ namespace RainMeadow
                     {
                         OnlinePlayer player = NetworkDomain.Router.GetPlayerRouter(packet.routerIds[i], true);
                         RouterPlayerId playerID = (RouterPlayerId)player.id;
-                        if (UDPPeerManager.CompareIPEndpoints(packet.endPoints[i], SharedPlatform.BlackHole)) {
+                        if (!RainMeadow.rainMeadowOptions.RouterExposeIP.Value) {
+                            playerID.endPoint = serverPeer;
+                        } else if (UDPPeerManager.CompareIPEndpoints(packet.endPoints[i], SharedPlatform.BlackHole)){
                             playerID.endPoint = serverPeer;
                         } else {
                             playerID.endPoint = packet.endPoints[i];
