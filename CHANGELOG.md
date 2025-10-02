@@ -1,3 +1,9 @@
+# Upcoming Release
+
+## Engine:
+- Added Router multiplayer mode, to allow worldwide Steam-GOG crossplay (currently only works if a player is hosting the server)
+
+
 # Release 1.7.0
 
 ## Arena:

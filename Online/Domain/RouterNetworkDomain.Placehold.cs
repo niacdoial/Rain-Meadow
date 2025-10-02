@@ -22,7 +22,7 @@ namespace RainMeadow
             ((RouterPlayerId)OnlineManager.mePlayer.id).routingID = 1;
 
             // the user can create the lobby now, and it will be published to the server.
-            OnLobbyJoinedEvent(false, Utils.Translate("No lobby in this server: you can create one."));
+            OnLobbyJoinedEvent(false, Utils.Translate("Connection successful! You can now use the \"create lobby\" menu to start playing."));
             //OnlineManager.instance.manager.ShowDialog(new DialogNotify("No lobby in this server: you can create one.", OnlineManager.instance.manager, null));
         }
 
