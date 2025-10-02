@@ -50,6 +50,7 @@ public class RainMeadowOptions : OptionInterface
     public readonly Configurable<int> ShowPingLocation;
 
     public readonly Configurable<string> LanUserName;
+    public readonly Configurable<bool> RouterExposeIP;
     public readonly Configurable<int> UdpTimeout;
     public readonly Configurable<int> UdpHeartbeat;
     public readonly Configurable<bool> DisableMeadowPauseAnimation;
@@ -131,6 +132,7 @@ public class RainMeadowOptions : OptionInterface
 
         PickedIntroRoll = config.Bind("PickedIntroRoll", IntroRoll.Meadow);
         LanUserName = config.Bind("LanUserName", "");
+        RouterExposeIP = config.Bind("RouterExposeIP", false);
         UdpTimeout = config.Bind("UdpTimeout", 3000);
         UdpHeartbeat = config.Bind("UdpHeartbeat", 50);
 
@@ -245,7 +247,7 @@ public class RainMeadowOptions : OptionInterface
                introroll = new OpComboBox2(PickedIntroRoll, new Vector2(10, 70f), 160f, OpResourceSelector.GetEnumNames(null, typeof(IntroRoll)).Select(li => { li.displayName = Translate(li.displayName); return li; }).ToList()) { colorEdge = Menu.MenuColorEffect.rgbWhite },
                downpourWarning = new OpLabel(introroll.pos.x + 170, 70, Translate("Downpour DLC is not activated, vanilla intro will be used instead")),
                watcherWarning = new OpLabel(introroll.pos.x + 170, 70, Translate("Watcher DLC is not activated, vanilla intro will be used instead")),
-            
+
                new OpLabel(10f, 30, Translate("Player Menu Scroll Speed for Spectate, Story menu, Arena results.  Default: 5"), bigText: false),
                new OpTextBox(ScrollSpeed, new Vector2(10, 5), 160f)
                 {
@@ -379,21 +381,24 @@ public class RainMeadowOptions : OptionInterface
                 for (int i = 0; i < arenaPotentialSpoilerSettings.Length; i++) arenaPotentialSpoilerSettings[i].Show();
             };
 
-            OnlineLANSettings = new UIelement[7]
+            OnlineLANSettings = new UIelement[9]
             {
-                new OpLabel(10f, 550f, Translate("LAN"), bigText: true),
+                new OpLabel(10f, 550f, Translate("LAN/Router"), bigText: true),
                 new OpLabel(10f, 505, Translate("Username"), bigText: false),
                 new OpTextBox(LanUserName, new Vector2(10f, 480), 160f)
                 {
                     accept = OpTextBox.Accept.StringASCII
                 },
-                new OpLabel(10f, 455, Translate("UDP timeout (ms)"), bigText: false),
-                new OpTextBox(UdpTimeout, new Vector2(10f, 420), 160f)
+                new OpCheckBox(RouterExposeIP, new Vector2(10, 455)),
+                new OpLabel(40f, 455, Translate("Expose IP address to other players"), bigText: false),
+
+                new OpLabel(10f, 420, Translate("UDP timeout (ms)"), bigText: false),
+                new OpTextBox(UdpTimeout, new Vector2(10f, 395), 160f)
                 {
                     accept = OpTextBox.Accept.Int
                 },
-                new OpLabel(10f, 395, Translate("UDP heartbeat (ms)"), bigText: false),
-                new OpTextBox(UdpHeartbeat, new Vector2(10f, 370), 160f)
+                new OpLabel(10f, 370, Translate("UDP heartbeat (ms)"), bigText: false),
+                new OpTextBox(UdpHeartbeat, new Vector2(10f, 345), 160f)
                 {
                     accept = OpTextBox.Accept.Int
                 }

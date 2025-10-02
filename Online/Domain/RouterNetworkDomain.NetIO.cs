@@ -33,7 +33,7 @@ namespace RainMeadow
             if (serverPeer is null) return false;
             if (!UDPPeerManager.CompareIPEndpoints(packet.processingEndpoint, serverPeer))
             {
-                RainMeadow.Error($"Recieved host packet not from server: {packet.processingEndpoint}, server: {serverPeer}");
+                RainMeadow.Error($"Recieved from-server packet from {UDPPeerManager.describeEndPoint(packet.processingEndpoint)}, not server: {serverPeer}");
                 return false;
             }
             return true;
@@ -54,7 +54,7 @@ namespace RainMeadow
                 } else {
                     RainMeadow.Error(
                         "Possible impersonation: player " + fromRouterID.ToString()
-                        + " can't come from that endpoint!"
+                        + " can't come from endpoint " + UDPPeerManager.describeEndPoint(packet.processingEndpoint)
                     );
                     return null;
                 }

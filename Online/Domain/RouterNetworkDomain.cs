@@ -225,7 +225,7 @@ namespace RainMeadow
                 if (joiningId.routingID == ((RouterPlayerId)OnlineManager.mePlayer.id).routingID) {
                     RainMeadow.Debug("No NAT-piercing needed for self");
                 } else if (joiningId.endPoint != serverPeer) {
-                    RainMeadow.Debug("Piercing for peer " + joiningId.routingID.ToString() + " at " + joiningId.endPoint.ToString());
+                    RainMeadow.Debug("Piercing for peer " + joiningId.routingID.ToString() + " at " + UDPPeerManager.describeEndPoint(joiningId.endPoint));
                     SendEmptyPacket(joiningId.endPoint, UDPPeerManager.PacketType.Reliable, true);
                 } else {
                     RainMeadow.Debug("peer " + joiningId.routingID.ToString() + " hidden by router");
@@ -239,10 +239,6 @@ namespace RainMeadow
 
         public void RemoveRouterPlayer(OnlinePlayer leavingPlayer)
         {
-            StackTrace stackTrace = new();
-            RainMeadow.Debug(stackTrace.ToString());
-
-
             if (leavingPlayer.isMe) return;
             if (!OnlineManager.players.Contains(leavingPlayer)) { return; }
             OnlineManager.RemovePlayer(leavingPlayer);
@@ -282,7 +278,7 @@ namespace RainMeadow
 
                 RainMeadow.Debug("Sending Request to join lobby...");
                 string meName = OnlineManager.mePlayer.id.name;
-                Send(serverPeer, new BeginRouterSession(false, meName), UDPPeerManager.PacketType.Reliable, true);
+                Send(serverPeer, new BeginRouterSession(RainMeadow.rainMeadowOptions.RouterExposeIP.Value, meName), UDPPeerManager.PacketType.Reliable, true);
             }
             else
             {
