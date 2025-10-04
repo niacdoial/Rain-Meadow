@@ -32,8 +32,15 @@ namespace RainMeadow
             if (OnlineManager.lobby is not null)
             {
                 if (NetworkDomain.currentDomain != NetworkDomain.NetworkDomainType.LAN) return;
-                Buffer.BlockCopy(data, 0, OnlineManager.serializer.buffer, 0, size);
-                OnlineManager.serializer.ReadData(NetworkDomain.LAN?.GetPlayerLAN(processingEndpoint, true), size);
+                var player = NetworkDomain.LAN?.GetPlayerLAN(processingEndpoint, true)!;
+                unsafe
+                {
+                    fixed (byte* pdata = data)
+                    {
+                        player.UpdateSessionBuffer((IntPtr)pdata, data.Length);
+                    }
+                }
+                
             }
         }
     }

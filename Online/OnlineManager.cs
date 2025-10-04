@@ -27,6 +27,7 @@ namespace RainMeadow
         public static float lastReceive;
         public static OnlinePlayer mePlayer;
         public static List<OnlinePlayer> players;
+        public static Queue<OnlinePlayer> queuedSessionPlayers = new(4);
         public static Lobby lobby;
 
         public static LobbyInfo currentlyJoiningLobby;
@@ -118,9 +119,8 @@ namespace RainMeadow
             instance.manager.rainWorld.progression.Update();
         }
 
-        public override void RawUpdate(float dt)
+        private static void RecieveData()
         {
-            myTimeStacker += dt * (float)framesPerSecond;
             if (OnlineManager.instance.manager.currentMainLoop is INetworkUpdator networkUpdator && networkUpdator.updateALLDomains)
             {
                 foreach (var domain in NetworkDomain.supportedDomains)
@@ -133,6 +133,29 @@ namespace RainMeadow
                 NetworkDomain.currentInstance.RecieveData();
             }
 
+            int networkBudget = 32768;
+            while (queuedSessionPlayers.Any() && networkBudget > 0)
+            {
+                OnlinePlayer p = queuedSessionPlayers.Dequeue();
+                try
+                {
+                    Buffer.BlockCopy(p.latestSessionBytes, 0, OnlineManager.serializer.buffer, 0, p.latestSessionSize);
+                    serializer.ReadData(p, p.latestSessionSize);
+                }
+                catch (Exception e)
+                {
+                    RainMeadow.Error("Error reading packet from player : " + p.id);
+                    RainMeadow.Error(e);
+                    serializer.EndRead();
+                }
+                networkBudget -= p.latestSessionSize;
+            }
+        }
+
+        public override void RawUpdate(float dt)
+        {
+            myTimeStacker += dt * (float)framesPerSecond;
+            RecieveData();
             lastReceive = UnityEngine.Time.realtimeSinceStartup;
 
             if (myTimeStacker >= 1f)
@@ -149,7 +172,7 @@ namespace RainMeadow
         // from a force-load situation
         public static void ForceLoadUpdate()
         {
-            NetworkDomain.currentInstance?.RecieveData();
+            RecieveData();
             lastReceive = UnityEngine.Time.realtimeSinceStartup;
 
             if (UnityEngine.Time.realtimeSinceStartup > lastSend + 1f / instance.framesPerSecond)

@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Runtime.InteropServices;
 using RainMeadow.Shared;
 
 namespace RainMeadow
@@ -40,7 +41,23 @@ namespace RainMeadow
         public int bytesSnapIndex; // used to loop through the array and overwrite old data
         public readonly int[] bytesIn = new int[40];
         public readonly int[] bytesOut = new int[40];
-        
+
+        public const int sessionBufferSize = 65536;
+        public byte[] latestSessionBytes;
+        public int latestSessionSize;
+        public void UpdateSessionBuffer(IntPtr data, int size)
+        {
+            if (size > sessionBufferSize) throw new ArgumentException("Session data too big!");
+            if (latestSessionBytes is null)
+            {
+                latestSessionBytes = new byte[sessionBufferSize];
+            }
+
+            latestSessionSize = size;
+            Marshal.Copy(data, latestSessionBytes, 0, size);
+            if (!OnlineManager.queuedSessionPlayers.Contains(this)) OnlineManager.queuedSessionPlayers.Enqueue(this);
+        }
+
         public OnlinePlayer(MeadowPlayerId id)
         {
             this.id = id;
