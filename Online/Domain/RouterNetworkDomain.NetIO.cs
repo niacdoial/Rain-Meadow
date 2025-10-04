@@ -98,8 +98,13 @@ namespace RainMeadow
                     return;
                 }
 
-                Buffer.BlockCopy(packet.data, 0, OnlineManager.serializer.buffer, 0, packet.data.Length);
-                OnlineManager.serializer.ReadData(player, packet.data.Length);
+                unsafe
+                {
+                    fixed (byte* data = packet.data)
+                    {
+                        maybePlayer.UpdateSessionBuffer((IntPtr)data, packet.data.Length);
+                    }
+                }
             }
         }
 

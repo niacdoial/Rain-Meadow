@@ -71,7 +71,7 @@ public class RainMeadowOptions : OptionInterface
     private UIelement[] GeneralUIArrPlayerOptions;
     private UIelement[] OnlineArenaSettings;
     private UIelement[] OnlineStorySettings;
-    private UIelement[] OnlineLANSettings;
+    private UIelement[] OnlineNetworkSettings;
 
 
 
@@ -150,7 +150,7 @@ public class RainMeadowOptions : OptionInterface
             OpTab meadowTab = new OpTab(this, Translate("Meadow"));
             OpTab arenaTab = new OpTab(this, Translate("Arena"));
             OpTab storyTab = new OpTab(this, Translate("Story"));
-            OpTab lanTab = new OpTab(this, Translate("LAN"));
+            OpTab lanTab = new OpTab(this, Translate("Network"));
 
 
 
@@ -381,9 +381,9 @@ public class RainMeadowOptions : OptionInterface
                 for (int i = 0; i < arenaPotentialSpoilerSettings.Length; i++) arenaPotentialSpoilerSettings[i].Show();
             };
 
-            OnlineLANSettings = new UIelement[9]
+            OnlineNetworkSettings = new UIelement[9]
             {
-                new OpLabel(10f, 550f, Translate("LAN/Router"), bigText: true),
+                new OpLabel(10f, 550f, Translate("Network"), bigText: true),
                 new OpLabel(10f, 505, Translate("Username"), bigText: false),
                 new OpTextBox(LanUserName, new Vector2(10f, 480), 160f)
                 {
@@ -404,7 +404,7 @@ public class RainMeadowOptions : OptionInterface
                 }
 
         };
-            lanTab.AddItems(OnlineLANSettings);
+            lanTab.AddItems(OnlineNetworkSettings);
 
         }
 

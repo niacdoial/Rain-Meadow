@@ -104,9 +104,9 @@ namespace RainMeadow
                                     RainMeadow.Error("player not found: " + message.m_identityPeer + " " + message.m_identityPeer.GetSteamID());
                                     continue;
                                 }
-                                //RainMeadow.Debug($"Receiving message from {fromPlayer}");
-                                Marshal.Copy(message.m_pData, OnlineManager.serializer.buffer, 0, message.m_cbSize);
-                                OnlineManager.serializer.ReadData(fromPlayer, message.m_cbSize);
+
+
+                                fromPlayer.UpdateSessionBuffer(message.m_pData, message.m_cbSize);
                             }
                         }
                         catch (Exception e)
