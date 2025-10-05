@@ -192,8 +192,9 @@ namespace RainMeadow
                 OnlineManager.mePlayer = GetPlayerRouter(mePlayerid, false);
                 if (OnlineManager.mePlayer is null)
                 {
-                    OnlineManager.QuitWithError("Recieved connection packets out of order:"+
-                        "list of players (with just our player ID inside) should arrive before arrival ack");
+                    OnlineManager.QuitWithError("Recieved connection packets out of order:" +
+                        "list of players (with just our player ID inside) should arrive before arrival ack", true);
+                    return;
                 }
                 OnlineManager.mePlayer.id.name = RainMeadow.rainMeadowOptions.LanUserName.Value;
                 OnlineManager.mePlayer.isMe = true;
@@ -282,21 +283,6 @@ namespace RainMeadow
             else
             {
                 RainMeadow.Error("Invalid lobby type");
-            }
-        }
-
-        public override void JoinLobby(bool success)
-        {
-            if (success)
-            {
-                RainMeadow.Debug("Joining lobby");
-                OnLobbyJoinedEvent(true);
-            }
-            else
-            {
-                OnlineManager.LeaveLobby();
-                RainMeadow.Debug("Failed to join local game. Wrong Password");
-                OnLobbyJoinedEvent(false, Utils.Translate("Wrong password!"));
             }
         }
 

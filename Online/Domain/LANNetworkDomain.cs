@@ -348,21 +348,6 @@ namespace RainMeadow
             }
         }
 
-        public override void JoinLobby(bool success)
-        {
-            if (success)
-            {
-                RainMeadow.Debug("Joining lobby");
-                OnLobbyJoinedEvent(true);
-            }
-            else
-            {
-                OnlineManager.LeaveLobby();
-                RainMeadow.Debug("Failed to join local game. Wrong Password");
-                OnLobbyJoinedEvent(false, Utils.Translate("Wrong password!"));
-            }
-        }
-
         public override void HandleLeavingLobby()
         {
             if (OnlineManager.players is not null)

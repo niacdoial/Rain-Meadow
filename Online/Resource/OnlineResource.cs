@@ -140,7 +140,7 @@ namespace RainMeadow
             {
                 if (latestState is ResourceWithSubresourcesState withSubresources && withSubresources.subleaseState.list.Count != subresources.Count)
                 {
-                    OnlineManager.QuitWithError("subresources missmatch");
+                    OnlineManager.QuitWithError("subresources missmatch", true);
                     return;
                 }
                 latestState.ReadTo(this);

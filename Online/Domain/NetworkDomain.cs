@@ -35,6 +35,15 @@ namespace RainMeadow
         public static event PlayerListReceived_t OnPlayerListReceived = delegate { };
         public static event LobbyJoined_t OnLobbyJoined = delegate { };
 
+        public static void AbortJoinLobby(string error = "")
+        {
+            if (OnlineManager.currentlyJoiningLobby == null) return;
+            if (OnlineManager.lobby != null) OnlineManager.LeaveLobby();
+            OnlineManager.currentlyJoiningLobby = null!;
+            OnLobbyJoined?.Invoke(false, error);
+            return;
+        }
+
         protected static void OnLobbyJoinedEvent(bool ok, string error = "") => OnLobbyJoined?.Invoke(ok, error);
         protected static void OnPlayerListReceivedEvent(MeadowPlayerId[] players) => OnPlayerListReceived?.Invoke(players);
         protected static void OnLobbyListReceivedEvent(bool ok, LobbyInfo[] lobbies) => OnLobbyListReceived?.Invoke(ok, lobbies);
@@ -142,7 +151,20 @@ namespace RainMeadow
 
 
         public abstract void RequestJoinLobby(LobbyInfo lobby, string? password);
-        public abstract void JoinLobby(bool success);
+        public void JoinLobby(bool success, string error = "")
+        {
+            if (success)
+            {
+                RainMeadow.Debug("Joining lobby");
+                OnLobbyJoinedEvent(true);
+            }
+            else
+            {
+                OnlineManager.LeaveLobby();
+                RainMeadow.Debug($"Failed to join local game. {error}");
+                OnLobbyJoinedEvent(false, Utils.Translate(error));
+            }
+        }
         public abstract void HandleLeavingLobby();
 
         public abstract OnlinePlayer? GetLobbyOwner();

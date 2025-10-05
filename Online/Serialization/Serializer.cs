@@ -247,6 +247,11 @@ namespace RainMeadow
             for (uint ie = 0; ie < ne; ie++)
             {
                 OnlineManager.ProcessIncomingEvent(ReadEvent());
+                if (OnlineManager.lobby is null)
+                {
+                    EndRead();
+                    return;
+                }
             }
 
             uint ns = BeginReadStates();
@@ -255,6 +260,11 @@ namespace RainMeadow
             for (uint ist = 0; ist < ns; ist++)
             {
                 OnlineManager.ProcessIncomingState(ReadState());
+                if (OnlineManager.lobby is null)
+                {
+                    EndRead();
+                    return;
+                }
             }
 
             EndRead();

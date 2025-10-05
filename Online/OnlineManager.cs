@@ -68,13 +68,13 @@ namespace RainMeadow
         public static void AddPlayer(OnlinePlayer player)
         {
             players.Add(player);
-            if (lobby != null && mePlayer == lobby.owner && lobby.bannedUsers.list.Contains(player.id))
-            {
-                BanHammer.BanUser(player);
-                ChatLogManager.LogSystemMessage((player.id.GetPersonaName()) + " " + Utils.Translate("tried to join the game but was kicked."));
-                return;
-            }
-            ChatLogManager.LogSystemMessage((player.id.GetPersonaName()) + " " + Utils.Translate("joined the game."));
+            // if (lobby != null && mePlayer == lobby.owner && lobby.bannedUsers.list.Contains(player.id))
+            // {
+            //     BanHammer.BanUser(player);
+            //     ChatLogManager.LogSystemMessage((player.id.GetPersonaName()) + " " + Utils.Translate("tried to join the game but was kicked."));
+            //     return;
+            // }
+            // ChatLogManager.LogSystemMessage((player.id.GetPersonaName()) + " " + Utils.Translate("joined the game."));
         }
 
         public static void RemovePlayer(OnlinePlayer player)
@@ -82,7 +82,7 @@ namespace RainMeadow
             RainMeadow.Debug($"Handling player disconnect:{player}");
             player.hasLeft = true;
             lobby?.OnPlayerDisconnect(player);
-            while (player.HasUnacknoledgedEvents())
+            while (player.HasUnacknoledgedEvents() && OnlineManager.lobby is not null)
             {
                 player.AbortUnacknoledgedEvents();
                 lobby?.OnPlayerDisconnect(player);
@@ -183,46 +183,52 @@ namespace RainMeadow
 
         public override void Update()
         {
-            if (lobby != null)
+            try
             {
-                mePlayer.tick++;
-                ProcessSelfEvents();
-                ProcessDeferredEvents();
 
-                if (lobby.isActive)
+                if (lobby != null)
                 {
-                    lobby.Tick(mePlayer.tick);
+                    mePlayer.tick++;
+                    ProcessSelfEvents();
+                    ProcessDeferredEvents();
+
+                    if (lobby.isActive)
+                    {
+                        lobby.Tick(mePlayer.tick);
+                    }
+                    else if (lobby.isAvailable)
+                    {
+                        lobby.Activate();
+                    }
+
+                    foreach (OnlinePlayer player in players)
+                    {
+                        player.Update();
+                    }
+
+                    // Prepare outgoing messages
+                    foreach (var subscription in subscriptions)
+                    {
+                        subscription.Update(mePlayer.tick);
+                    }
+
+                    foreach (var feed in feeds)
+                    {
+                        feed.Update(mePlayer.tick);
+                    }
+
+                    // Outgoing messages
+                    foreach (var player in players)
+                    {
+                        SendData(player);
+                    }
+
+                    lastSend = UnityEngine.Time.realtimeSinceStartup;
                 }
-                else if (lobby.isAvailable)
-                {
-                    lobby.Activate();
-                }
-
-                foreach (OnlinePlayer player in players)
-                {
-                    player.Update();
-                }
-
-                // Prepare outgoing messages
-                foreach (var subscription in subscriptions)
-                {
-                    subscription.Update(mePlayer.tick);
-                }
-
-                foreach (var feed in feeds)
-                {
-                    feed.Update(mePlayer.tick);
-                }
-
-
-
-                // Outgoing messages
-                foreach (var player in players)
-                {
-                    SendData(player);
-                }
-
-                lastSend = UnityEngine.Time.realtimeSinceStartup;
+            }
+            catch (Exception except)
+            {
+                RainMeadow.Error("Exception during network frame " + except.ToString());
             }
         }
 
@@ -435,16 +441,59 @@ namespace RainMeadow
             return null;
         }
 
-        public static void QuitWithError(string v)
+        public static void QuitWithError(string v, bool urgent = false)
         {
             RainMeadow.Error(v);
-            if (lobby != null && instance.manager.upcomingProcess != ProcessManager.ProcessID.MainMenu)
+            if (lobby != null)
             {
-                instance.manager.upcomingProcess = null;
-                instance.manager.RequestMainProcessSwitch(ProcessManager.ProcessID.MainMenu);
-                instance.manager.ShowDialog(new Menu.DialogNotify(v, Utils.Translate("Leaving Lobby"), new Vector2(240, 320), instance.manager, () => { }));
-                LeaveLobby();
-                throw new Exception(v);
+                var manager = RWCustom.Custom.rainWorld.processManager;
+                try
+                {
+                    if (manager.currentMainLoop is RainWorldGame game && manager.upcomingProcess is null)
+                    {
+                        if (manager.musicPlayer != null)
+                        {
+                            manager.musicPlayer.DeathEvent();
+                        }
+
+                        game.ExitGame(asDeath: false, asQuit: true);
+                    }
+                }
+                catch (Exception except)
+                {
+                    RainMeadow.Error(except);
+                }
+
+                try
+                {
+                    LeaveLobby();
+                }  
+                catch (Exception except)
+                {
+                    RainMeadow.Error(except);
+                }
+
+                manager.RequestMainProcessSwitch(RainMeadow.Ext_ProcessID.LobbySelectMenu);
+                if (urgent)
+                {
+                    manager.PreSwitchMainProcess(RainMeadow.Ext_ProcessID.LobbySelectMenu);
+                    manager.finalizeModsStep = 0;
+                    manager.finalizeModsDelay = 0;
+                    manager.modFinalizationDone = false;
+                    manager.processAfterModFinalization = RainMeadow.Ext_ProcessID.LobbySelectMenu;
+                    manager.upcomingProcess = null;
+                }
+
+                manager.ShowDialog(new Menu.DialogNotify(v, manager, () => { }));
+                if (RPCEvent.currentRPCEvent is null) // rpc will return normally.
+                {
+                    throw new Exception(v);
+                }
+            }
+            else if (currentlyJoiningLobby is not null)
+            {
+                NetworkDomain.AbortJoinLobby(v);
+                return;
             }
         }
     }
