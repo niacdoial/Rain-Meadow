@@ -70,23 +70,11 @@ namespace RainMeadow
             }
         }
 
-        [RPCMethod]
+        [RPCMethod(security = RPCSecurity.Owner)]
         public static void KickToLobby(RPCEvent rpc)
         {
             RainMeadow.Debug($"{rpc.from} is trying to kick {rpc.to}");
-            if (OnlineManager.lobby.owner != rpc.from) return; // Only respond if its the host kicking the player
-            if ((RWCustom.Custom.rainWorld.processManager.currentMainLoop is RainWorldGame game && game.manager.upcomingProcess is not null))
-            {
-                if (RWCustom.Custom.rainWorld.processManager.musicPlayer != null)
-                {
-                    RWCustom.Custom.rainWorld.processManager.musicPlayer.DeathEvent();
-                }
-
-                game.ExitGame(asDeath: true, asQuit: true);
-            }
-            RWCustom.Custom.rainWorld.processManager.RequestMainProcessSwitch(RainMeadow.Ext_ProcessID.LobbySelectMenu);
-            BanHammer.ShowBan(RWCustom.Custom.rainWorld.processManager);
-            OnlineManager.LeaveLobby();
+            OnlineManager.QuitWithError("You were removed from the previous online game");
         }
 
         [RPCMethod]

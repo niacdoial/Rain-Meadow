@@ -429,7 +429,7 @@ namespace RainMeadow
                 ws.NotNeeded();
                 if (self.manager.upcomingProcess != ProcessManager.ProcessID.MainMenu) // quit directly, otherwise wait release
                 {
-                    while (ws.isAvailable)
+                    while (ws.isAvailable && OnlineManager.lobby is not null)
                     {
                         OnlineManager.ForceLoadUpdate();
                     }

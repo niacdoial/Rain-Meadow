@@ -91,15 +91,24 @@ namespace RainMeadow
                     return;
                 }
             }
+
+            if (bannedUsers.list.Contains(request.from.id))
+            {
+                request.from.QueueEvent(new GenericResult.LackPerm(request));
+                return;
+            }
+
             try
             {
                 lobbyRequestable = true;
                 Requested(request);
             }
-            finally
+            catch
             {
                 lobbyRequestable = false;
+                throw;
             }
+            lobbyRequestable = false;
         }
 
         public void ResolveLobbyRequest(GenericResult requestResult)
@@ -121,7 +130,12 @@ namespace RainMeadow
             else if (requestResult is GenericResult.Fail) // I didn't have the right key for this resource
             {
                 RainMeadow.Error("locked request for " + this);
-                NetworkDomain.currentInstance.JoinLobby(false);
+                NetworkDomain.currentInstance.JoinLobby(false, "Incorrect Password!");
+            }
+            else if (requestResult is GenericResult.LackPerm)
+            {
+                RainMeadow.Error("request failed for " + this);
+                NetworkDomain.currentInstance.JoinLobby(false, "You have been banned from this Lobby!");
             }
             else if (requestResult is GenericResult.Error) // I should retry
             {
@@ -255,7 +269,7 @@ namespace RainMeadow
 
                 }
                 lobby.UpdateParticipants(players.list.Select(NetworkDomain.currentInstance.GetPlayer).Where(p => p is not null).ToList());
-                if (lobby.bannedUsersChecked == false)
+                if (!lobby.bannedUsersChecked)
                 {
                     // Need to get the participants before we check
                     if (this.bannedUsers != null && this.bannedUsers.list.Contains(OnlineManager.mePlayer.id))
@@ -268,7 +282,6 @@ namespace RainMeadow
                         }
                         lobby.bannedUsersChecked = true;
                         return;
-
                     }
 
                     lobby.bannedUsersChecked = true;
@@ -317,6 +330,8 @@ namespace RainMeadow
                 nextId++;
                 // todo overflows and repeats (unrealistic but it's a ushort)
             }
+
+            ChatLogManager.LogSystemMessage((player.id.GetPersonaName()) + " " + Utils.Translate("joined the game."));
             base.NewParticipantImpl(player);
             gameMode.NewPlayerInLobby(player);
         }

@@ -188,20 +188,6 @@ namespace RainMeadow
             }
         }
 
-        public override void JoinLobby(bool success)
-        {
-            if (success)
-            {
-                OnLobbyJoinedEvent(true);
-            }
-            else
-            {
-                HandleLeavingLobby();
-                RainMeadow.Debug("Failed to join local game. Wrong Password");
-                OnLobbyJoinedEvent(false, Utils.Translate("Wrong password!"));
-            }
-        }
-
         private static string creatingWithMode;
         private static string? lobbyPassword;
         private void LobbyCreated(LobbyCreated_t param, bool bIOFailure)
@@ -243,6 +229,21 @@ namespace RainMeadow
         {
             try
             {
+
+                if (OnlineManager.currentlyJoiningLobby is not SteamLobbyInfo steamLobby)
+                {
+                    RainMeadow.Error("Cannot join lobby that does not");
+                    OnlineManager.LeaveLobby();
+                    return;
+                }
+
+                if (steamLobby.iD.m_SteamID != param.m_ulSteamIDLobby)
+                {
+                    RainMeadow.Error("Cannot join lobby that does not match the currently joined.");
+                    OnlineManager.LeaveLobby();
+                    return;
+                }
+                
                 if (!bIOFailure)
                 {
                     RainMeadow.Debug("success");
