@@ -22,8 +22,7 @@ namespace RainMeadow
                 if (serverPeer == null) { return; }
 
                 if (UDPPeerManager.CompareIPEndpoints(endPoint, serverPeer)) {
-                    RainMeadow.Error("Lost contact with the lobby server. Shutting down...");
-                    OnlineManager.LeaveLobby();
+                    OnlineManager.QuitWithError("Lost contact with the lobby server. Shutting down...");
                 }
 
                 // first, check if this endpoint is managed by the current NetworkDomain
