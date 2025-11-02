@@ -28,7 +28,7 @@ namespace RainMeadow
 
         public override void CreateLobby(LobbyVisibility visibility, string gameMode, string? password, int? maxPlayerCount)
         {
-            if (serverPeer != null && !UDPPeerManager.CompareIPEndpoints(serverPeer, SharedPlatform.BlackHole)) {
+            if (serverPeer != null && serverPeer != PlatformPeerManager.BlackHole) {
                 var maxplayercount = maxPlayerCount ?? 0;
                 var lobbyInfo = new RouterLobbyInfo(
                     serverPeer,
@@ -58,7 +58,7 @@ namespace RainMeadow
                     lobby.maxPlayerCount, lobby.name,  lobby.mode, lobby.hasPassword,
                     lobby.requiredMods, lobby.bannedMods
                 ),
-                UDPPeerManager.PacketType.Reliable,
+                BasePeerManager.PacketType.Reliable,
                 false
             );
             ((RouterPlayerId)OnlineManager.mePlayer.id).routingID = 1; // we have to be the first for us to send this

@@ -243,7 +243,7 @@ namespace RainMeadow
             }
         }
 
-        public static void SendCustomData(OnlinePlayer toPlayer, string key, byte[] data, ushort size, UDPPeerManager.PacketType sendType)
+        public static void SendCustomData(OnlinePlayer toPlayer, string key, byte[] data, ushort size, BasePeerManager.PacketType sendType)
         {
             if (toPlayer.isMe)
                 return;
@@ -467,7 +467,7 @@ namespace RainMeadow
                 try
                 {
                     LeaveLobby();
-                }  
+                }
                 catch (Exception except)
                 {
                     RainMeadow.Error(except);

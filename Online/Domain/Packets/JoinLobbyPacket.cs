@@ -19,7 +19,7 @@ namespace RainMeadow
                 if (OnlineManager.currentlyJoiningLobby is LANNetworkDomain.LANLobbyInfo oldLobbyInfo)
                 {
                     // If the lobby we want to join is the lobby that allowed us to join.
-                    if (UDPPeerManager.CompareIPEndpoints(oldLobbyInfo.endPoint, newLobbyInfo.endPoint))
+                    if (oldLobbyInfo.endPoint == newLobbyInfo.endPoint)
                     {
                         OnlineManager.currentlyJoiningLobby = newLobbyInfo;
                         var processingPlayer = NetworkDomain.LAN.GetPlayerLAN(processingEndpoint, true);

@@ -28,7 +28,7 @@ namespace RainMeadow
         public static bool isSteamAvailable { get { bool val = false; PlatformSteamAvailable(ref val); return val; } }
         public static bool isLANAvailable { get { bool val = false; PlatformLanAvailable(ref val); return val; } }
         public static bool isRouterAvailable { get { bool val = false; PlatformRouterAvailable(ref val); return val; } }
-        public static UDPPeerManager? PlatformUDPManager { get; private set; }
+        public static BasePeerManager? PlatformPeerManager { get; private set; }
 
 
         public static event LobbyListReceived_t OnLobbyListReceived = delegate { };
@@ -88,7 +88,8 @@ namespace RainMeadow
 
             try
             {
-                PlatformUDPManager = new();
+                PlatformPeerManager = new UDPPeerManager();
+                SharedPlatform.PlatformPeerManager = PlatformPeerManager;
             }
             catch (Exception except)
             {

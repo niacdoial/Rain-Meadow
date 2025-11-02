@@ -12,7 +12,7 @@ namespace RainMeadow
 {
     public partial class NetworkDomain
     {
-        static partial void PlatformLanAvailable(ref bool val) { val = NetworkDomain.PlatformUDPManager is not null; }
+        static partial void PlatformLanAvailable(ref bool val) { val = NetworkDomain.PlatformPeerManager is not null; }
     }
 
     public partial class LANNetworkDomain
@@ -44,11 +44,11 @@ namespace RainMeadow
 
         public override void SendSessionData(OnlinePlayer toPlayer)
         {
-            if (PlatformUDPManager is null) return;
+            if (PlatformPeerManager is null) return;
             try
             {
                 OnlineManager.serializer.WriteData(toPlayer);
-                SendP2P(toPlayer, new SessionPacket(OnlineManager.serializer.buffer, (ushort)OnlineManager.serializer.Position), UDPPeerManager.PacketType.Unreliable);
+                SendP2P(toPlayer, new SessionPacket(OnlineManager.serializer.buffer, (ushort)OnlineManager.serializer.Position), BasePeerManager.PacketType.Unreliable);
                 OnlineManager.serializer.EndWrite();
             }
             catch (Exception e)
@@ -60,7 +60,7 @@ namespace RainMeadow
 
         }
 
-        public override void SendCustomData(OnlinePlayer toPlayer, string key, byte[] data, ushort size, UDPPeerManager.PacketType sendType)
+        public override void SendCustomData(OnlinePlayer toPlayer, string key, byte[] data, ushort size, BasePeerManager.PacketType sendType)
         {
             try
             {
@@ -77,63 +77,58 @@ namespace RainMeadow
 
         public void SendBroadcast(Packet packet)
         {
-            if (PlatformUDPManager is null) return;
+            if (PlatformPeerManager is null) return;
             RainMeadow.DebugMe();
-            for (int broadcast_port = UDPPeerManager.DEFAULT_PORT;
-                broadcast_port < (UDPPeerManager.FIND_PORT_ATTEMPTS + UDPPeerManager.DEFAULT_PORT);
-                broadcast_port++)
+            PeerId[] broadcastables = PlatformPeerManager.GetBroadcastPeerIDs();
+            foreach(PeerId broadId in broadcastables)
             {
-                IPEndPoint point = new(IPAddress.Broadcast, broadcast_port);
-
                 using (MemoryStream memory = new MemoryStream(128))
                 using (BinaryWriter writer = new BinaryWriter(memory))
                 {
-                    Packet.Encode(packet, writer, point);
+                    Packet.Encode(packet, writer, broadId);
 
                     for (int i = 0; i < 4; i++)
-                        PlatformUDPManager.Send(memory.GetBuffer(), point,
-                            UDPPeerManager.PacketType.UnreliableBroadcast, false);
+                        PlatformPeerManager.Send(memory.GetBuffer(), broadId,
+                            BasePeerManager.PacketType.UnreliableBroadcast, false);
                 }
             }
         }
 
         // If using a domain requires you to start a conversation, then any packet sent before before starting a conversation is ignored.
         // otherwise, the parameter "start_conversation" is ignored.
-        public void SendP2P(OnlinePlayer player, Packet packet, UDPPeerManager.PacketType sendType, bool start_conversation = false)
+        public void SendP2P(OnlinePlayer player, Packet packet, BasePeerManager.PacketType sendType, bool start_conversation = false)
         {
-            if (PlatformUDPManager is null) return;
+            if (PlatformPeerManager is null) return;
             if (player.id is LANNetworkDomain.LANPlayerId lanid)
             {
                 using (MemoryStream memory = new MemoryStream(128))
                 using (BinaryWriter writer = new BinaryWriter(memory))
                 {
                     Packet.Encode(packet, writer, lanid.endPoint);
-                    PlatformUDPManager.Send(memory.GetBuffer(), lanid.endPoint, sendType, start_conversation);
+                    PlatformPeerManager.Send(memory.GetBuffer(), lanid.endPoint, sendType, start_conversation);
                 }
             }
         }
 
         public override void RecieveData()
         {
-            if (PlatformUDPManager is null) return;
-            PlatformUDPManager.Update();
+            if (PlatformPeerManager is null) return;
+            PlatformPeerManager.Update();
 
             int packetlimit = 4; // TODO: Add to remix menu
-            for (int i = 0; (i < packetlimit) && PlatformUDPManager.IsPacketAvailable(); i++)
+            for (int i = 0; (i < packetlimit) && PlatformPeerManager.IsPacketAvailable(); i++)
             {
                 try
                 {
-                    byte[]? data = PlatformUDPManager.Recieve(out EndPoint? remoteEndpoint);
+                    byte[]? data = PlatformPeerManager.Recieve(out PeerId? remoteEndpoint);
                     if (data == null) continue;
-                    IPEndPoint? iPEndPoint = remoteEndpoint as IPEndPoint;
-                    if (iPEndPoint is null) continue;
-
+                    if (remoteEndpoint is null) continue;
 
                     using (MemoryStream netStream = new MemoryStream(data))
                     using (BinaryReader netReader = new BinaryReader(netStream))
                     {
                         if (netReader.BaseStream.Position == ((MemoryStream)netReader.BaseStream).Length) continue; // nothing to read somehow?
-                        Packet.Decode(netReader, iPEndPoint);
+                        Packet.Decode(netReader, remoteEndpoint);
                     }
                 }
                 catch (Exception e)
@@ -143,7 +138,7 @@ namespace RainMeadow
             }
         }
 
-        public override void RecieveCustomPacket(IPEndPoint endPoint, CustomPacket packet)
+        public override void RecieveCustomPacket(PeerId endPoint, CustomPacket packet)
         {
             var maybePlayer = GetPlayerLAN(endPoint);
             if (maybePlayer is OnlinePlayer player) {
@@ -153,27 +148,27 @@ namespace RainMeadow
 
         public void SendAcknoledgement(OnlinePlayer player)
         {
-            if (PlatformUDPManager is null) return;
+            if (PlatformPeerManager is null) return;
             if (player.id is LANNetworkDomain.LANPlayerId lanid)
             {
-                PlatformUDPManager.Send(Array.Empty<byte>(), lanid.endPoint,
-                    UDPPeerManager.PacketType.Reliable, true);
+                PlatformPeerManager.Send(Array.Empty<byte>(), lanid.endPoint,
+                    BasePeerManager.PacketType.Reliable, true);
             }
         }
 
         public override void ForgetPlayer(OnlinePlayer player)
         {
-            if (PlatformUDPManager is null) return;
+            if (PlatformPeerManager is null) return;
             if (player.id is LANNetworkDomain.LANPlayerId lanid)
             {
-                PlatformUDPManager.ForgetPeer(lanid.endPoint);
+                PlatformPeerManager.ForgetPeer(lanid.endPoint);
             }
         }
 
         public override void ForgetEverything()
         {
-            if (PlatformUDPManager is null) return;
-            PlatformUDPManager.ForgetAllPeers();
+            if (PlatformPeerManager is null) return;
+            PlatformPeerManager.ForgetAllPeers();
         }
 
     }

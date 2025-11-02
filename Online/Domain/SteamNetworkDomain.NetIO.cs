@@ -37,7 +37,7 @@ namespace RainMeadow
             }
         }
 
-        public override void SendCustomData(OnlinePlayer toPlayer, string key, byte[] data, ushort size, UDPPeerManager.PacketType sendType)
+        public override void SendCustomData(OnlinePlayer toPlayer, string key, byte[] data, ushort size, BasePeerManager.PacketType sendType)
         {
             if (NetworkDomain.currentDomain == NetworkDomain.NetworkDomainType.Steam)
             {
@@ -65,8 +65,8 @@ namespace RainMeadow
                             SteamNetworkingMessages.SendMessageToUser(ref steamNetId, (IntPtr)dataPointer, (uint)buffer.Length,
                                 sendType switch
                                 {
-                                    UDPPeerManager.PacketType.Reliable => Constants.k_nSteamNetworkingSend_Reliable,
-                                    UDPPeerManager.PacketType.Unreliable => Constants.k_nSteamNetworkingSend_Unreliable
+                                    BasePeerManager.PacketType.Reliable => Constants.k_nSteamNetworkingSend_Reliable,
+                                    BasePeerManager.PacketType.Unreliable => Constants.k_nSteamNetworkingSend_Unreliable
                                 }, 1);
                         }
                     }

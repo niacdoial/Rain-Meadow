@@ -517,7 +517,7 @@ namespace RainMeadow
 
                     if (VerifyPlay(lobbyinfo))
                     {
-                        if (lobbyinfo is LANNetworkDomain.LANLobbyInfo laninfo && !UDPPeerManager.isEndpointLocal(laninfo.endPoint))
+                        if (lobbyinfo is LANNetworkDomain.LANLobbyInfo laninfo && !laninfo.endPoint.isNetworkLocal())
                         {
                             ShowNotLocalDialogue(
                                 Translate("This address is possibly not local to your current network.") + Environment.NewLine +

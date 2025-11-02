@@ -36,7 +36,7 @@ namespace RainMeadow
             bool includeme = lanids.FirstOrDefault(x => x.isLoopback()) is not null;
 
             lanids = lanids.Where(x => !x.isLoopback());
-            UDPPeerManager.SerializeEndPoints(writer, lanids.Select(x => x.endPoint).ToArray(), processingEndpoint, includeme);
+            NetworkDomain.PlatformPeerManager.SerializePeerIDs(writer, lanids.Select(x => x.endPoint).ToArray(), processingEndpoint, includeme);
 
             if (modifyOperation == Operation.Add) {
                 if (includeme) {
@@ -53,7 +53,7 @@ namespace RainMeadow
         public override void Deserialize(BinaryReader reader)
         {
             modifyOperation = (Operation)reader.ReadByte();
-            var endpoints = UDPPeerManager.DeserializeEndPoints(reader, processingEndpoint);
+            var endpoints = NetworkDomain.PlatformPeerManager.DeserializePeerIDs(reader, processingEndpoint);
 
             if (modifyOperation == Operation.Add) {
                 players = endpoints.Select(x => new OnlinePlayer(new LANNetworkDomain.LANPlayerId(x))).ToArray();
@@ -61,7 +61,7 @@ namespace RainMeadow
                     players[i].id.name = reader.ReadNullTerminatedString();
                 }
             }
-                
+
             else if (modifyOperation == Operation.Remove)
                 players = endpoints.Select(x => NetworkDomain.LAN.GetPlayerLAN(x)).OfType<OnlinePlayer>().ToArray();
 

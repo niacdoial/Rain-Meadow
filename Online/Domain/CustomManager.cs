@@ -28,7 +28,7 @@ namespace RainMeadow
             RefreshSettings();
         }
 
-        public static void SendCustomData(OnlinePlayer toPlayer, string key, byte[] data, ushort size, UDPPeerManager.PacketType sendType)
+        public static void SendCustomData(OnlinePlayer toPlayer, string key, byte[] data, ushort size, BasePeerManager.PacketType sendType)
         {
             OnlineManager.SendCustomData(toPlayer, key, data, size, sendType);
         }

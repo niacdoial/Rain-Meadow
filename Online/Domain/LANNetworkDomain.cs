@@ -17,7 +17,7 @@ namespace RainMeadow
         public LANNetworkDomain()
         {
             InitializePackets();
-            NetworkDomain.PlatformUDPManager.OnPeerForgotten += (IPEndPoint endPoint) => {
+            NetworkDomain.PlatformPeerManager.OnPeerForgotten += (PeerId endPoint) => {
                 // first, check if this endpoint is managed by the current NetworkDomain
                 // then, check if the peer timed out or if we booted them already (done in the callee)
                 OnlinePlayer? maybePeer = GetPlayerLAN(endPoint);
@@ -33,29 +33,26 @@ namespace RainMeadow
 
             public override string directJoinCode => endPoint.ToString();
 
-            public IPEndPoint endPoint;
-            public LANLobbyInfo(IPEndPoint endPoint, string name, string mode, int playerCount, bool hasPassword, int maxPlayerCount, string highImpactMods = "", string bannedMods = "") :
+            public PeerId endPoint;
+            public LANLobbyInfo(PeerId endPoint, string name, string mode, int playerCount, bool hasPassword, int maxPlayerCount, string highImpactMods = "", string bannedMods = "") :
                 base(name, mode, playerCount, hasPassword, maxPlayerCount, highImpactMods, bannedMods)
             {
                 this.endPoint = endPoint;
             }
             public override bool Equals(LobbyInfo other)
             {
-                if (other is LANLobbyInfo otherlan) return UDPPeerManager.CompareIPEndpoints(endPoint, otherlan.endPoint);
+                if (other is LANLobbyInfo otherlan) return (endPoint == otherlan.endPoint);
                 return false;
             }
         }
 
         public class LANPlayerId : MeadowPlayerId
         {
-            // Blackhole Endpoint
-            // https://superuser.com/questions/698244/ip-address-that-is-the-equivalent-of-dev-null
-            static readonly IPEndPoint BlackHole = new IPEndPoint(IPAddress.Parse("253.253.253.253"), 999);
-            public IPEndPoint endPoint;
-            public LANPlayerId(IPEndPoint? endPoint) : base(
+            public PeerId endPoint;
+            public LANPlayerId(PeerId? endPoint) : base(
                     UsernameGenerator.GenerateRandomUsername(endPoint?.GetHashCode() ?? 0))
             {
-                this.endPoint = endPoint ?? BlackHole;
+                this.endPoint = endPoint ?? PlatformPeerManager.BlackHole;
             }
 
             public override void OpenProfileLink()
@@ -67,7 +64,7 @@ namespace RainMeadow
                     dialogue += Utils.Translate("Your network interface(s) are");
                     foreach (var ip in UDPPeerManager.getInterfaceAddresses())
                     {
-                        dialogue += Environment.NewLine + ip.ToString() + ":" + this.endPoint.Port.ToString();
+                        dialogue += Environment.NewLine + ip.ToString() + ":" + PlatformPeerManager.port.ToString();
                     }
                 }
                 else dialogue += Utils.Translate("<NAME> network interface is ").Replace("<NAME>", name) + endPoint.ToString();
@@ -85,7 +82,7 @@ namespace RainMeadow
 
             public void reset()
             {
-                this.endPoint = BlackHole;
+                this.endPoint = PlatformPeerManager.BlackHole;
             }
 
             public override int GetHashCode()
@@ -95,6 +92,7 @@ namespace RainMeadow
 
             public override void CustomSerialize(Serializer serializer)
             {
+
                 if (serializer.IsWriting)
                 {
                     if (this.isLoopback())
@@ -104,9 +102,7 @@ namespace RainMeadow
                     else
                     {
                         serializer.writer.Write(false);
-                        serializer.writer.Write((int)endPoint.Port);
-                        serializer.writer.Write((int)endPoint.Address.GetAddressBytes().Length);
-                        serializer.writer.Write(endPoint.Address.GetAddressBytes());
+                        this.endPoint.CustomSerialize(serializer);
                     }
                 }
                 else if (serializer.IsReading)
@@ -114,22 +110,21 @@ namespace RainMeadow
                     bool issender = serializer.reader.ReadBoolean();
                     if (issender)
                     {
-                        this.endPoint = (serializer.currPlayer.id as LANPlayerId)?.endPoint ?? BlackHole;
+                        this.endPoint = (serializer.currPlayer.id as LANPlayerId)?.endPoint ?? SharedPlatform.PlatformPeerManager.BlackHole;
                     }
                     else
                     {
-                        int port = serializer.reader.ReadInt32();
-                        byte[] endpointbytes = serializer.reader.ReadBytes(serializer.reader.ReadInt32());
-                        this.endPoint = new IPEndPoint(new IPAddress(endpointbytes), port);
+                        this.endPoint.CustomSerialize(serializer);
                     }
                 }
+
+                ;
             }
 
             public bool isLoopback()
             {
                 if (endPoint is null) return false;
-                if (PlatformUDPManager?.port != endPoint.Port) return false;
-                return UDPPeerManager.isLoopback(endPoint.Address);
+                return endPoint.isLoopback();
             }
 
             public override bool Equals(MeadowPlayerId other)
@@ -137,7 +132,7 @@ namespace RainMeadow
 
                 if (other is LANPlayerId lanid)
                 {
-                    return UDPPeerManager.CompareIPEndpoints(endPoint, lanid.endPoint);
+                    return endPoint == lanid.endPoint;
                 }
                 return false;
             }
@@ -145,8 +140,7 @@ namespace RainMeadow
 
         public override OnlinePlayer CreateMePlayer()
         {
-            var op = new OnlinePlayer(new LANPlayerId(new IPEndPoint(
-                UDPPeerManager.getInterfaceAddresses()[0], PlatformUDPManager.port)))
+            var op = new OnlinePlayer(new LANPlayerId(PlatformPeerManager.GetSelf()))
             { isMe = true };
 
             if (!string.IsNullOrWhiteSpace(RainMeadow.rainMeadowOptions.LanUserName.Value))
@@ -178,7 +172,7 @@ namespace RainMeadow
         }
 
 
-        public void SendLobbyInfo(IPEndPoint endPoint)
+        public void SendLobbyInfo(PeerId endPoint)
         {
             if (OnlineManager.lobby != null && OnlineManager.lobby.isOwner)
             {
@@ -190,7 +184,7 @@ namespace RainMeadow
                 using (BinaryWriter writer = new BinaryWriter(memory))
                 {
                     Packet.Encode(packet, writer, endPoint);
-                    PlatformUDPManager.Send(memory.GetBuffer(), endPoint, UDPPeerManager.PacketType.UnreliableBroadcast, false);
+                    PlatformPeerManager.Send(memory.GetBuffer(), endPoint, BasePeerManager.PacketType.UnreliableBroadcast, false);
                 }
             }
         }
@@ -198,7 +192,7 @@ namespace RainMeadow
         public override bool canDirectConnect => true;
         public override LobbyInfo GenerateDCLobbyInfo(string connectstr)
         {
-            var endpoint = UDPPeerManager.GetEndPointByName(connectstr);
+            var endpoint = PlatformPeerManager.GetPeerIdByName(connectstr);
             if (endpoint != null)
             {
                 return new LANNetworkDomain.LANLobbyInfo(endpoint, "Direct Connection", "Meadow", 0, true, 2);
@@ -209,13 +203,13 @@ namespace RainMeadow
             }
         }
 
-        public OnlinePlayer? GetPlayerLAN(IPEndPoint other, bool create = false)
+        public OnlinePlayer? GetPlayerLAN(PeerId other, bool create = false)
         {
             var player = OnlineManager.players.FirstOrDefault(p =>
             {
                 if (p.id is LANPlayerId lanid)
                     if (lanid.endPoint != null)
-                        return UDPPeerManager.CompareIPEndpoints(lanid.endPoint, other);
+                        return lanid.endPoint == other;
                 return false;
             });
 
@@ -234,7 +228,7 @@ namespace RainMeadow
             foreach (OnlinePlayer player in OnlineManager.players)
             {
                 if (player.isMe) continue;
-                SendP2P(player, new ChatMessagePacket(message), UDPPeerManager.PacketType.Reliable);
+                SendP2P(player, new ChatMessagePacket(message), BasePeerManager.PacketType.Reliable);
             }
 
             RecieveChatMessage(OnlineManager.mePlayer, message);
@@ -285,13 +279,13 @@ namespace RainMeadow
                         continue;
 
                     SendP2P(player, new ModifyPlayerListPacket(ModifyPlayerListPacket.Operation.Add, new OnlinePlayer[] { joiningPlayer }),
-                        UDPPeerManager.PacketType.Reliable);
+                        BasePeerManager.PacketType.Reliable);
                 }
 
                 // Tell joining peer to create everyone in the server
                 SendP2P(joiningPlayer, new ModifyPlayerListPacket(ModifyPlayerListPacket.Operation.Add,
                     OnlineManager.players.Append(OnlineManager.mePlayer).ToArray()),
-                    UDPPeerManager.PacketType.Reliable);
+                    BasePeerManager.PacketType.Reliable);
             }
 
             OnPlayerListReceivedEvent(OnlineManager.players.Select(x => x.id).ToArray());
@@ -316,7 +310,7 @@ namespace RainMeadow
                             continue;
 
                         SendP2P(player, new ModifyPlayerListPacket(ModifyPlayerListPacket.Operation.Remove, new OnlinePlayer[] { leavingPlayer }),
-                            UDPPeerManager.PacketType.Reliable);
+                            BasePeerManager.PacketType.Reliable);
                     }
                 }
             ForgetPlayer(leavingPlayer);
@@ -340,7 +334,7 @@ namespace RainMeadow
 
                 RainMeadow.Debug("Sending Request to join lobby...");
                 SendP2P(new OnlinePlayer(new LANPlayerId(lobbyInfo.endPoint)),
-                    new RequestJoinPacket(OnlineManager.mePlayer.id.name), UDPPeerManager.PacketType.Reliable, true);
+                    new RequestJoinPacket(OnlineManager.mePlayer.id.name), BasePeerManager.PacketType.Reliable, true);
             }
             else
             {
@@ -358,7 +352,7 @@ namespace RainMeadow
                     {
                         SendP2P(p,
                             new SessionEndPacket(),
-                                UDPPeerManager.PacketType.Unreliable);
+                                BasePeerManager.PacketType.Unreliable);
                     }
                 }
             }
