@@ -102,7 +102,7 @@ namespace RainMeadow
                     else
                     {
                         serializer.writer.Write(false);
-                        this.endPoint.CustomSerialize(serializer);
+                        NetworkDomain.PlatformPeerManager.SerializePeerId(serializer.writer, this.endPoint);
                     }
                 }
                 else if (serializer.IsReading)
@@ -110,11 +110,11 @@ namespace RainMeadow
                     bool issender = serializer.reader.ReadBoolean();
                     if (issender)
                     {
-                        this.endPoint = (serializer.currPlayer.id as LANPlayerId)?.endPoint ?? SharedPlatform.PlatformPeerManager.BlackHole;
+                        this.endPoint = (serializer.currPlayer.id as LANPlayerId)?.endPoint ?? NetworkDomain.PlatformPeerManager.BlackHole;
                     }
                     else
                     {
-                        this.endPoint.CustomSerialize(serializer);
+                        this.endPoint = NetworkDomain.PlatformPeerManager.DeserializePeerId(serializer.reader);
                     }
                 }
 
