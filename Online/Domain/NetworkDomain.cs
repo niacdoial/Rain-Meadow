@@ -184,6 +184,7 @@ namespace RainMeadow
         }
 
         public virtual bool canSendChatMessages => false;
+        public virtual void FilterMessage(ref string message) { }
         public virtual void SendChatMessage(string message) { }
         public virtual void RecieveChatMessage(OnlinePlayer player, string message)
         {

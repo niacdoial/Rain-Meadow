@@ -74,25 +74,6 @@ namespace RainMeadow
             {
                 // watcher color fixes (jolly doesnt even work, but we do)
                 var c = new ILCursor(il);
-                c.GotoNext(moveType: MoveType.Before,
-                    i => i.MatchLdarg(0),
-                    i => i.MatchLdfld<PlayerGraphics>("player"),
-                    i => i.MatchLdfld<Creature>("injectedPoison"),
-                    i => i.MatchLdcR4(0.0F)
-                );
-                c.MoveAfterLabels();
-                c.Emit(OpCodes.Ldarg_0);
-                c.Emit(OpCodes.Ldloca, 1);
-                c.EmitDelegate((PlayerGraphics self, ref Color originalBodyColor) =>
-                {
-                    if (RainMeadow.creatureCustomizations.TryGetValue(self.player, out var customization))
-                    {
-                        customization.ModifyBodyColor(ref originalBodyColor);
-                        RainMeadow.Trace("color became " + originalBodyColor);
-                    }
-                });
-                // basegame color overrides
-                c = new ILCursor(il);
                 c.GotoNext(moveType: MoveType.After,
                     i => i.MatchStloc(0)
                     );
@@ -120,7 +101,7 @@ namespace RainMeadow
         // To explain further, basically try store a value into this field before orig in the relevant methods, then restore to null after orig
         // Allows it to be read when the PlayerGraphics static methods are called
 
-        private void PlayerGraphicsOnInitiateSprites(On.PlayerGraphics.orig_InitiateSprites orig, PlayerGraphics self, RoomCamera.SpriteLeaser sleaser, RoomCamera rcam)
+        private void PlayerGraphicsOnInitiateSprites(On.PlayerGraphics.orig_InitiateSprites orig, PlayerGraphics self, RoomCamera.SpriteLeaser sLeaser, RoomCamera rCam)
         {
             var cachedCustomColors = PlayerGraphics.customColors;
 
@@ -134,7 +115,31 @@ namespace RainMeadow
                     PlayerGraphics.customColors = hackySlugcatCustomization.currentColors;
                 }
 
-                orig(self, sleaser, rcam);
+                orig(self, sLeaser, rCam);
+
+                // dev nightsky skin
+                if(customization != null && self.player.abstractCreature.GetOnlineObject() is OnlineEntity entity)
+                {
+                    if (customization.IsNightSkySkin(entity))
+                    {
+                        var nightsky = rCam.game.rainWorld.Shaders["RM_NightSkySkin"];
+                        for (int i = 0; i < 10; i++) // 9 is face, 10 is Mark light
+                        {
+                            sLeaser.sprites[i].shader = nightsky;
+                        }
+                        if (ModManager.MSC)
+                        {
+                            if (self.player.SlugCatClass == MoreSlugcats.MoreSlugcatsEnums.SlugcatStatsName.Artificer && sLeaser.sprites.Length > 12)
+                            {
+                                sLeaser.sprites[12].shader = nightsky;
+                            }
+                            if (self.player.SlugCatClass == MoreSlugcats.MoreSlugcatsEnums.SlugcatStatsName.Saint)
+                            {
+                                sLeaser.sprites[12].shader = nightsky;
+                            }
+                        }
+                    }
+                }
             }
             finally
             {

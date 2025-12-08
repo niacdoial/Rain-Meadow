@@ -56,6 +56,8 @@ namespace RainMeadow
             [OnlineField(group = "arenaSetup")]
             public int watcherCamoLimit;
             [OnlineField(group = "arenaSetup")]
+            public int watcherRippleLevel;
+            [OnlineField(group = "arenaSetup")]
             public bool sainot;
             [OnlineField(group = "arenaSetup")]
             public bool painCatEgg;
@@ -73,7 +75,12 @@ namespace RainMeadow
             public bool arenaItemSteal;
             [OnlineField(group = "arenaSetup")]
             public bool allowJoiningMidRound;
-
+            [OnlineField(group = "arenaSetup")]
+            public bool voidMasterEnabled;
+            [OnlineField(group = "arenaSetup")]
+            public int amoebaDuration;
+            [OnlineField(group = "aremaSetup")]
+            public bool amoebaControl;
             // Group: arenaGameplay
             [OnlineField(group = "arenaGameplay")]
             public List<ushort> arenaSittingOnlineOrder;
@@ -90,9 +97,9 @@ namespace RainMeadow
             [OnlineField(group = "arenaGameplay")]
             public Dictionary<int, int> playerNumberWithWins;
             [OnlineField(group = "arenaGameplay")]
-            public Dictionary<int, int> playerNumberWithKills;
-            [OnlineField(group = "arenaGameplay")]
             public Dictionary<int, int> playerTotScore;
+            [OnlineField(group = "arenaGameplay")]
+            public Dictionary<int, List<string>> playerNumberWithTrophies;
             [OnlineField(group = "arenaGameplay")]
             public bool countdownInitiatedHoldFire;
             [OnlineField(group = "arenaGameplay")]
@@ -101,6 +108,12 @@ namespace RainMeadow
             public bool leaveForNextLevel;
             [OnlineField]
             public bool weaponCollisionFix;
+            [OnlineField]
+            public bool enableBombs;
+            [OnlineField]
+            public bool enableBees;
+            [OnlineField]
+            public bool enableCorpseGrab;
             [OnlineField]
             public bool playersEqualToOnlineSitting;
             [OnlineField]
@@ -121,9 +134,9 @@ namespace RainMeadow
                 reigningChamps = new(arena.reigningChamps.list.ToList());
                 playerNumberWithScore = new(arena.playerNumberWithScore);
                 playerNumberWithDeaths = new(arena.playerNumberWithDeaths);
-                playerNumberWithKills = new(arena.playerNumberWithKills);
                 playerTotScore = new(arena.playerTotScore);
                 playerNumberWithWins = new(arena.playerNumberWithWins);
+                playerNumberWithTrophies = arena.playerNumberWithTrophies;
                 playersLateWaitingInLobby = new(arena.playersLateWaitingInLobbyForNextRound);
 
                 playersChoosingSlugs = new(arena.playersInLobbyChoosingSlugs.ToDictionary<string, int>());
@@ -135,6 +148,7 @@ namespace RainMeadow
                 sainot = arena.sainot;
                 saintAscendanceTimer = arena.arenaSaintAscendanceTimer;
                 watcherCamoLimit = arena.watcherCamoTimer;
+                watcherRippleLevel = arena.watcherRippleLevel;
                 currentGameMode = arena.currentGameMode;
                 currentLevel = arena.currentLevel;
                 totalLevels = arena.totalLevelCount;
@@ -146,12 +160,18 @@ namespace RainMeadow
                 arenaItemSteal = arena.itemSteal;
                 allowJoiningMidRound = arena.allowJoiningMidRound;
                 weaponCollisionFix = arena.weaponCollisionFix;
+                enableBombs = arena.enableBombs;
+                enableBees = arena.enableBees;
+                enableCorpseGrab = arena.enableCorpseGrab;
                 leaveForNextLevel = arena.leaveForNextLevel;
                 hasPermissionToRejoin = arena.hasPermissionToRejoin;
                 playersEqualToOnlineSitting = arena.playersEqualToOnlineSitting;
                 piggyBack = arena.piggyBack;
 
                 bannedSlugs = new(arena.bannedSlugs);
+                voidMasterEnabled = arena.voidMasterEnabled;
+                amoebaDuration = arena.amoebaDuration;
+                amoebaControl = arena.amoebaControl;
             }
 
             public override void ReadTo(OnlineResource.ResourceData data, OnlineResource resource)
@@ -171,7 +191,10 @@ namespace RainMeadow
                 (lobby.gameMode as ArenaOnlineGameMode).playerNumberWithScore = playerNumberWithScore;
                 (lobby.gameMode as ArenaOnlineGameMode).playerNumberWithDeaths = playerNumberWithDeaths;
                 (lobby.gameMode as ArenaOnlineGameMode).playerNumberWithWins = playerNumberWithWins;
-                (lobby.gameMode as ArenaOnlineGameMode).playerNumberWithKills = playerNumberWithKills;
+
+                (lobby.gameMode as ArenaOnlineGameMode).playerNumberWithTrophies = playerNumberWithTrophies;
+
+
                 (lobby.gameMode as ArenaOnlineGameMode).playerTotScore = playerTotScore;
 
                 (lobby.gameMode as ArenaOnlineGameMode).playersLateWaitingInLobbyForNextRound = playersLateWaitingInLobby;
@@ -186,7 +209,7 @@ namespace RainMeadow
                 (lobby.gameMode as ArenaOnlineGameMode).sainot = sainot;
                 (lobby.gameMode as ArenaOnlineGameMode).arenaSaintAscendanceTimer = saintAscendanceTimer;
                 (lobby.gameMode as ArenaOnlineGameMode).watcherCamoTimer = watcherCamoLimit;
-
+                (lobby.gameMode as ArenaOnlineGameMode).watcherRippleLevel = watcherRippleLevel;
                 (lobby.gameMode as ArenaOnlineGameMode).currentGameMode = currentGameMode;
                 (lobby.gameMode as ArenaOnlineGameMode).currentLevel = currentLevel;
                 (lobby.gameMode as ArenaOnlineGameMode).totalLevelCount = totalLevels;
@@ -199,12 +222,19 @@ namespace RainMeadow
                 (lobby.gameMode as ArenaOnlineGameMode).allowJoiningMidRound = allowJoiningMidRound;
                 (lobby.gameMode as ArenaOnlineGameMode).weaponCollisionFix = weaponCollisionFix;
 
+                (lobby.gameMode as ArenaOnlineGameMode).enableBees = enableBees;
+                (lobby.gameMode as ArenaOnlineGameMode).enableBombs = enableBombs;
+                (lobby.gameMode as ArenaOnlineGameMode).enableCorpseGrab = enableCorpseGrab;
+
                 (lobby.gameMode as ArenaOnlineGameMode).leaveForNextLevel = leaveForNextLevel;
                 (lobby.gameMode as ArenaOnlineGameMode).hasPermissionToRejoin = hasPermissionToRejoin;
                 (lobby.gameMode as ArenaOnlineGameMode).playersEqualToOnlineSitting = playersEqualToOnlineSitting;
 
                 (lobby.gameMode as ArenaOnlineGameMode).bannedSlugs = bannedSlugs;
                 (lobby.gameMode as ArenaOnlineGameMode).piggyBack = piggyBack;
+                (lobby.gameMode as ArenaOnlineGameMode).voidMasterEnabled= voidMasterEnabled;
+                (lobby.gameMode as ArenaOnlineGameMode).amoebaDuration= amoebaDuration;
+                (lobby.gameMode as ArenaOnlineGameMode).amoebaControl = amoebaControl;
 
 
             }

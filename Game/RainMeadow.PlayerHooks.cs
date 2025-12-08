@@ -92,9 +92,11 @@ public partial class RainMeadow
             orig(self);
             WatcherOverrideRippleLevel = false;
         };
+        IL.Player.WatcherUpdate += Player_WatcherUpdate;
         On.Player.CamoUpdate += Player_CamoUpdate;
-
-
+        On.Player.ToggleCamo += Player_ToggleCamo;
+        IL.Player.TransitionRippleUpdate += Player_TransitionRippleUpdate;
+        IL.Player.RippleSpawnInteractions += Player_RippleSpawnInteractions;
 
         On.Player.SetMalnourished += Player_SetMalnourished;
         new Hook(typeof(Player).GetProperty(nameof(Player.Malnourished)).GetGetMethod(), Player_get_Malnourished);
@@ -196,7 +198,35 @@ public partial class RainMeadow
         }
         return orig(self);
     }
-
+    private void Player_ToggleCamo(On.Player.orig_ToggleCamo orig, Player self)
+    {
+        bool lastRippleState = self.room.game.cameras[0].lastRippleState;
+        orig(self);
+        if (!self.IsLocal(out _))
+            self.room.game.cameras[0].lastRippleState = lastRippleState;
+    }
+    private void Player_TransitionRippleUpdate(ILContext il)
+    {
+        try
+        {
+            ILCursor c = new(il);
+            ILLabel label = null;
+            c.GotoNext(x => x.MatchLdarg(0), x => x.MatchLdfld<Player>(nameof(Player.isCamo)), x => x.MatchBrfalse(out label));
+            c.Emit(OpCodes.Ldarg_0);
+            c.EmitDelegate(delegate (Player self)
+            {
+                return self.IsLocal(out _);
+            });
+            //if ripplespace avaliable, plays exiting ripple space animation when player isnt local.
+            //its stupid how roomcamera doesnt use FullScreen Ripple and uses the transition ripple when player transitions to ripple screen
+            //fsRipple only is used for the next rooms you enter if camera.lastRippleState is true. ToggleCamo hook prevents it being set true by non-local player
+            c.Emit(OpCodes.Brfalse, label);
+        }
+        catch (Exception ex)
+        {
+            Error(ex);
+        }
+    }
     private void Player_CamoUpdate(On.Player.orig_CamoUpdate orig, Player self)
     {
         if (self.isCamo && (!self.Consious || self.warpExhausionTime > 0))
@@ -344,6 +374,62 @@ public partial class RainMeadow
             }
         }
     }
+    private void Player_WatcherUpdate(ILContext il)
+    {
+        try
+        {
+            ILCursor c = new(il);
+            ILLabel label = null;
+            c.GotoNext(x => x.MatchLdsfld<ModManager>(nameof(ModManager.Watcher)), x => x.MatchBrfalse(out label));
+            c.EmitDelegate(delegate ()
+            {
+                return isArenaMode(out _);
+            });
+            c.Emit(OpCodes.Brtrue, label); //skip sharing ripple layer with Players[0] which is host in arena
+
+
+            c.GotoNext(MoveType.After, x => x.MatchLdarg(0), x => x.MatchCall<Player>("get_rippleLevel"), x => x.MatchLdcR4(5), x => x.MatchBltUn(out label));
+            c.Emit(OpCodes.Ldarg_0);
+            c.EmitDelegate(delegate (Player player)
+            {
+                return player.IsLocal(out _); //dont play ripple music
+            });
+            c.Emit(OpCodes.Brfalse, label);
+        }
+        catch (Exception ex)
+        {
+            Error(ex);
+        }
+    }
+    private void Player_RippleSpawnInteractions(ILContext il)
+    {
+        try
+        {
+            ILCursor c = new(il);
+            ILLabel label = null;
+            c.GotoNext(MoveType.After, x => x.MatchBneUn(out label));
+            c.Emit(OpCodes.Ldarg_0);
+            c.Emit(OpCodes.Ldloc, 3);
+            c.EmitDelegate(delegate (Player self, int i)
+            {
+                VoidSpawn spawn = self.room.voidSpawns[i];
+                if (!self.IsLocal())
+                {
+                    if (isArenaMode(out _))
+                        spawn.playerProximityTime = 10; //slow down when near the player
+                    return false;
+                }
+                if (isArenaMode(out _) && spawn.IsLocal() && spawn.behavior != null)
+                    return false; //dont use death effect if amoeba was created by player and dont slow down the voidspawn!
+                return true;
+            });
+            c.Emit(OpCodes.Brfalse, label);
+        }
+        catch (Exception ex)
+        {
+            Error(ex);
+        }
+    }
     delegate bool orig_get_Malnourished(Player self);
 
     bool Player_get_Malnourished(orig_get_Malnourished orig, Player self)
@@ -352,7 +438,7 @@ public partial class RainMeadow
         {
             if (slugcatStatsPerPlayer.TryGetValue(self, out var stats))
             {
-                return stats.malnourished;
+                return stats.malnourished || stats.malnourishedByCreature;
             }
         }
 
@@ -362,13 +448,15 @@ public partial class RainMeadow
 
 
 
-    void Player_SetMalnourished(On.Player.orig_SetMalnourished orig, Player self, bool m)
+    void Player_SetMalnourished(On.Player.orig_SetMalnourished orig, Player self, bool m, bool malnourishedByCreature)
     {
-        orig(self, m);
+        orig(self, m, malnourishedByCreature);
         if (OnlineManager.lobby != null && !self.isNPC)
         {
             slugcatStatsPerPlayer.Remove(self);
-            slugcatStatsPerPlayer.Add(self, new SlugcatStats(self.SlugCatClass, m));
+            var newStats = new SlugcatStats(self.SlugCatClass, m);
+            newStats.malnourishedByCreature = malnourishedByCreature;
+            slugcatStatsPerPlayer.Add(self, newStats);
         }
     }
     private void SlugOnBack_GraphicsModuleUpdated(ILContext ctx)
@@ -430,6 +518,34 @@ public partial class RainMeadow
     private void Player_UpdateMSC(On.Player.orig_UpdateMSC orig, Player self)
     {
         orig(self);
+        if (isArenaMode(out var arena))
+        {
+            if (self.SlugCatClass == MoreSlugcats.MoreSlugcatsEnums.SlugcatStatsName.Saint)
+            {
+                if (!arena.sainot)
+                {
+                    if (!arena.countdownInitiatedHoldFire)
+                    {
+
+                        if (self.monkAscension == false && self.godTimer != self.maxGodTime)
+                        {
+
+                            if (self.tongue.mode == Player.Tongue.Mode.Retracted && (self.input[0].x != 0 || self.input[0].y != 0 || self.input[0].jmp))
+                            {
+                                self.godTimer += 0.8f;
+                            }
+                            else
+                            {
+                                self.godTimer -= 0.8f;
+                            }
+                        }
+
+                    }
+
+                }
+
+            }
+        }
         if (OnlineManager.lobby != null && HasSlugcatClassOnBack(self, MoreSlugcats.MoreSlugcatsEnums.SlugcatStatsName.Saint, out Player saint_player))
         {
             if (self.tongue is not null && self.tongue.Attached)
@@ -665,6 +781,7 @@ public partial class RainMeadow
         if (OnlineManager.lobby != null)
         {
             if (pickUpCandidate == null || pickUpCandidate.isNPC) return false;
+            if (isArenaMode(out var arena) && !arena.piggyBack) return false;
             return true;
         }
 
@@ -983,17 +1100,15 @@ public partial class RainMeadow
             if (self.controller is null && self.room.world.game.cameras[0]?.hud is HUD.HUD hud
                 && (hud.textPrompt?.pausedMode is true || hud.parts.OfType<ChatHud>().Any(x => x.chatInputActive) || (hud.parts.OfType<SpectatorHud>().Any(x => x.isActive) && RainMeadow.rainMeadowOptions.StopMovementWhileSpectateOverlayActive.Value)))
             {
-                InputOverride.StopPlayerMovement(self);
+                GameplayOverrides.StopPlayerMovement(self);
             }
 
             if (isArenaMode(out var arena))
             {
                 if (arena.countdownInitiatedHoldFire)
                 {
-                    InputOverride.HoldFire(self);
+                    GameplayOverrides.HoldFire(self);
                 }
-
-                ArenaHelpers.OverideSlugcatClassAbilities(self, arena);
             }
 
             if (ModManager.MSC)
@@ -1193,12 +1308,12 @@ public partial class RainMeadow
             {
                 if (self.sleepCounter > 0) { extras.timeSinceShelterWakeup = 0; }
                 else                       { extras.timeSinceShelterWakeup++;   }
-                if (self.input[0].y < 0)   { extras.manualSleepDownCounter++;   }
-                else if ( //Reset if we press anything but down, or if we release down before entering the animation.
-                    (self.input[0].y > 0 || self.input[0].x != 0 || self.input[0].jmp || self.input[0].thrw || self.input[0].pckp || self.input[0].spec) ||
-                    (self.input[0].y == 0 && extras.manualSleepDownCounter < manualSleepRequiredTime)
-                )
-                { extras.manualSleepDownCounter = 0; }
+
+                bool isInvalidInputPressed = self.input[0].y > 0 || self.input[0].x != 0 || self.input[0].jmp || self.input[0].thrw || self.input[0].pckp || self.input[0].spec;
+                bool hasReleasedDownEarly = self.input[0].y == 0 && extras.manualSleepDownCounter < manualSleepRequiredTime;
+                
+                if (isInvalidInputPressed || hasReleasedDownEarly) { extras.manualSleepDownCounter = 0; }
+                else if (self.input[0].y < 0)                      { extras.manualSleepDownCounter++;   }
 
                 if ((extras.timeSinceShelterWakeup > afkSleepRequiredTime || extras.timeSinceShelterWakeup > manualSleepRequiredTime) && //touchedNoInputCounter and stillInStartShelter are liars. STOP FALLING ASLEEP WHEN WAKING UP.
                     self.onBack == null && //Check we're not piggybacked onto someone else (hilarious but looked very wrong).
@@ -1650,7 +1765,7 @@ public partial class RainMeadow
             }
 
             // Allow glow for any non-watcher in watcher campaign
-            if (ModManager.Watcher && self.room.game.session is StoryGameSession storyGameSession && self.rippleLevel > 0f && self.room != null && self.AI == null)
+            if (isStoryMode(out var storyGameMode) && ModManager.Watcher && self.room.game.session is StoryGameSession storyGameSession && storyGameMode.currentCampaign == Watcher.WatcherEnums.SlugcatStatsName.Watcher && self.rippleLevel > 0f && self.room != null && self.AI == null)
             {
                 storyGameSession.saveState.theGlow = true;
                 self.glowing = storyGameSession.saveState.theGlow || self.room.game.setupValues.playerGlowing;
@@ -1943,10 +2058,13 @@ public partial class RainMeadow
                     }
                     if (obj is Player pl)
                     {
-                        if (pl.Stunned || pl.dead)
-                        {
+                        if (pl.dead || pl.Stunned) {
+                            if (pl.dead && !arena.enableCorpseGrab)// no grabbing period
+                            {
+                                return false;                  
+                            };
                             return orig(self, obj);
-                        };
+                        }
                     }
 
                 }

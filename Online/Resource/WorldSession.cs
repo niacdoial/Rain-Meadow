@@ -7,26 +7,26 @@ namespace RainMeadow
 {
     public partial class WorldSession : OnlineResource
     {
-        public Region region;
         public World world;
         public WorldLoader worldLoader;
         public static ConditionalWeakTable<World, WorldSession> map = new();
         public Dictionary<string, RoomSession> roomSessions = new();
         public World World => world;
+        public OverworldSession overworldSession => (OverworldSession)super;
 
-        public WorldSession(Region region, Lobby lobby) : base(lobby)
+        public string worldID;
+        public ushort shortWorldID;
+
+        public WorldSession(string worldID, ushort shortWorldID, OverworldSession overworld) : base(overworld)
         {
-            this.region = region;
+            this.worldID = worldID;
+            this.shortWorldID = shortWorldID;
         }
 
         public void BindWorld(WorldLoader worldLoader, World world)
         {
             this.world = world;
             this.worldLoader = worldLoader;
-            if (RainMeadow.isArenaMode(out var _)) {
-
-                world.region = new Region("arena", 0, 0, SlugcatStats.SlugcatToTimeline(RainMeadow.Ext_SlugcatStatsName.OnlineSessionPlayer));
-            }
             map.Add(world, this);
         }
 
@@ -71,6 +71,7 @@ namespace RainMeadow
         protected override void DeactivateImpl()
         {
             this.roomSessions.Clear();
+            if (world != null && map.TryGetValue(world, out var ws) && ws == this) map.Remove(world);
             world = null;
         }
 
@@ -86,17 +87,17 @@ namespace RainMeadow
 
         public override string Id()
         {
-            return region.name;
+            return worldID;
         }
 
         public override ushort ShortId()
         {
-            return (ushort)region.regionNumber;
+            return shortWorldID;
         }
 
         public override OnlineResource SubresourceFromShortId(ushort shortId)
         {
-            return this.subresources[shortId - region.firstRoomIndex];
+            return this.subresources[shortId];
         }
 
         public class WorldState : ResourceWithSubresourcesState
@@ -105,11 +106,18 @@ namespace RainMeadow
             public RainCycleData rainCycleData;
             [OnlineField(nullable: true)]
             public Generics.DynamicOrderedUshorts realizedRooms;
+
+            // Used to sync RainWorldGame.clock which is used for a few APOs introduced in the Watcher as well as a few
+            // other functions in the game. Should be safe to update this way but I would keep a watch on it for a little bit.
+            [OnlineField]
+            public int clock;
             public WorldState() : base() { }
             public WorldState(WorldSession resource, uint ts) : base(resource, ts)
             {
                 if (resource.world != null)
                 {
+                    clock = resource.world.game.clock;
+
                     RainCycle rainCycle = resource.world.rainCycle;
                     if (rainCycle.brokenAntiGrav == null)
                     {
@@ -128,10 +136,17 @@ namespace RainMeadow
                 if (resource.isActive)
                 {
                     var ws = (WorldSession)resource;
+
+                    ws.world.game.clock = clock;
+
                     RainCycle cycle = ws.world.rainCycle;
                     cycle.preTimer = rainCycleData.preTimer;
                     cycle.timer = rainCycleData.timer;
                     cycle.cycleLength = rainCycleData.cycleLength;
+
+                    cycle.waterCycle.timeInStage = rainCycleData.timeInStage;
+                    cycle.waterCycle.stageDuration = rainCycleData.stageDuration;
+                    cycle.waterCycle.stage = (WaterLevelCycle.Stage)rainCycleData.stage;
 
                     if (realizedRooms != null)
                     {

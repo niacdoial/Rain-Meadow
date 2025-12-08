@@ -585,6 +585,7 @@ namespace RainMeadow
             }
 
             UpdateSelectedSlugcatInMiscProg();
+            pages[0].mouseCursor.BumToFront(); //add cursor container back
         }
 
         private void RemoveSlugcatList()
@@ -695,6 +696,7 @@ namespace RainMeadow
         {
             if (OnlineManager.lobby == null) return;
             if (OnlineManager.lobby.gameMode.mutedPlayers.Contains(user)) return;
+            MatchmakingManager.currentInstance.FilterMessage(ref message);
             this.chatLog.Add((user, message));
             this.UpdateLogDisplay();
         }

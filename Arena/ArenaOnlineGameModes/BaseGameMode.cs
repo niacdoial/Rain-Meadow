@@ -53,6 +53,14 @@ namespace RainMeadow
                 {
                     list[0].winner = true;
                 }
+                else if (list[0].allKills.Count > list[1].allKills.Count)
+                {
+                    list[0].winner = true;
+                }
+                else if (list[0].deaths < list[1].deaths)
+                {
+                    list[0].winner = true;
+                }
                 else if (list[0].score > list[1].score)
                 {
                     list[0].winner = true;
@@ -318,6 +326,7 @@ namespace RainMeadow
                         self.room.abstractRoom.GetResource()?.ApoEnteringRoom(bringTheTrain, bringTheTrain.pos);
                     }
                 }
+
 
                 if ((abstractCreature.realizedCreature as Player).SlugCatClass == MoreSlugcats.MoreSlugcatsEnums.SlugcatStatsName.Saint)
                 {

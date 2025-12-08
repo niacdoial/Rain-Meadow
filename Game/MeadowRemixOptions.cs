@@ -1,3 +1,4 @@
+using HarmonyLib;
 using Menu.Remix.MixedUI;
 using RWCustom;
 using System;
@@ -25,10 +26,19 @@ public class RainMeadowOptions : OptionInterface
     public readonly Configurable<int> ArenaSaintAscendanceTimer;
     public readonly Configurable<int> ArenaWatcherCamoTimer;
 
+    public readonly Configurable<bool> ProfanityFilter;
+
     public readonly Configurable<bool> ArenaSAINOT;
     public readonly Configurable<bool> PainCatThrows;
     public readonly Configurable<bool> PainCatEgg;
     public readonly Configurable<bool> PainCatLizard;
+    public readonly Configurable<bool> WeaverWatcher;
+    public readonly Configurable<bool> VoidMaster;
+
+    public readonly Configurable<int> AmoebaDuration;
+    public readonly Configurable<bool> AmoebaControl;
+
+
     public readonly Configurable<bool> BlockMaul;
     public readonly Configurable<bool> BlockArtiStun, ArenaAllowMidJoin;
     public readonly Configurable<bool> WearingCape;
@@ -36,7 +46,14 @@ public class RainMeadowOptions : OptionInterface
     public readonly Configurable<bool> StoryItemSteal;
     public readonly Configurable<bool> ArenaItemSteal;
     public readonly Configurable<bool> WeaponCollisionFix;
+
+    public readonly Configurable<bool> EnableBombs;
+    public readonly Configurable<bool> EnableCorpseGrab;
+    public readonly Configurable<bool> EnableBees;
+
     public readonly Configurable<bool> EnablePiggyBack;
+    public readonly Configurable<StreamMode> StreamerMode;
+    public readonly Configurable<int> ArenaWatcherRippleLevel;
 
     public readonly Configurable<Color> MartyrTeamColor, OutlawsTeamColor, DragonSlayersTeamColor, ChieftainTeamColor;
     public readonly Configurable<string> MartyrTeamName;
@@ -56,6 +73,10 @@ public class RainMeadowOptions : OptionInterface
     public readonly Configurable<bool> DisableMeadowPauseAnimation;
     public readonly Configurable<bool> StopMovementWhileSpectateOverlayActive;
 
+    public readonly Configurable<bool> DevNightskySkin;
+
+    public readonly Configurable<bool> EnableAchievementsOnline;
+
     public readonly Configurable<IntroRoll> PickedIntroRoll;
 
     public enum IntroRoll
@@ -66,12 +87,21 @@ public class RainMeadowOptions : OptionInterface
         Watcher
     }
 
+    public enum StreamMode
+    {
+        None,
+        Me,
+        Everyone
+    }
+
 
     private UIelement[] OnlineMeadowSettings;
     private UIelement[] GeneralUIArrPlayerOptions;
     private UIelement[] OnlineArenaSettings;
     private UIelement[] OnlineStorySettings;
     private UIelement[] OnlineNetworkSettings;
+    private UIelement[] OnlineAdvancedSettings;
+    private UIelement[] OnlineGameplay;
 
 
 
@@ -94,6 +124,8 @@ public class RainMeadowOptions : OptionInterface
         ArenaSaintAscendanceTimer = config.Bind("ArenaSaintAscendanceTimer", 3);
         ArenaWatcherCamoTimer = config.Bind("ArenaWatcherCamoTimer", 12);
 
+        ProfanityFilter = config.Bind("ProfanityFilter", false);
+
         ArenaSAINOT = config.Bind("ArenaSAINOT", false);
         ArenaAllowMidJoin = config.Bind("ArenaAllowMidJoin", true);
 
@@ -102,6 +134,11 @@ public class RainMeadowOptions : OptionInterface
         PainCatLizard = config.Bind("PainCatLizard", true);
         BlockMaul = config.Bind("BlockMaul", false);
         BlockArtiStun = config.Bind("BlockArtiStun", false);
+        WeaverWatcher = config.Bind("WeaverWatcher", false);
+        VoidMaster = config.Bind("VoidMaster", false);
+        AmoebaDuration = config.Bind("AmoebaDuration", 7);
+        AmoebaControl = config.Bind("AmoebaControl", false);
+        ArenaWatcherRippleLevel = config.Bind("ArenaWatcherRippleLevel", 1);
 
 
         MartyrTeamColor = config.Bind("MartyrTeamColor", new Color(1, 0.49f, 0.49f));
@@ -119,6 +156,9 @@ public class RainMeadowOptions : OptionInterface
         SlugpupHellBackground = config.Bind("SlugpupHellBackground", false);
 
         WeaponCollisionFix = config.Bind("WeaponCollisionFix", true);
+        EnableBees = config.Bind("EnableBees", true);
+        EnableBombs = config.Bind("EnableBombs", true);
+        EnableCorpseGrab = config.Bind("EnableCorpseGrab", true);
 
         ShowPing = config.Bind("ShowPing", false);
         ShowPingLocation = config.Bind("ShowPingLocation", 0);
@@ -140,6 +180,11 @@ public class RainMeadowOptions : OptionInterface
         StopMovementWhileSpectateOverlayActive = config.Bind("StopMovementWhileSpectateOverlayActive", false);
 
         ChatBgOpacity = config.Bind("ChatBgOpacity", 0.2f);
+        StreamerMode = config.Bind("StreamerMode", StreamMode.None);
+
+        DevNightskySkin = config.Bind("DevNightskySkin", false);
+
+        EnableAchievementsOnline = config.Bind("EnableAchievementsOnline", false);
     }
 
     public override void Initialize()
@@ -151,10 +196,11 @@ public class RainMeadowOptions : OptionInterface
             OpTab arenaTab = new OpTab(this, Translate("Arena"));
             OpTab storyTab = new OpTab(this, Translate("Story"));
             OpTab lanTab = new OpTab(this, Translate("Network"));
+            OpTab onlineTab = new OpTab(this, Translate("Gameplay"));
 
 
 
-            Tabs = new OpTab[] { opTab, meadowTab, arenaTab, storyTab, lanTab };
+            Tabs = new OpTab[] { opTab, meadowTab, arenaTab, storyTab, lanTab, onlineTab };
 
             List<UIelement> meadowCheats;
             OpTextBox meadowCheatBox;
@@ -163,6 +209,61 @@ public class RainMeadowOptions : OptionInterface
             OpSimpleButton cheatCharacter;
             OpSimpleButton cheatReset;
             float cheaty = 130f;
+            OpTextBox chatBgOpacity;
+            OnlineGameplay = new UIelement[]
+          {
+            new OpLabel(10f, 550f, Translate("Gameplay"), bigText: true),
+            new OpLabel(10f, 530f, Translate("Note: These inputs are not used in Meadow mode"), bigText: false),
+
+            new OpLabel(10, 490f, Translate("Show usernames")),
+            new OpKeyBinder(FriendsListKey, new Vector2(10f, 460f), new Vector2(150f, 30f)),
+
+            new OpLabel(310f, 490f, Translate("Username Toggle"), bigText: false),
+            new OpCheckBox(FriendViewClickToActivate, new Vector2(310f, 465f)),
+            new OpLabel(340f, 475f, RWCustom.Custom.ReplaceLineDelimeters(Translate("Replace holding with toggling"))),
+
+            new OpLabel(10, 400f, Translate("Key used for toggling spectator mode")),
+            new OpKeyBinder(SpectatorKey, new Vector2(10f, 370f), new Vector2(150f, 30f)),
+
+            new OpLabel(310, 445f, Translate("Stop Inputs While Spectating")),
+            new OpCheckBox(StopMovementWhileSpectateOverlayActive, new Vector2(310f, 420)),
+
+            new OpLabel(310, 400f, Translate("Pointing Key")),
+            new OpKeyBinder(PointingKey, new Vector2(310f, 370f), new Vector2(150f, 30f)),
+
+            new OpLabel(10f, 340, Translate($"Player Menu Scroll Speed for Spectate, Story menu, Arena results.  Default: ${ScrollSpeed.Value}"), bigText: false),
+            new OpTextBox(ScrollSpeed, new Vector2(10, 310), 160f)
+                {
+                    accept = OpTextBox.Accept.Float
+                },
+
+            new OpLabel(10, 250f, Translate("Streamer Mode")),
+            new OpComboBox2(StreamerMode, new Vector2(10f, 220f), 160f, OpResourceSelector.GetEnumNames(null, typeof(StreamMode)).Select(li => { li.displayName = Translate(li.displayName); return li; }).ToList()) { colorEdge = Menu.MenuColorEffect.rgbWhite },
+
+            new OpLabel(10, 180f, Translate("Chat Log Toggle")),
+            new OpKeyBinder(ChatLogKey, new Vector2(10f, 150), new Vector2(150f, 30f)),
+
+            new OpLabel(210, 180f, Translate("Chat Talk Button")),
+            new OpKeyBinder(ChatButtonKey, new Vector2(210f, 150), new Vector2(150f, 30f)),
+
+            new OpLabel(410, 180, Translate("Chat Background Opacity")),
+            chatBgOpacity = new OpTextBox(ChatBgOpacity, new Vector2(410f, 153f), 90),
+
+
+            new OpLabel(10, 120f, Translate("Profanity Filter")),
+            new OpCheckBox(ProfanityFilter, new Vector2(10f, 90f)),
+
+            new OpLabel(210, 120f, Translate("Show Ping")),
+            new OpCheckBox(ShowPing, new Vector2(210, 90f)),
+
+
+            new OpLabel(410, 120f, Translate("Chat Log On/Off")),
+            new OpCheckBox(ChatLogOnOff, new Vector2(410f, 90f)),
+
+
+          };
+            onlineTab.AddItems(OnlineGameplay);
+
             OnlineMeadowSettings = new UIelement[]
             {
                 new OpLabel(10f, 550f, Translate("Meadow"), bigText: true),
@@ -198,62 +299,36 @@ public class RainMeadowOptions : OptionInterface
             OpSimpleButton editSyncRequiredModsButton;
             OpSimpleButton editBannedModsButton;
 
-            OpTextBox chatBgOpacity;
+            OpLabel devOptions;
 
             GeneralUIArrPlayerOptions = new UIelement[]
             {
                 new OpLabel(10f, 550f, Translate("General"), bigText: true),
-                new OpLabel(10f, 530f, Translate("Note: These inputs are not used in Meadow mode"), bigText: false),
+                devOptions = new OpLabel(410f, 560f, Translate("Dev options")),
+                new OpCheckBox(DevNightskySkin, new Vector2(410f, 535f)),
+                new OpLabel(440f, 535f, Translate("Nightsky Skin")),
 
-                new OpLabel(10, 490f, Translate("Show usernames")),
-                new OpKeyBinder(FriendsListKey, new Vector2(10f, 460f), new Vector2(150f, 30f)),
 
-                new OpLabel(310f, 490f, Translate("Username Toggle"), bigText: false),
-                new OpCheckBox(FriendViewClickToActivate, new Vector2(310f, 465f)),
-                new OpLabel(340f, 475f, RWCustom.Custom.ReplaceLineDelimeters(Translate("Replace holding with toggling"))),
 
-                new OpLabel(10, 400f, Translate("Key used for toggling spectator mode")),
-                new OpKeyBinder(SpectatorKey, new Vector2(10f, 370f), new Vector2(150f, 30f)),
+                new OpLabel(10f, 490f, RWCustom.Custom.ReplaceLineDelimeters(Translate("Control which mods are permitted on clients by editing the files below.<LINE>Instructions included within."))),
+                editSyncRequiredModsButton = new OpSimpleButton(new Vector2(10f, 450f), new Vector2(150f, 30f), Translate("Edit High-Impact Mods")),
+                editBannedModsButton = new OpSimpleButton(new Vector2(185f, 450f), new Vector2(150f, 30f), Translate("Edit Banned Mods")),
 
-                new OpLabel(310, 445f, Translate("Stop Inputs While Spectating")),
-                new OpCheckBox(StopMovementWhileSpectateOverlayActive, new Vector2(310f, 420)),
 
-                new OpLabel(310, 400f, Translate("Pointing Key")),
-                new OpKeyBinder(PointingKey, new Vector2(310f, 370f), new Vector2(150f, 30f)),
+                new OpLabel(10, 420, Translate("Playtesting Gift")),
+                new OpCheckBox(WearingCape, new Vector2(10, 390f)),
 
-                new OpLabel(10f, 300f, RWCustom.Custom.ReplaceLineDelimeters(Translate("Control which mods are permitted on clients by editing the files below.<LINE>Instructions included within."))),
-                editSyncRequiredModsButton = new OpSimpleButton(new Vector2(10f, 260f), new Vector2(150f, 30f), Translate("Edit High-Impact Mods")),
-                editBannedModsButton = new OpSimpleButton(new Vector2(185f, 260f), new Vector2(150f, 30f), Translate("Edit Banned Mods")),
-
-                new OpLabel(10, 180f, Translate("Chat Log Toggle")),
-                new OpKeyBinder(ChatLogKey, new Vector2(10f, 150), new Vector2(150f, 30f)),
-
-                new OpLabel(210, 180f, Translate("Chat Talk Button")),
-                new OpKeyBinder(ChatButtonKey, new Vector2(210f, 150), new Vector2(150f, 30f)),
-
-                new OpLabel(410, 180, Translate("Chat Background Opacity")),
-                chatBgOpacity = new OpTextBox(ChatBgOpacity, new Vector2(410f, 153f), 90),
-
-                new OpLabel(210, 120f, Translate("Show Ping")),
-                new OpCheckBox(ShowPing, new Vector2(210, 90f)),
-
-                new OpLabel(310, 120f, Translate("Playtesting Gift")),
-                new OpCheckBox(WearingCape, new Vector2(325, 90f)),
-
-                new OpLabel(410, 120f, Translate("Chat Log On/Off")),
-                new OpCheckBox(ChatLogOnOff, new Vector2(440f, 90f)),
-
-                new OpLabel(10, 100, Translate("Introroll")),
-               introroll = new OpComboBox2(PickedIntroRoll, new Vector2(10, 70f), 160f, OpResourceSelector.GetEnumNames(null, typeof(IntroRoll)).Select(li => { li.displayName = Translate(li.displayName); return li; }).ToList()) { colorEdge = Menu.MenuColorEffect.rgbWhite },
+                new OpLabel(10, 370, Translate("Introroll")),
+               introroll = new OpComboBox2(PickedIntroRoll, new Vector2(10, 340f), 160f, OpResourceSelector.GetEnumNames(null, typeof(IntroRoll)).Select(li => { li.displayName = Translate(li.displayName); return li; }).ToList()) { colorEdge = Menu.MenuColorEffect.rgbWhite },
                downpourWarning = new OpLabel(introroll.pos.x + 170, 70, Translate("Downpour DLC is not activated, vanilla intro will be used instead")),
                watcherWarning = new OpLabel(introroll.pos.x + 170, 70, Translate("Watcher DLC is not activated, vanilla intro will be used instead")),
 
-               new OpLabel(10f, 30, Translate("Player Menu Scroll Speed for Spectate, Story menu, Arena results.  Default: 5"), bigText: false),
-               new OpTextBox(ScrollSpeed, new Vector2(10, 5), 160f)
-                {
-                    accept = OpTextBox.Accept.Float
-                },
-        };
+            };
+            if (!RainMeadow.IsDev(OnlineManager.mePlayer.id))
+            {
+                GeneralUIArrPlayerOptions.Skip(GeneralUIArrPlayerOptions.IndexOf(devOptions)).Take(3).Do(e => e.Hidden = true);
+            }
+
             introroll.OnValueChanged += (UIconfig config, string value, string oldValue) =>
             {
                 if (value == "Downpour" && !ModManager.MSC)
@@ -288,12 +363,6 @@ public class RainMeadowOptions : OptionInterface
                 watcherWarning.Hidden = ModManager.Watcher;
             }
 
-
-            chatBgOpacity.OnValueChanged += (config, value, oldValue) =>
-            {
-                chatBgOpacity.valueFloat = Mathf.Clamp01(chatBgOpacity.valueFloat);
-            };
-
             editSyncRequiredModsButton.OnClick += _ =>
             {
                 try
@@ -321,8 +390,8 @@ public class RainMeadowOptions : OptionInterface
             };
             opTab.AddItems(GeneralUIArrPlayerOptions);
 
-            OnlineStorySettings = new UIelement[11]
-           {    new OpLabel(10f, 550f, Translate("Story"), bigText: true),
+            OnlineStorySettings =
+            [   new OpLabel(10f, 550f, Translate("Story"), bigText: true),
 
                 new OpLabel(10f, 500, Translate("Ready to shelter/gate"), bigText: false),
 
@@ -349,8 +418,12 @@ public class RainMeadowOptions : OptionInterface
                 new OpLabel(40f, 260, RWCustom.Custom.ReplaceLineDelimeters(Translate("Steal items from other players in Story mode")))
                 {
                     verticalAlignment = OpLabel.LabelVAlignment.Center
-                }
-           };
+                },
+
+                new OpLabel(new Vector2(40, 170), new(25, 25), Custom.ReplaceLineDelimeters(Translate("Gain achievements online")), FLabelAlignment.Left),
+                new OpCheckBox(EnableAchievementsOnline, new Vector2(10, 170)),
+
+            ];
             storyTab.AddItems(OnlineStorySettings);
 
             OpLabel arenaSpoilerLabel, slugpupHellBackgroundLabel;
@@ -405,7 +478,6 @@ public class RainMeadowOptions : OptionInterface
 
         };
             lanTab.AddItems(OnlineNetworkSettings);
-
         }
 
         catch (Exception ex)
