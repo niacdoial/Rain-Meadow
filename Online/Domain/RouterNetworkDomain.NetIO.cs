@@ -30,7 +30,13 @@ namespace RainMeadow
         }
 
         bool ValidateIsFromServer(Packet packet) {
-            if (serverPeer is null) return false;
+            if (NetworkDomain.currentDomain != NetworkDomain.NetworkDomainType.Router) {
+                throw new Exception("subtle failure inbound: inconsistant currentDomain");
+            }
+            if (serverPeer is null) {
+                RainMeadow.Error($"serverPeer is null, cannot check that the packet is from the right peer");
+                return false;
+            }
             if (packet.processingEndpoint != serverPeer)
             {
                 RainMeadow.Error($"Recieved from-server packet from {PlatformPeerManager.describePeerId(packet.processingEndpoint)}, not server: {serverPeer}");
@@ -74,11 +80,11 @@ namespace RainMeadow
             // If we don't have a lobby and we a currently joining a lobby
             if (OnlineManager.lobby is null && OnlineManager.currentlyJoiningLobby is not null)
             {
-                // If the lobby we want to join is a lan lobby
+                // If the lobby we want to join is a router lobby
                 if (OnlineManager.currentlyJoiningLobby is RouterNetworkDomain.RouterLobbyInfo oldLobbyInfo)
                 {
                     // If the lobby we want to join is the lobby that allowed us to join.
-                    if (oldLobbyInfo.endPoint != newLobbyInfo.endPoint)
+                    if (oldLobbyInfo.endPoint.CompareAndUpdate(newLobbyInfo.endPoint))
                     {
                         OnlineManager.currentlyJoiningLobby = newLobbyInfo;
                         LobbyAcknoledgedUs(packet.assignedRoutingID);
@@ -241,9 +247,10 @@ namespace RainMeadow
             {
                 try
                 {
-                    byte[]? data = PlatformPeerManager.Recieve(out PeerId? remoteEndpoint);
+                    byte[]? data = PlatformPeerManager.Receive(out PeerId? remoteEndpoint);
                     if (data == null) continue;
                     if (remoteEndpoint is null) continue;
+                    serverPeer.CompareAndUpdate(remoteEndpoint);  // the server might need to be updated on how to be contacted
 
                     using (MemoryStream netStream = new MemoryStream(data))
                     using (BinaryReader netReader = new BinaryReader(netStream))

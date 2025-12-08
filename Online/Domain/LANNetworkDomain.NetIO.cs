@@ -120,7 +120,7 @@ namespace RainMeadow
             {
                 try
                 {
-                    byte[]? data = PlatformPeerManager.Recieve(out PeerId? remoteEndpoint);
+                    byte[]? data = PlatformPeerManager.Receive(out PeerId? remoteEndpoint);
                     if (data == null) continue;
                     if (remoteEndpoint is null) continue;
 

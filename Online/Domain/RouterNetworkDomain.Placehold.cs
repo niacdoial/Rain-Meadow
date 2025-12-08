@@ -28,7 +28,7 @@ namespace RainMeadow
 
         public override void CreateLobby(LobbyVisibility visibility, string gameMode, string? password, int? maxPlayerCount)
         {
-            if (serverPeer != null && serverPeer != PlatformPeerManager.BlackHole) {
+            if (serverPeer != null && !serverPeer.isBlackHole()) {
                 var maxplayercount = maxPlayerCount ?? 0;
                 var lobbyInfo = new RouterLobbyInfo(
                     serverPeer,
@@ -48,6 +48,9 @@ namespace RainMeadow
 
         void RequestPublishLobby(RouterLobbyInfo lobby)
         {
+            // do not set currentDomain because it has been set when setting up the direct connect
+            // also setting it now would destroy the serverPeer
+            //NetworkDomain.currentDomain = NetworkDomainType.Router;
             OnlineManager.currentlyJoiningLobby = lobby;
 
             RainMeadow.Debug("Sending Request to join lobby...");

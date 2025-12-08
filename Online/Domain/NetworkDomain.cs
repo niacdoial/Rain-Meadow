@@ -88,7 +88,7 @@ namespace RainMeadow
 
             try
             {
-                PlatformPeerManager = new UDPPeerManager();
+                PlatformPeerManager = new SecuredPeerManager();
                 SharedPlatform.PlatformPeerManager = PlatformPeerManager;
             }
             catch (Exception except)

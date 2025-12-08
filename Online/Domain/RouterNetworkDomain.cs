@@ -144,7 +144,7 @@ namespace RainMeadow
             {
                 if (p.id is RouterPlayerId route) {
                     if (route.endPoint != PlatformPeerManager.BlackHole)
-                        return (route.endPoint == endPoint);
+                        return (route.endPoint.CompareAndUpdate(endPoint));
                 }
                 return false;
             });
@@ -256,7 +256,11 @@ namespace RainMeadow
             }
             else
             {
-                throw new FormatException("IP Address format should be xxx.xxx.xxx.xxx:port");
+                if (PlatformPeerManager is SecuredPeerManager) {
+                    throw new FormatException("IP Address format should be superLongStringThatIsTheServerPublicKey@xxx.xxx.xxx.xxx:port or xxx.xxx.xxx.xxx:port");
+                } else {
+                    throw new FormatException("IP Address format should be xxx.xxx.xxx.xxx:port");
+                }
             }
         }
 
