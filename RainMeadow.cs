@@ -288,7 +288,7 @@ namespace RainMeadow
 
         public static bool IsDev(MeadowPlayerId player)
         {
-            if (player is SteamMatchmakingManager.SteamPlayerId steamid)
+            if (player is SteamNetworkDomain.SteamPlayerId steamid)
             {
                 ulong steamID = steamid.oid.GetSteamID64();
                 SHA256 Sha = SHA256.Create();

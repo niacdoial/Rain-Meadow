@@ -354,7 +354,7 @@ namespace RainMeadow
             }
             if (OnlineManager.lobby != null)
             {
-                self.devToolsLabel.text = self.devToolsLabel.text + $" | Rain Meadow {RainMeadow.MeadowVersionStr} ({MatchmakingManager.currentDomain.value})";
+                self.devToolsLabel.text = self.devToolsLabel.text + $" | Rain Meadow {RainMeadow.MeadowVersionStr} ({NetworkDomain.currentDomain.value})";
             }
         }
 

@@ -56,7 +56,7 @@ namespace RainMeadow
             if (OnlineManager.lobby == null) return;
 
             if (OnlineManager.lobby.gameMode.mutedPlayers.Contains(user)) return;
-            MatchmakingManager.currentInstance.FilterMessage(ref message);
+            NetworkDomain.currentInstance.FilterMessage(ref message);
             chatLog.Add((user, message));
             if (chatLogOverlay != null)
             {
@@ -117,7 +117,7 @@ namespace RainMeadow
             chatLogOverlay?.GrafUpdate(timeStacker);
             chatInputOverlay?.GrafUpdate(timeStacker);
         }
-    
+
         public void ShutDownChatLog()
         {
             RainMeadow.DebugMe();
@@ -138,7 +138,7 @@ namespace RainMeadow
                 chatInputOverlay.ShutDownProcess();
                 chatInputOverlay = null;
             }
-            
+
         }
         public void Destroy()
         {
