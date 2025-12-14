@@ -127,8 +127,8 @@ namespace RainMeadow
                         OnlinePlayer player = NetworkDomain.Router.GetPlayerRouter(packet.routerIds[i], true);
                         RouterPlayerId playerID = (RouterPlayerId)player.id;
                         if (!RainMeadow.rainMeadowOptions.RouterExposeIP.Value) {
-                            playerID.endPoint = serverPeer;
-                        } else if (packet.endPoints[i] != PlatformPeerManager.BlackHole){
+                            playerID.endPoint = serverPeer;  // the value should already be set that way, but let's make sure
+                        } else if (packet.endPoints[i].IsBlackHole()){
                             playerID.endPoint = serverPeer;
                         } else {
                             playerID.endPoint = packet.endPoints[i];

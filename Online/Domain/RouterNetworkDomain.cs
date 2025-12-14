@@ -8,6 +8,25 @@ using System.Diagnostics;
 using UnityEngine;
 using RainMeadow.Shared;
 
+/// //////////////////////////////////////////////////
+/// NetworkDomain describes the common interface for the middle part of the network stack
+/// (or, for steam networking, the wrapper around the steam library): NetworkDomain.
+/// This file describes the variant for Routed networking.
+///
+/// placeholder lobby creation process
+/// host->server: BeginRouterSession
+/// server->host: LobbyIsEmpty
+/// server->host: RouterModifyPlayerListPacket (inform host of player ID)
+///
+/// handshake process:
+/// player->server: BeginRouterSession
+/// server->player: RouterModifyPlayerListPacket (inform of all player IDs/names/PeerIDs)
+/// server->players: RouterModifyPlayerListPacket (inform of new player IDs/names/PeerIDs)
+/// server->player: JoinRouterLobby (lobby data plus player's ID)
+/// player sets up lobby object
+/// player{RPC} -> host{RPC}: .RequestedLobby()
+/// host checks the password
+/// host{RPC} -> player{RPC}: .JoinLobby()
 
 namespace RainMeadow
 {

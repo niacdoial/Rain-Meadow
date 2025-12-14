@@ -6,6 +6,18 @@ using HarmonyLib;
 using Menu;
 using RainMeadow.Shared;
 
+/// //////////////////////////////////////////
+/// NetworkDomain describes the common interface for the middle part of the network stack
+/// (or, for steam networking, the wrapper around the steam library): NetworkDomain.
+///
+/// This layer is responsible for keeping track of the player list (PeerID, name),
+/// interpreting messages (packets of the RPC system, chat messages) between players,
+/// and in general keeping up with joining/leaving/kicked players,
+/// as well as setting up the info necessary to join an existing lobby
+/// It is also somewhat responsible for preventing players to impersonate each other.
+///
+/// It is heavily used by the OnlineManager, which orchestrates the link between the network stack and the game's state changes.
+
 namespace RainMeadow
 {
 
