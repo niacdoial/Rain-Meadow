@@ -88,6 +88,7 @@ namespace RainMeadow
                 if (this.password != key)
                 {
                     request.from.QueueEvent(new GenericResult.Fail(request));
+                    NetworkDomain.currentInstance.AcceptOrRejectPlayer(request.from, false);
                     return;
                 }
             }
@@ -95,12 +96,14 @@ namespace RainMeadow
             if (bannedUsers.list.Contains(request.from.id))
             {
                 request.from.QueueEvent(new GenericResult.LackPerm(request));
+                NetworkDomain.currentInstance.AcceptOrRejectPlayer(request.from, false);
                 return;
             }
 
             try
             {
                 lobbyRequestable = true;
+                NetworkDomain.currentInstance.AcceptOrRejectPlayer(request.from, true);
                 Requested(request);
             }
             catch

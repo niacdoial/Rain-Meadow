@@ -128,21 +128,21 @@ namespace RainMeadow
                         RouterPlayerId playerID = (RouterPlayerId)player.id;
                         if (!RainMeadow.rainMeadowOptions.RouterExposeIP.Value) {
                             playerID.endPoint = serverPeer;  // the value should already be set that way, but let's make sure
-                        } else if (packet.endPoints[i].IsBlackHole()){
+                        } else if (packet.endPoints[i].isBlackHole()){
                             playerID.endPoint = serverPeer;
                         } else {
                             playerID.endPoint = packet.endPoints[i];
                         }
                         playerID.name = packet.userNames[i];
                         RainMeadow.Debug(String.Format("new player to acknowledge: {0}, name {1}", playerID.routingID, playerID.name));
-                        NetworkDomain.Router.AcknoledgeRouterPlayer(player);
+                        AcknoledgeRouterPlayer(player);
                     }
                     break;
 
                 case RouterModifyPlayerListPacket.Operation.Remove:
                     for (int i = 0; i < packet.routerIds.Count; i++)
                     {
-                        NetworkDomain.Router.RemoveRouterPlayer(NetworkDomain.Router.GetPlayerRouter(packet.routerIds[i], true));
+                        RemoveRouterPlayer(GetPlayerRouter(packet.routerIds[i], true));
                     }
                     break;
             }

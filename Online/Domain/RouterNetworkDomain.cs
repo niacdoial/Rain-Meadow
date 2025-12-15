@@ -231,7 +231,6 @@ namespace RainMeadow
                     new OnlineGameMode.OnlineGameModeType(OnlineManager.currentlyJoiningLobby.mode, false),
                     owner, lobbyPassword);
             }
-
         }
 
 
@@ -249,8 +248,18 @@ namespace RainMeadow
                 } else {
                     RainMeadow.Debug("peer " + joiningId.routingID.ToString() + " hidden by router");
                 }
+
+                if (OnlineManager.players.Contains(joiningPlayer)) {
+                    if (joiningId.routingID == ((RouterPlayerId)OnlineManager.mePlayer.id).routingID) {
+                        // as part of the handshake process, we are initially "alone" with the host, and we need to be repositioned later.
+                        // since player removal doesn't do anything for (OnlinePlayer.isMe==true), we need to act properly when the server asks us to re-add ourself to the player list
+                        OnlineManager.players.Remove(OnlineManager.mePlayer);
+                        OnlineManager.players.Add(OnlineManager.mePlayer);
+                    }
+                    // FIXME: allow server to force-reorder the player list for everyone, as a recovery mesure
+                    return;
+                }
             }
-            if (OnlineManager.players.Contains(joiningPlayer)) { return; }
             OnlineManager.AddPlayer(joiningPlayer);
             RainMeadow.Debug($"Added {joiningPlayer} to the lobby matchmaking player list");
             OnPlayerListReceivedEvent(OnlineManager.players.Select(x => x.id).ToArray());
@@ -306,6 +315,23 @@ namespace RainMeadow
             else
             {
                 RainMeadow.Error("Invalid lobby type");
+            }
+        }
+
+        public override void AcceptOrRejectPlayer(OnlinePlayer player, bool accept) {
+            if (player.id is RouterPlayerId joiningId)
+            if (GetLobbyOwner() == OnlineManager.mePlayer) {
+                PlayerJoiningDecision.Decision decision = accept switch
+                {
+                    true => PlayerJoiningDecision.Decision.Accept,
+                    false => PlayerJoiningDecision.Decision.Reject
+                };
+                Send(
+                    serverPeer,
+                    new PlayerJoiningDecision(joiningId.routingID, decision),
+                    BasePeerManager.PacketType.Reliable,
+                    false
+                );
             }
         }
 

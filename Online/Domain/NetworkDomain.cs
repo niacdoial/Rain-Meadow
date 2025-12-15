@@ -164,6 +164,7 @@ namespace RainMeadow
 
 
         public abstract void RequestJoinLobby(LobbyInfo lobby, string? password);
+        public virtual void AcceptOrRejectPlayer(OnlinePlayer player, bool accept) {}
         public void JoinLobby(bool success, string error = "")
         {
             if (success)
