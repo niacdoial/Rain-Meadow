@@ -234,9 +234,8 @@ namespace RainMeadow
         }
 
 
-        public void AcknoledgeRouterPlayer(OnlinePlayer joiningPlayer)
+        public void NATPierce(OnlinePlayer joiningPlayer)
         {
-            RainMeadow.DebugMe();
             if (joiningPlayer.id is RouterPlayerId joiningId) {
                 // if all two players send unprompted packets to their respective endpoints, it should pierce NAT layers on both sides,
                 // allowing them to communicate.
@@ -248,21 +247,7 @@ namespace RainMeadow
                 } else {
                     RainMeadow.Debug("peer " + joiningId.routingID.ToString() + " hidden by router");
                 }
-
-                if (OnlineManager.players.Contains(joiningPlayer)) {
-                    if (joiningId.routingID == ((RouterPlayerId)OnlineManager.mePlayer.id).routingID) {
-                        // as part of the handshake process, we are initially "alone" with the host, and we need to be repositioned later.
-                        // since player removal doesn't do anything for (OnlinePlayer.isMe==true), we need to act properly when the server asks us to re-add ourself to the player list
-                        OnlineManager.players.Remove(OnlineManager.mePlayer);
-                        OnlineManager.players.Add(OnlineManager.mePlayer);
-                    }
-                    // FIXME: allow server to force-reorder the player list for everyone, as a recovery mesure
-                    return;
-                }
             }
-            OnlineManager.AddPlayer(joiningPlayer);
-            RainMeadow.Debug($"Added {joiningPlayer} to the lobby matchmaking player list");
-            OnPlayerListReceivedEvent(OnlineManager.players.Select(x => x.id).ToArray());
         }
 
         public void RemoveRouterPlayer(OnlinePlayer leavingPlayer)

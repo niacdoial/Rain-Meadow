@@ -121,11 +121,11 @@ namespace RainMeadow
 
             switch (packet.operation)
             {
+                case RouterModifyPlayerListPacket.Operation.Update:
                 case RouterModifyPlayerListPacket.Operation.Add:
                     for (int i = 0; i < packet.routerIds.Count; i++)
                     {
-                        OnlinePlayer player = NetworkDomain.Router.GetPlayerRouter(packet.routerIds[i], true);
-                        RouterPlayerId playerID = (RouterPlayerId)player.id;
+                        RouterPlayerId playerID = new RouterPlayerId(packet.routerIds[i]);
                         if (!RainMeadow.rainMeadowOptions.RouterExposeIP.Value) {
                             playerID.endPoint = serverPeer;  // the value should already be set that way, but let's make sure
                         } else if (packet.endPoints[i].isBlackHole()){
@@ -134,8 +134,24 @@ namespace RainMeadow
                             playerID.endPoint = packet.endPoints[i];
                         }
                         playerID.name = packet.userNames[i];
-                        RainMeadow.Debug(String.Format("new player to acknowledge: {0}, name {1}", playerID.routingID, playerID.name));
-                        AcknoledgeRouterPlayer(player);
+
+                        OnlinePlayer? addedPlayer = GetPlayerRouter(packet.routerIds[i], false);
+                        if (addedPlayer is OnlinePlayer existingPlayer) {
+                            if (packet.operation == RouterModifyPlayerListPacket.Operation.Update) {
+                                // FIXME: add checks once the PeerManager guarantees player identity
+                                existingPlayer.id = playerID;
+                                RainMeadow.Debug(String.Format("updating player: {0}, name {1}", playerID.routingID, playerID.name));
+                            } else {
+                                RainMeadow.Debug(String.Format("redundant add-player: {0}, 'name' {1}", playerID.routingID, playerID.name));
+                            }
+                            NATPierce(existingPlayer);  // just in case
+                        } else {
+                            addedPlayer = new OnlinePlayer(playerID);
+                            NATPierce(addedPlayer);
+                            RainMeadow.Debug(String.Format("new player to acknowledge: {0}, name {1}", playerID.routingID, playerID.name));
+                            OnlineManager.AddPlayer(addedPlayer);
+                            RainMeadow.Debug($"Added {addedPlayer} to the lobby matchmaking player list");
+                        }
                     }
                     break;
 
@@ -146,6 +162,7 @@ namespace RainMeadow
                     }
                     break;
             }
+            OnPlayerListReceivedEvent(OnlineManager.players.Select(x => x.id).ToArray());
         }
 
         public void HandleChatMessage(RouterChatMessage packet) {
