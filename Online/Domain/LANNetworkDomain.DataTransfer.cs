@@ -10,38 +10,8 @@ using RainMeadow.Shared;
 
 namespace RainMeadow
 {
-    public partial class NetworkDomain
-    {
-        static partial void PlatformLanAvailable(ref bool val) { val = NetworkDomain.PlatformPeerManager is not null; }
-    }
-
     public partial class LANNetworkDomain
     {
-        void PacketFactory(Packet.Type type, ref Packet? packet)
-        {
-            if (packet is null)
-            {
-                packet = type switch
-                {
-                    Packet.Type.RequestJoin => new RequestJoinPacket(),
-                    Packet.Type.ModifyPlayerList => new ModifyPlayerListPacket(),
-                    Packet.Type.JoinLobby => new JoinLobbyPacket(),
-                    Packet.Type.Session => new SessionPacket(),
-                    Packet.Type.SessionEnd => new SessionEndPacket(),
-                    Packet.Type.RequestLobby => new RequestLobbyPacket(),
-                    Packet.Type.InformLobby => new InformLobbyPacket(),
-                    Packet.Type.ChatMessage => new ChatMessagePacket(),
-                    Packet.Type.CustomPacket => new CustomPacket(),
-
-                    _ => null
-                };
-            }
-        }
-
-        public void InitializePackets() {
-            Packet.packetFactory += PacketFactory;
-        }
-
         public override void SendSessionData(OnlinePlayer toPlayer)
         {
             if (PlatformPeerManager is null) return;
@@ -57,7 +27,6 @@ namespace RainMeadow
                 OnlineManager.serializer.EndWrite();
                 throw;
             }
-
         }
 
         public override void SendCustomData(OnlinePlayer toPlayer, string key, byte[] data, ushort size, BasePeerManager.PacketType sendType)
@@ -156,20 +125,16 @@ namespace RainMeadow
             }
         }
 
-        public override void ForgetPlayer(OnlinePlayer player)
+        public override bool canSendChatMessages => true;
+        public override void SendChatMessage(string message)
         {
-            if (PlatformPeerManager is null) return;
-            if (player.id is LANNetworkDomain.LANPlayerId lanid)
+            foreach (OnlinePlayer player in OnlineManager.players)
             {
-                PlatformPeerManager.ForgetPeer(lanid.endPoint);
+                if (player.isMe) continue;
+                SendP2P(player, new ChatMessagePacket(message), BasePeerManager.PacketType.Reliable);
             }
-        }
 
-        public override void ForgetEverything()
-        {
-            if (PlatformPeerManager is null) return;
-            PlatformPeerManager.ForgetAllPeers();
+            RecieveChatMessage(OnlineManager.mePlayer, message);
         }
-
     }
 }

@@ -14,37 +14,6 @@ namespace RainMeadow
 
     public partial class LANNetworkDomain : NetworkDomain
     {
-        public LANNetworkDomain()
-        {
-            InitializePackets();
-            NetworkDomain.PlatformPeerManager.OnPeerForgotten += (PeerId endPoint) => {
-                // first, check if this endpoint is managed by the current NetworkDomain
-                // then, check if the peer timed out or if we booted them already (done in the callee)
-                OnlinePlayer? maybePeer = GetPlayerLAN(endPoint);
-                if (maybePeer is OnlinePlayer peer) {
-                    RemoveLANPlayer(peer);
-                }
-            };
-        }
-
-        public class LANLobbyInfo : LobbyInfo
-        {
-            public override NetworkDomainType domain => NetworkDomainType.LAN;
-
-            public override string directJoinCode => endPoint.ToString();
-
-            public PeerId endPoint;
-            public LANLobbyInfo(PeerId endPoint, string name, string mode, int playerCount, bool hasPassword, int maxPlayerCount, string highImpactMods = "", string bannedMods = "") :
-                base(name, mode, playerCount, hasPassword, maxPlayerCount, highImpactMods, bannedMods)
-            {
-                this.endPoint = endPoint;
-            }
-            public override bool Equals(LobbyInfo other)
-            {
-                if (other is LANLobbyInfo otherlan) return (endPoint == otherlan.endPoint);
-                return false;
-            }
-        }
 
         public class LANPlayerId : MeadowPlayerId
         {
@@ -151,58 +120,6 @@ namespace RainMeadow
             return op;
         }
 
-
-        public override void RequestLobbyList()
-        {
-            // To create a proper list, we need to send a message to the broadcast endpoint.
-            // and wait for responces from possible hosts.
-            for (int i = 0; i < 8; i++)
-            {
-                using (MemoryStream memoryStream = new())
-                using (BinaryWriter writer = new(memoryStream))
-                {
-                    SendBroadcast(new RequestLobbyPacket());
-                }
-            }
-        }
-
-        public void AddLobby(LANLobbyInfo lobby)
-        {
-            OnLobbyListReceivedEvent(true, [ lobby ]);
-        }
-
-
-        public void SendLobbyInfo(PeerId endPoint)
-        {
-            if (OnlineManager.lobby != null && OnlineManager.lobby.isOwner)
-            {
-                var packet = new InformLobbyPacket(
-                    maxplayercount, Utils.Translate("LAN Lobby"), OnlineManager.lobby.hasPassword,
-                    OnlineManager.lobby.gameModeType.value, OnlineManager.players.Count,
-                    RainMeadowModManager.ModArrayToString(RainMeadowModManager.GetRequiredMods()), RainMeadowModManager.ModArrayToString(RainMeadowModManager.GetBannedMods()));
-                using (MemoryStream memory = new MemoryStream(128))
-                using (BinaryWriter writer = new BinaryWriter(memory))
-                {
-                    Packet.Encode(packet, writer, endPoint);
-                    PlatformPeerManager.Send(memory.GetBuffer(), endPoint, BasePeerManager.PacketType.UnreliableBroadcast, false);
-                }
-            }
-        }
-
-        public override bool canDirectConnect => true;
-        public override LobbyInfo GenerateDCLobbyInfo(string connectstr)
-        {
-            var endpoint = PlatformPeerManager.GetPeerIdByName(connectstr);
-            if (endpoint != null)
-            {
-                return new LANNetworkDomain.LANLobbyInfo(endpoint, "Direct Connection", "Meadow", 0, true, 2);
-            }
-            else
-            {
-                throw new FormatException("IP Address format should be xxx.xxx.xxx.xxx:port");
-            }
-        }
-
         public OnlinePlayer? GetPlayerLAN(PeerId other, bool create = false)
         {
             var player = OnlineManager.players.FirstOrDefault(p =>
@@ -220,39 +137,6 @@ namespace RainMeadow
             }
 
             return player;
-        }
-
-        public override bool canSendChatMessages => true;
-        public override void SendChatMessage(string message)
-        {
-            foreach (OnlinePlayer player in OnlineManager.players)
-            {
-                if (player.isMe) continue;
-                SendP2P(player, new ChatMessagePacket(message), BasePeerManager.PacketType.Reliable);
-            }
-
-            RecieveChatMessage(OnlineManager.mePlayer, message);
-        }
-
-        public int maxplayercount = 0;
-        public override void CreateLobby(LobbyVisibility visibility, string gameMode, string? password, int? maxPlayerCount)
-        {
-            NetworkDomain.currentDomain = NetworkDomainType.LAN;
-            maxplayercount = maxPlayerCount ?? 0;
-            OnlineManager.lobby = new Lobby(new OnlineGameMode.OnlineGameModeType(gameMode), OnlineManager.mePlayer, password);
-            NetworkDomain.OnLobbyJoinedEvent(true, "");
-        }
-
-        public void LobbyAcknoledgedUs(OnlinePlayer owner)
-        {
-            RainMeadow.DebugMe();
-            if (OnlineManager.lobby is null)
-            {
-                OnlineManager.lobby = new Lobby(
-                    new OnlineGameMode.OnlineGameModeType(OnlineManager.currentlyJoiningLobby.mode, false),
-                    owner, lobbyPassword);
-            }
-
         }
 
 
@@ -316,48 +200,6 @@ namespace RainMeadow
             ForgetPlayer(leavingPlayer);
             OnPlayerListReceivedEvent(OnlineManager.players.Select(x => x.id).ToArray());
         }
-        string lobbyPassword = "";
-        public override void RequestJoinLobby(LobbyInfo lobby, string? password)
-        {
-            NetworkDomain.currentDomain = NetworkDomainType.LAN;
-            RainMeadow.DebugMe();
-            if (lobby is LANLobbyInfo lobbyinfo)
-            {
-                lobbyPassword = password ?? "";
-                OnlineManager.currentlyJoiningLobby = lobby;
-                var lobbyInfo = (LANLobbyInfo)lobby;
-                if (lobbyInfo.endPoint == null)
-                {
-                    RainMeadow.Debug("Failed to join local game...");
-                    return;
-                }
-
-                RainMeadow.Debug("Sending Request to join lobby...");
-                SendP2P(new OnlinePlayer(new LANPlayerId(lobbyInfo.endPoint)),
-                    new RequestJoinPacket(OnlineManager.mePlayer.id.name), BasePeerManager.PacketType.Reliable, true);
-            }
-            else
-            {
-                RainMeadow.Error("Invalid lobby type");
-            }
-        }
-
-        public override void HandleLeavingLobby()
-        {
-            if (OnlineManager.players is not null)
-            {
-                if (OnlineManager.players.Count > 1)
-                {
-                    foreach (OnlinePlayer p in OnlineManager.players)
-                    {
-                        SendP2P(p,
-                            new SessionEndPacket(),
-                                BasePeerManager.PacketType.Unreliable);
-                    }
-                }
-            }
-            ForgetEverything();
-        }
 
         public override OnlinePlayer? GetLobbyOwner()
         {
@@ -384,12 +226,19 @@ namespace RainMeadow
             return new LANPlayerId(null);
         }
 
-
-        public override void OpenInvitationOverlay()
+        public override void ForgetPlayer(OnlinePlayer player)
         {
-            OnlineManager.instance.manager.ShowDialog(new DialogNotify(Utils.Translate("You cannot use this feature here."), OnlineManager.instance.manager, null));
+            if (PlatformPeerManager is null) return;
+            if (player.id is LANNetworkDomain.LANPlayerId lanid)
+            {
+                PlatformPeerManager.ForgetPeer(lanid.endPoint);
+            }
         }
 
-        public override bool canOpenInvitations => false;
+        public override void ForgetEverything()
+        {
+            if (PlatformPeerManager is null) return;
+            PlatformPeerManager.ForgetAllPeers();
+        }
     }
 }

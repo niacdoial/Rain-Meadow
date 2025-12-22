@@ -16,12 +16,17 @@ namespace RainMeadow
         public abstract void SendSessionData(OnlinePlayer toPlayer);
         public abstract void RecieveData();
 
-        public virtual void ForgetPlayer(OnlinePlayer player) { }
-        public virtual void ForgetEverything() { }
-
         public abstract void SendCustomData(OnlinePlayer toPlayer, string key, byte[] data, ushort size, BasePeerManager.PacketType sendType);
         public virtual void RecieveCustomPacket(PeerId endPoint, CustomPacket packet) {
             throw new InvalidProgrammerException("This domain should not process custom data this way");
+        }
+
+        public virtual bool canSendChatMessages => false;
+        public virtual void FilterMessage(ref string message) { }
+        public virtual void SendChatMessage(string message) { }
+        public virtual void RecieveChatMessage(OnlinePlayer player, string message)
+        {
+            ChatLogManager.LogMessage($"{player.id.GetPersonaName()}", $"{message}");
         }
     }
 }

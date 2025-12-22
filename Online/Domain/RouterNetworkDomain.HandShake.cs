@@ -1,0 +1,164 @@
+using System;
+using System.Net;
+using System.Linq;
+using System.IO;
+using Menu;
+using System.Collections.Generic;
+using System.Diagnostics;
+using UnityEngine;
+using RainMeadow.Shared;
+
+namespace RainMeadow
+{
+    public partial class RouterNetworkDomain
+    {
+        static List<RouterLobbyInfo> lobbyinfo = new();
+        public override void RequestLobbyList()
+        {
+            lobbyinfo.Clear();
+        }
+
+        // public override void CreateLobby(LobbyVisibility visibility, string gameMode, string? password, int? maxPlayerCount)
+        // {
+        //     maxplayercount = maxPlayerCount ?? 0;
+        //     OnlineManager.lobby = new Lobby(new OnlineGameMode.OnlineGameModeType(gameMode), OnlineManager.mePlayer, password);
+        //     NetworkDomain.OnLobbyJoinedEvent(true, "");
+        // }
+
+        public override bool canOpenInvitations => false;
+        public override void OpenInvitationOverlay()
+        {
+            OnlineManager.instance.manager.ShowDialog(new DialogNotify(Utils.Translate("You cannot use this feature here."), OnlineManager.instance.manager, null));
+        }
+
+        public override bool canDirectConnect => true;
+        public override LobbyInfo GenerateDCLobbyInfo(string connectstr)
+        {
+            var endpoint = PlatformPeerManager.GetPeerIdByName(connectstr);
+            if (endpoint != null)
+            {
+                return new RouterLobbyInfo(endpoint, "Direct Connection", "Meadow", 0, true, 2);
+            }
+            else
+            {
+                if (PlatformPeerManager is SecuredPeerManager) {
+                    throw new FormatException("IP Address format should be superLongStringThatIsTheServerPublicKey@xxx.xxx.xxx.xxx:port or xxx.xxx.xxx.xxx:port");
+                } else {
+                    throw new FormatException("IP Address format should be xxx.xxx.xxx.xxx:port");
+                }
+            }
+        }
+
+        string lobbyPassword = "";
+        public override void RequestJoinLobby(LobbyInfo lobby, string? password)
+        {
+            RainMeadow.DebugMe();
+            NetworkDomain.currentDomain = NetworkDomainType.Router;
+            if (lobby is RouterLobbyInfo routerLobbyInfo)
+            {
+                lobbyPassword = password ?? "";
+                OnlineManager.currentlyJoiningLobby = lobby;
+                if (routerLobbyInfo.endPoint == null)
+                {
+                    RainMeadow.Debug("Failed to join local game...");
+                    return;
+                }
+                serverPeer = routerLobbyInfo.endPoint;
+
+                RainMeadow.Debug("Sending Request to join lobby...");
+                string meName = OnlineManager.mePlayer.id.name;
+                Send(serverPeer, new BeginRouterSession(RainMeadow.rainMeadowOptions.RouterExposeIP.Value, meName), BasePeerManager.PacketType.Reliable, true);
+            }
+            else
+            {
+                RainMeadow.Error("Invalid lobby type");
+            }
+        }
+
+        public void HandleJoinRouterLobby(JoinRouterLobby packet)
+        {
+            RainMeadow.DebugMe();
+            if (!ValidateIsFromServer(packet)) return;
+
+            if (NetworkDomain.currentDomain != NetworkDomain.NetworkDomainType.Router) return;
+            var newLobbyInfo = new RouterLobbyInfo(packet.processingEndpoint, packet.name, packet.mode, 1, packet.passwordprotected, packet.maxplayers, packet.mods, packet.bannedMods);
+            // If we don't have a lobby and we a currently joining a lobby
+            if (OnlineManager.lobby is null && OnlineManager.currentlyJoiningLobby is not null)
+            {
+                // If the lobby we want to join is a router lobby
+                if (OnlineManager.currentlyJoiningLobby is RouterNetworkDomain.RouterLobbyInfo oldLobbyInfo)
+                {
+                    // If the lobby we want to join is the lobby that allowed us to join.
+                    if (oldLobbyInfo.endPoint.CompareAndUpdate(newLobbyInfo.endPoint))
+                    {
+                        OnlineManager.currentlyJoiningLobby = newLobbyInfo;
+                        LobbyAcknoledgedUs(packet.assignedRoutingID);
+                    }
+                }
+            }
+        }
+
+        public void LobbyAcknoledgedUs(ushort mePlayerid)
+        {
+            RainMeadow.DebugMe();
+            if (((RouterPlayerId)OnlineManager.mePlayer.id).routingID == 0)
+            {
+                OnlineManager.players.Remove(OnlineManager.mePlayer);
+                OnlineManager.mePlayer = GetPlayerRouter(mePlayerid, false);
+                if (OnlineManager.mePlayer is null)
+                {
+                    OnlineManager.QuitWithError("Recieved connection packets out of order:" +
+                        "list of players (with just our player ID inside) should arrive before arrival ack", true);
+                    return;
+                }
+                OnlineManager.mePlayer.id.name = RainMeadow.rainMeadowOptions.LanUserName.Value;
+                OnlineManager.mePlayer.isMe = true;
+            }
+
+            foreach (var player in OnlineManager.players)
+            {
+                RainMeadow.Debug($"{player}, {((RouterPlayerId)player.id).routingID}");
+            }
+
+            var owner = OnlineManager.players.First();
+            if (OnlineManager.lobby is null)
+            {
+                OnlineManager.lobby = new Lobby(
+                    new OnlineGameMode.OnlineGameModeType(OnlineManager.currentlyJoiningLobby.mode, false),
+                    owner, lobbyPassword);
+            }
+        }
+
+        public void NATPierce(OnlinePlayer joiningPlayer)
+        {
+            if (joiningPlayer.id is RouterPlayerId joiningId) {
+                // if all two players send unprompted packets to their respective endpoints, it should pierce NAT layers on both sides,
+                // allowing them to communicate.
+                if (joiningId.routingID == ((RouterPlayerId)OnlineManager.mePlayer.id).routingID) {
+                    RainMeadow.Debug("No NAT-piercing needed for self");
+                } else if (joiningId.endPoint != serverPeer) {
+                    RainMeadow.Debug("Piercing for peer " + joiningId.routingID.ToString() + " at " + PlatformPeerManager.describePeerId(joiningId.endPoint));
+                    SendEmptyPacket(joiningId.endPoint, BasePeerManager.PacketType.Reliable, true);
+                } else {
+                    RainMeadow.Debug("peer " + joiningId.routingID.ToString() + " hidden by router");
+                }
+            }
+        }
+
+        public override void HandleLeavingLobby()
+        {
+            if (serverPeer != null)  // because this also gets called on startup
+            {
+                RainMeadow.Debug("Telling lobby server we're leavin'");
+                Send(
+                    serverPeer,
+                    new EndRouterSession(),
+                    BasePeerManager.PacketType.Reliable,
+                    false
+                );
+                serverPeer = null;  // prevent infinite recursion
+            }
+            ForgetEverything();
+        }
+    }
+}
