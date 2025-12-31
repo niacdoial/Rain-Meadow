@@ -28,7 +28,8 @@ namespace RainMeadow
 
         public override void CreateLobby(LobbyVisibility visibility, string gameMode, string? password, int? maxPlayerCount)
         {
-            if (serverPeer != null && !serverPeer.isBlackHole()) {
+            if (serverPeer != null) 
+            {
                 var maxplayercount = maxPlayerCount ?? 0;
                 var lobbyInfo = new RouterLobbyInfo(
                     serverPeer,
@@ -55,13 +56,13 @@ namespace RainMeadow
 
             RainMeadow.Debug("Sending Request to join lobby...");
             string meName = OnlineManager.mePlayer.id.name;
-            Send(
+            SendPacket(
                 serverPeer,
                 new PublishRouterLobby(
                     lobby.maxPlayerCount, lobby.name,  lobby.mode, lobby.hasPassword,
                     lobby.requiredMods, lobby.bannedMods
                 ),
-                BasePeerManager.PacketType.Reliable,
+                PacketReliability.Reliable,
                 false
             );
             ((RouterPlayerId)OnlineManager.mePlayer.id).routingID = 1; // we have to be the first for us to send this

@@ -25,7 +25,7 @@ namespace RainMeadow
                 {
                     fixed (byte* dataPointer = OnlineManager.serializer.buffer)
                     {
-                        SteamNetworkingMessages.SendMessageToUser(ref steamNetId, (IntPtr)dataPointer, (uint)OnlineManager.serializer.Position, Constants.k_nSteamNetworkingSend_Unreliable, 0);
+                        SteamNetworkingMessages.SendMessageToUser(ref steamNetId, (IntPtr)dataPointer, (uint)OnlineManager.serializer.Position, Constants.k_nSteamNetworkingSend_UnreliableNoDelay, 0);
                     }
                 }
             }
@@ -37,7 +37,7 @@ namespace RainMeadow
             }
         }
 
-        public override void SendCustomData(OnlinePlayer toPlayer, string key, byte[] data, ushort size, BasePeerManager.PacketType sendType)
+        public override void SendCustomData(OnlinePlayer toPlayer, string key, byte[] data, PacketReliability sendType, bool boxed)
         {
             if (NetworkDomain.currentDomain == NetworkDomain.NetworkDomainType.Steam)
             {
@@ -47,7 +47,7 @@ namespace RainMeadow
                     using (MemoryStream ms = new MemoryStream())
                     using (BinaryWriter writer = new BinaryWriter(ms))
                     {
-                        var customPacket = new CustomPacket(key, data, size);
+                        var customPacket = new CustomPacket(key, data, (ushort)data.Length);
                         customPacket.SteamEncode(ms, writer);
                         writer.Flush();
                         buffer = ms.ToArray();
@@ -65,8 +65,8 @@ namespace RainMeadow
                             SteamNetworkingMessages.SendMessageToUser(ref steamNetId, (IntPtr)dataPointer, (uint)buffer.Length,
                                 sendType switch
                                 {
-                                    BasePeerManager.PacketType.Reliable => Constants.k_nSteamNetworkingSend_Reliable,
-                                    BasePeerManager.PacketType.Unreliable => Constants.k_nSteamNetworkingSend_Unreliable
+                                    PacketReliability.Reliable => Constants.k_nSteamNetworkingSend_Reliable,
+                                    _ => Constants.k_nSteamNetworkingSend_UnreliableNoDelay
                                 }, 1);
                         }
                     }

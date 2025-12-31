@@ -7,6 +7,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using UnityEngine;
 using RainMeadow.Shared;
+using System.Net.Sockets;
 
 /// //////////////////////////////////////////////////
 /// NetworkDomain describes the common interface for the middle part of the network stack
@@ -31,29 +32,32 @@ using RainMeadow.Shared;
 namespace RainMeadow
 {
 
-    public partial class RouterNetworkDomain : NetworkDomain
+    public partial class RouterNetworkDomain : SecuredPeerNetworkDomain
     {
         public RouterNetworkDomain()
         {
             InitializePackets();
-            NetworkDomain.PlatformPeerManager.OnPeerForgotten += (PeerId endPoint) => {
+            if (PlatformPeerManager is null) throw new InvalidProgrammerException("no peer manager");
+            PlatformPeerManager.OnPeerForgotten += (SecuredPeerManager.RemotePeer peer) => 
+            {
                 // ignore player removal / recursive call if we are leaving the lobby
-                if (serverPeer == null) { return; }
+                if (serverPeer == null) return;
 
-                if (endPoint == serverPeer) {
+                if (peer.id == serverPeer) 
+                {
                     OnlineManager.QuitWithError("Lost contact with the lobby server. Shutting down...");
                 }
 
                 // first, check if this endpoint is managed by the current NetworkDomain
                 // then, check if the peer timed out or if we booted them already
                 // if it's just a timeout, then fall back on proxied communication
-                OnlinePlayer? maybePeer = GetPlayerRouter(endPoint);
-                if (maybePeer is OnlinePlayer peer) {
-                    if (!OnlineManager.players.Contains(peer)) { return; }
-                    RouterPlayerId peerId = (RouterPlayerId)peer.id;
+                if (GetPlayerFromPeerID(peer.id) is OnlinePlayer player) 
+                {
+                    if (!OnlineManager.players.Contains(player)) { return; }
+                    RouterPlayerId peerId = (RouterPlayerId)player.id;
                     RainMeadow.Error("Peer " + peerId.routingID.ToString() + " lost direct connection, falling back to proxied connection");
                     RainMeadow.Error("Note: some Reliable packets may have been lost. Enjoy the jank!");
-                    peerId.endPoint = serverPeer;
+                    peerId.endPoint = null;
                 }
             };
         }
@@ -66,8 +70,8 @@ namespace RainMeadow
             public override NetworkDomainType domain => NetworkDomainType.Router;
             public override string directJoinCode => endPoint.ToString();
 
-            public PeerId endPoint;
-            public RouterLobbyInfo(PeerId endPoint, string name, string mode, int playerCount, bool hasPassword, int maxPlayerCount, string highImpactMods = "", string bannedMods = "") :
+            public SecuredPeerId endPoint;
+            public RouterLobbyInfo(SecuredPeerId endPoint, string name, string mode, int playerCount, bool hasPassword, int maxPlayerCount, string highImpactMods = "", string bannedMods = "") :
                 base(name, mode, playerCount, hasPassword, maxPlayerCount, highImpactMods, bannedMods)
             {
                 this.endPoint = endPoint;
@@ -83,12 +87,12 @@ namespace RainMeadow
         public class RouterPlayerId : MeadowPlayerId
         {
             public ushort routingID;
-            public PeerId endPoint;
+            public SecuredPeerId? endPoint;
             public RouterPlayerId(ushort routingID) : base(
                     UsernameGenerator.GenerateRandomUsername(routingID))
             {
                 this.routingID = routingID;
-                endPoint = PlatformPeerManager.BlackHole;
+                endPoint = null;
             }
 
             public override void OpenProfileLink()
@@ -138,6 +142,16 @@ namespace RainMeadow
             lobbyinfo.Clear();
         }
 
+        public override SecuredPeerId GetPeerIDFromPlayer(OnlinePlayer player)
+        {
+            throw new NotImplementedException();
+        }
+
+        public override OnlinePlayer? GetPlayerFromPeerID(SecuredPeerId id) => OnlineManager.players.FirstOrDefault(p =>
+        {
+            if (p.id is RouterPlayerId route) return route.endPoint?.CompareAndUpdate(id) ?? false;
+            return false;
+        });
 
         public OnlinePlayer? GetPlayerRouter(ushort routingID, bool create = false)
         {
@@ -157,41 +171,32 @@ namespace RainMeadow
             return player;
         }
 
-        public OnlinePlayer? GetPlayerRouter(PeerId endPoint)
-        {
-            return OnlineManager.players.FirstOrDefault(p =>
-            {
-                if (p.id is RouterPlayerId route) {
-                    if (route.endPoint != PlatformPeerManager.BlackHole)
-                        return (route.endPoint.CompareAndUpdate(endPoint));
-                }
-                return false;
-            });
-        }
-
         public override bool canSendChatMessages => true;
         public override void SendChatMessage(string message)
         {
-            bool needSendToServer = false;
+            if (serverPeer is null) throw new InvalidProgrammerException("serverPeer is null");
+            // bool needSendToServer = false;
             var packet = new RouterChatMessage(
                 ((RouterPlayerId)OnlineManager.mePlayer.id).routingID,
                 message
             );
 
-            foreach (OnlinePlayer player in OnlineManager.players)
-            {
-                if (player.isMe) continue;
-                RouterPlayerId playerId = (RouterPlayerId)player.id;
-                if (playerId.endPoint == serverPeer) {
-                    needSendToServer = true;
-                } else {
-                    Send(playerId.endPoint, packet, BasePeerManager.PacketType.Reliable, false);
-                }
-            }
-            if (needSendToServer) {
-                Send(serverPeer, packet, BasePeerManager.PacketType.Reliable, false);
-            }
 
+            // since we're broadcasting this anyway, let's delegate the work to the server completey.
+            // this way we don't get any duplicate messages.
+
+            // foreach (OnlinePlayer player in OnlineManager.players)
+            // {
+            //     if (player.isMe) continue;
+            //     RouterPlayerId playerId = (RouterPlayerId)player.id;
+            //     if (playerId.endPoint == serverPeer) {
+            //         needSendToServer = true;
+            //     } else {
+            //         Send(playerId.endPoint, packet, SecuredPeerId..PacketType.Reliable, false);
+            //     }
+            // }
+
+            SendPacket(serverPeer, packet, PacketReliability.Reliable, true);
             RecieveChatMessage(OnlineManager.mePlayer, message);
         }
 
@@ -239,11 +244,11 @@ namespace RainMeadow
             if (joiningPlayer.id is RouterPlayerId joiningId) {
                 // if all two players send unprompted packets to their respective endpoints, it should pierce NAT layers on both sides,
                 // allowing them to communicate.
-                if (joiningId.routingID == ((RouterPlayerId)OnlineManager.mePlayer.id).routingID) {
-                    RainMeadow.Debug("No NAT-piercing needed for self");
-                } else if (joiningId.endPoint != serverPeer) {
-                    RainMeadow.Debug("Piercing for peer " + joiningId.routingID.ToString() + " at " + PlatformPeerManager.describePeerId(joiningId.endPoint));
-                    SendEmptyPacket(joiningId.endPoint, BasePeerManager.PacketType.Reliable, true);
+                if (joiningId.routingID != ((RouterPlayerId)OnlineManager.mePlayer.id).routingID) {
+                    // RainMeadow.Debug("No NAT-piercing needed for self");
+                } else if (joiningId.endPoint != null) {
+                    RainMeadow.Debug("Piercing for peer " + joiningId.routingID.ToString() + " at " + joiningId.endPoint);
+                    SendAcknoledgement(joiningId.endPoint);
                 } else {
                     RainMeadow.Debug("peer " + joiningId.routingID.ToString() + " hidden by router");
                 }
@@ -262,7 +267,7 @@ namespace RainMeadow
         public override bool canDirectConnect => true;
         public override LobbyInfo GenerateDCLobbyInfo(string connectstr)
         {
-            var endpoint = PlatformPeerManager.GetPeerIdByName(connectstr);
+            var endpoint = SecuredPeerId.GetPeerIdByName(connectstr);
             if (endpoint != null)
             {
                 return new RouterLobbyInfo(endpoint, "Direct Connection", "Meadow", 0, true, 2);
@@ -295,7 +300,7 @@ namespace RainMeadow
 
                 RainMeadow.Debug("Sending Request to join lobby...");
                 string meName = OnlineManager.mePlayer.id.name;
-                Send(serverPeer, new BeginRouterSession(RainMeadow.rainMeadowOptions.RouterExposeIP.Value, meName), BasePeerManager.PacketType.Reliable, true);
+                SendPacket(serverPeer, new BeginRouterSession(RainMeadow.rainMeadowOptions.RouterExposeIP.Value, meName), PacketReliability.Reliable, true);
             }
             else
             {
@@ -311,10 +316,11 @@ namespace RainMeadow
                     true => PlayerJoiningDecision.Decision.Accept,
                     false => PlayerJoiningDecision.Decision.Reject
                 };
-                Send(
+
+                SendPacket(
                     serverPeer,
                     new PlayerJoiningDecision(joiningId.routingID, decision),
-                    BasePeerManager.PacketType.Reliable,
+                    PacketReliability.Reliable,
                     false
                 );
             }
@@ -325,13 +331,13 @@ namespace RainMeadow
             if (serverPeer != null)  // because this also gets called on startup
             {
                 RainMeadow.Debug("Telling lobby server we're leavin'");
-                Send(
-                    serverPeer,
-                    new EndRouterSession(),
-                    BasePeerManager.PacketType.Reliable,
-                    false
-                );
-                serverPeer = null;  // prevent infinite recursion
+                // SendPacket(
+                //     serverPeer,
+                //     new EndRou(),
+                //     PacketReliability.Reliable,
+                //     false
+                // );
+                // serverPeer = null;  // prevent infinite recursion
             }
             ForgetEverything();
         }

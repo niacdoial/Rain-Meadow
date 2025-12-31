@@ -19,9 +19,15 @@ namespace RainMeadow
         public virtual void ForgetPlayer(OnlinePlayer player) { }
         public virtual void ForgetEverything() { }
 
-        public abstract void SendCustomData(OnlinePlayer toPlayer, string key, byte[] data, ushort size, BasePeerManager.PacketType sendType);
-        public virtual void RecieveCustomPacket(PeerId endPoint, CustomPacket packet) {
-            throw new InvalidProgrammerException("This domain should not process custom data this way");
+
+        public enum PacketReliability
+        {
+            Unreliable = 0,
+            Reliable
         }
+        
+        public virtual bool CustomDataSupported => false;
+        public virtual bool SupportsBoxedEncryption => false;
+        public virtual void SendCustomData(OnlinePlayer toPlayer, string key, byte[] data, PacketReliability sendType, bool boxed = false) => throw new NotImplementedException();
     }
 }

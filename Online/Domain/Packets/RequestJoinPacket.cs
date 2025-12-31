@@ -39,7 +39,7 @@ namespace RainMeadow
                     OnlineManager.players.Count,
                     RainMeadowModManager.ModArrayToString(RainMeadowModManager.GetRequiredMods()),
                     RainMeadowModManager.ModArrayToString(RainMeadowModManager.GetBannedMods())
-                ), BasePeerManager.PacketType.Reliable);
+                ), NetworkDomain.PacketReliability.Reliable);
 
             }
         }

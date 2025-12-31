@@ -39,7 +39,7 @@ namespace RainMeadow
             }
             if (packet.processingEndpoint != serverPeer)
             {
-                RainMeadow.Error($"Recieved from-server packet from {PlatformPeerManager.describePeerId(packet.processingEndpoint)}, not server: {serverPeer}");
+                RainMeadow.Error($"Recieved from-server packet from {packet.processingEndpoint}, not server: {serverPeer}");
                 return false;
             }
             return true;
@@ -58,10 +58,7 @@ namespace RainMeadow
                     // we also tolerate players switching to server-proxying halfway
                     return player;
                 } else {
-                    RainMeadow.Error(
-                        "Possible impersonation: player " + fromRouterID.ToString()
-                        + " can't come from endpoint " + PlatformPeerManager.describePeerId(packet.processingEndpoint)
-                    );
+                    RainMeadow.Error($"Possible impersonation: player {fromRouterID} can't come from endpoint {packet.processingEndpoint}");
                     return null;
                 }
             } else {
@@ -126,26 +123,33 @@ namespace RainMeadow
                     for (int i = 0; i < packet.routerIds.Count; i++)
                     {
                         RouterPlayerId playerID = new RouterPlayerId(packet.routerIds[i]);
-                        if (!RainMeadow.rainMeadowOptions.RouterExposeIP.Value) {
-                            playerID.endPoint = serverPeer;  // the value should already be set that way, but let's make sure
-                        } else if (packet.endPoints[i].isBlackHole()){
-                            playerID.endPoint = serverPeer;
-                        } else {
+                        if (!RainMeadow.rainMeadowOptions.RouterExposeIP.Value || packet.endPoints[i] == null)
+                        {
+                            playerID.endPoint = null;
+                        } 
+                        else 
+                        {
                             playerID.endPoint = packet.endPoints[i];
                         }
                         playerID.name = packet.userNames[i];
 
                         OnlinePlayer? addedPlayer = GetPlayerRouter(packet.routerIds[i], false);
-                        if (addedPlayer is OnlinePlayer existingPlayer) {
-                            if (packet.operation == RouterModifyPlayerListPacket.Operation.Update) {
+                        if (addedPlayer is OnlinePlayer existingPlayer) 
+                        {
+                            if (packet.operation == RouterModifyPlayerListPacket.Operation.Update) 
+                            {
                                 // FIXME: add checks once the PeerManager guarantees player identity
                                 existingPlayer.id = playerID;
                                 RainMeadow.Debug(String.Format("updating player: {0}, name {1}", playerID.routingID, playerID.name));
-                            } else {
+                            } 
+                            else 
+                            {
                                 RainMeadow.Debug(String.Format("redundant add-player: {0}, 'name' {1}", playerID.routingID, playerID.name));
                             }
                             NATPierce(existingPlayer);  // just in case
-                        } else {
+                        } 
+                        else 
+                        {
                             addedPlayer = new OnlinePlayer(playerID);
                             NATPierce(addedPlayer);
                             RainMeadow.Debug(String.Format("new player to acknowledge: {0}, name {1}", playerID.routingID, playerID.name));
@@ -193,7 +197,7 @@ namespace RainMeadow
             }
         }
 
-        PeerId? serverPeer = null;
+        SecuredPeerId? serverPeer = null;
         public override void SendSessionData(OnlinePlayer toPlayer)
         {
             if (PlatformPeerManager is null) return;
@@ -203,12 +207,14 @@ namespace RainMeadow
                 OnlineManager.serializer.WriteData(toPlayer);
                 var playerID = (RouterPlayerId)toPlayer.id;
                 var myId = (RouterPlayerId)OnlineManager.mePlayer.id;
-                Send(playerID.endPoint, new RouteSessionData(
+                var routerPacket = new RouteSessionData(
                     playerID.routingID,
                     myId.routingID,
                     OnlineManager.serializer.buffer,
                     (ushort)OnlineManager.serializer.Position
-                ), BasePeerManager.PacketType.Unreliable);
+                );
+
+                SendPacket(playerID.endPoint is null? serverPeer : playerID.endPoint, routerPacket, PacketReliability.Unreliable, true);
             }
             catch (Exception e)
             {
@@ -221,37 +227,22 @@ namespace RainMeadow
             }
         }
 
-        public override void SendCustomData(OnlinePlayer toPlayer, string key, byte[] data, ushort size, BasePeerManager.PacketType sendType)
+        public override void SendCustomData(OnlinePlayer toPlayer, string key, byte[] data, PacketReliability sendType, bool boxed = false)
         {
+            if (PlatformPeerManager is null) return;
+            if (serverPeer is null) throw new InvalidProgrammerException("No lobby server");
             try
             {
                 RouterPlayerId playerID = (RouterPlayerId)toPlayer.id;
                 RouterPlayerId meID = (RouterPlayerId)OnlineManager.mePlayer.id;
-                Send(playerID.endPoint, new RouterCustomPacket(playerID.routingID, meID.routingID, key, data, size), sendType);
+                var packet = new RouterCustomPacket(playerID.routingID, meID.routingID, key, data, (ushort)data.Length);
+                SendPacket(playerID.endPoint is null? serverPeer : playerID.endPoint, packet, sendType, boxed);
             }
-
             catch (Exception e)
             {
                 RainMeadow.Error(e);
                 throw;
             }
-        }
-
-        public void Send(PeerId endPoint, Packet packet, BasePeerManager.PacketType sendType, bool start_conversation = false)
-        {
-            if (PlatformPeerManager is null) return;
-            using (MemoryStream memory = new MemoryStream(128))
-            using (BinaryWriter writer = new BinaryWriter(memory))
-            {
-                Packet.Encode(packet, writer, endPoint);
-                PlatformPeerManager.Send(memory.GetBuffer(), endPoint, sendType, start_conversation);
-            }
-        }
-
-        public void SendEmptyPacket(PeerId endPoint, BasePeerManager.PacketType sendType, bool start_conversation = false)
-        {
-            if (PlatformPeerManager is null) return;
-            PlatformPeerManager.Send(Array.Empty<byte>(), endPoint, sendType, start_conversation);
         }
 
         public override void RecieveData()
@@ -264,10 +255,10 @@ namespace RainMeadow
             {
                 try
                 {
-                    byte[]? data = PlatformPeerManager.Receive(out PeerId? remoteEndpoint);
+                    byte[]? data = PlatformPeerManager.Receive(out SecuredPeerId? remoteEndpoint);
                     if (data == null) continue;
                     if (remoteEndpoint is null) continue;
-                    serverPeer.CompareAndUpdate(remoteEndpoint);  // the server might need to be updated on how to be contacted
+                    serverPeer?.CompareAndUpdate(remoteEndpoint);  // the server might need to be updated on how to be contacted
 
                     using (MemoryStream netStream = new MemoryStream(data))
                     using (BinaryReader netReader = new BinaryReader(netStream))
@@ -289,15 +280,15 @@ namespace RainMeadow
             if (PlatformPeerManager is null) return;
             if (player.id is RouterNetworkDomain.RouterPlayerId routid)
             {
-                if (routid.endPoint == serverPeer) { return; }  // do not forget the server accidentally!
-                PlatformPeerManager.ForgetPeer(routid.endPoint);
+                if (routid.endPoint == serverPeer) return;   // do not forget the server accidentally!
+                if (routid.endPoint is null) return;
+                PlatformPeerManager.GetRemotePeer(routid.endPoint)?.Terminate();
             }
         }
 
         public override void ForgetEverything()
         {
-            if (PlatformPeerManager is null) return;
-            PlatformPeerManager.ForgetAllPeers();
+            base.ForgetEverything();
             //serverPeer = null;  // do not reset server, it can be re-used in "knocking" lobby setup.
         }
     }

@@ -42,7 +42,20 @@ namespace RainMeadow
                 RainMeadow.Error($"Custom Packet was too large, the maximum size is 32768");
                 return;
             }
-            NetworkDomain.currentInstance.RecieveCustomPacket(processingEndpoint, this);
+            
+            if (NetworkDomain.currentInstance.CustomDataSupported && NetworkDomain.currentInstance is SecuredPeerNetworkDomain domain)
+            {
+                if (domain.GetPlayerFromPeerID(processingEndpoint!) is OnlinePlayer player)
+                {
+                    CustomManager.HandlePacket(player, this);
+                }
+                else
+                {
+                    RainMeadow.Error($"Recieved custom packet from unknown player {processingEndpoint}");
+                }
+                
+            }
+            
         }
 
         public void SteamEncode(MemoryStream ms, BinaryWriter writer)

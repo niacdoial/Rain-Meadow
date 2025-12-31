@@ -246,7 +246,9 @@ namespace RainMeadow
             }
         }
 
-        public static void SendCustomData(OnlinePlayer toPlayer, string key, byte[] data, ushort size, BasePeerManager.PacketType sendType)
+
+
+        public static void SendCustomData(OnlinePlayer toPlayer, string key, byte[] data, NetworkDomain.PacketReliability sendType, bool boxed = false)
         {
             if (toPlayer.isMe)
                 return;
@@ -254,7 +256,7 @@ namespace RainMeadow
                 return;
             if (!customSettings.keys.Contains(key))
                 return;
-            NetworkDomain.currentInstance?.SendCustomData(toPlayer, key, data, size, sendType);
+            NetworkDomain.currentInstance?.SendCustomData(toPlayer, key, data, sendType, boxed);
         }
 
         public void ProcessSelfEvents()

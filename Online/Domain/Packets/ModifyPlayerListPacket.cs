@@ -33,10 +33,10 @@ namespace RainMeadow
             var lanids = players.Select(x => (LANNetworkDomain.LANPlayerId)x.id);
             lanids = lanids.Where(x => x.endPoint != null);
 
-            bool includeme = lanids.FirstOrDefault(x => x.isLoopback()) is not null;
+            bool includeme = lanids.FirstOrDefault(x => x.IsMe()) is not null;
 
-            lanids = lanids.Where(x => !x.isLoopback());
-            NetworkDomain.PlatformPeerManager.SerializePeerIDs(writer, lanids.Select(x => x.endPoint).ToArray(), processingEndpoint, includeme);
+            lanids = lanids.Where(x => !x.IsMe());
+            SecuredPeerId.SerializePeerIDs(writer, lanids.Select(x => x.endPoint).ToArray(), processingEndpoint, includeme);
 
             if (modifyOperation == Operation.Add) {
                 if (includeme) {
@@ -53,7 +53,7 @@ namespace RainMeadow
         public override void Deserialize(BinaryReader reader)
         {
             modifyOperation = (Operation)reader.ReadByte();
-            var endpoints = NetworkDomain.PlatformPeerManager.DeserializePeerIDs(reader, processingEndpoint);
+            var endpoints = SecuredPeerId.DeserializePeerIDs(reader, processingEndpoint);
 
             if (modifyOperation == Operation.Add) {
                 players = endpoints.Select(x => new OnlinePlayer(new LANNetworkDomain.LANPlayerId(x))).ToArray();
@@ -76,7 +76,7 @@ namespace RainMeadow
                     RainMeadow.Debug("Adding players...\n\t" + string.Join<OnlinePlayer>("\n\t", players));
                     for (int i = 0; i < players.Length; i++)
                     {
-                        if (((LANNetworkDomain.LANPlayerId)players[i].id).isLoopback()) {
+                        if (((LANNetworkDomain.LANPlayerId)players[i].id).IsMe()) {
                             // That's me
                             // Put me where I belong.
                             OnlineManager.players.Remove(OnlineManager.mePlayer);
