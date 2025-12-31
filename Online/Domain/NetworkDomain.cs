@@ -86,6 +86,7 @@ namespace RainMeadow
         public static string MODS_KEY = "mods";
         public static string BANNED_MODS_KEY = "banned_mods";
         public static string PASSWORD_KEY = "password";
+        public static string PINNED_KEY = "pinned";
         public static int MAX_LOBBY = 4;
 
         static public readonly List<NetworkDomainType> supportedDomains = new();
@@ -153,7 +154,7 @@ namespace RainMeadow
         public abstract OnlinePlayer CreateMePlayer();
         public abstract void RequestLobbyList(); // todo custom filters?
 
-        public abstract void CreateLobby(LobbyVisibility visibility, string gameMode, string? password, int? maxPlayerCount);
+        public abstract void CreateLobby(LobbyVisibility visibility, string gameMode, string? password, int? maxPlayerCount, bool pinned = false);
 
         public virtual bool canDirectConnect => false;
         public virtual LobbyInfo GenerateDCLobbyInfo(string connectstr) // throws FormatException or NotImplementedException
@@ -211,5 +212,8 @@ namespace RainMeadow
         {
             OnlineManager.instance.manager.ShowDialog(new DialogNotify("You cannot use this feature here.", OnlineManager.instance.manager, null));
         }
+
+        public virtual bool IsDev(MeadowPlayerId player) => false;
+        public virtual bool IsTrustedCommunity(MeadowPlayerId player) => false;
     }
 }

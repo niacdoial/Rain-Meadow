@@ -1,13 +1,15 @@
 // HACK
+using BepInEx;
 using Menu;
 using Menu.Remix;
 using Menu.Remix.MixedUI;
+using RainMeadow.UI.Components;
+using RWCustom;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using RWCustom;
 using UnityEngine;
-using BepInEx;
+using Menu.Remix.MixedUI.ValueTypes;
 
 namespace RainMeadow;
 
@@ -16,6 +18,8 @@ public class LobbyCreateMenu : SmartMenu
     private OpComboBox2 visibilityDropDown;
     private OpTextBox lobbyLimitNumberTextBox;
     private int maxPlayerCount;
+    private OpCheckBox? lobbyPinnedCheckBox;
+    private OpCheckBox? lobbyAnniversaryGags;
     private SimplerButton createButton;
     private OpComboBox2 modeDropDown;
     private ProperlyAlignedMenuLabel modeDescriptionLabel;
@@ -64,7 +68,7 @@ public class LobbyCreateMenu : SmartMenu
             new ProperlyAlignedMenuLabel(this, mainPage, Translate("Password:"), where, new Vector2(200, 20f), false)
         );
         where.x += 160;
-        passwordInputBox = new OpTextBox(new Configurable<string>(""), where, 160f)
+        passwordInputBox = new OpTypeBox(new Configurable<string>(""), where, 160f)
         {
             accept = OpTextBox.Accept.StringASCII,
             allowSpace = true,
@@ -103,6 +107,33 @@ public class LobbyCreateMenu : SmartMenu
         domainDropdown = new OpComboBox2(new Configurable<string>(
                 NetworkDomain.supportedDomains.Last().value), where, 160f - 35f, NetworkDomain.supportedDomains.Select(x => new ListItem(x.value, Utils.Translate(x.value))).ToList()) { colorEdge = MenuColorEffect.rgbWhite };
         new UIelementWrapper(this.tabWrapper, domainDropdown);
+        where.x += 80;
+
+        if (NetworkDomain.instances.OfType<NetworkDomain>().Any(x => x.IsTrustedCommunity(OnlineManager.mePlayer.id)))
+        {
+            where.x -= 160;
+            where.y -= 45;
+            mainPage.subObjects.Add(new ProperlyAlignedMenuLabel(this, mainPage, Translate("Pinned:"), where, new Vector2(400, 20f), false));
+            where.x += 80;
+            where.y -= 5;
+            lobbyPinnedCheckBox = new OpCheckBox(new Configurable<bool>(false), where);
+            new UIelementWrapper(this.tabWrapper, lobbyPinnedCheckBox);
+            where.y += 5;
+            where.x += 80;
+        }
+
+        if (DateTime.Now.Month == 12 && DateTime.Now.Day < 30)
+        {
+            where.x -= 200;
+            where.y -= 45;
+            mainPage.subObjects.Add(new ProperlyAlignedMenuLabel(this, mainPage, Translate("Anniversary Gags:"), where, new Vector2(400, 20f), false));
+            where.x += 120;
+            where.y -= 5;
+            lobbyAnniversaryGags = new OpCheckBox(new Configurable<bool>(false), where);
+            new UIelementWrapper(this.tabWrapper, lobbyAnniversaryGags);
+            where.y += 5;
+            where.x += 80;
+        }
 
 
         // display version
@@ -114,8 +145,24 @@ public class LobbyCreateMenu : SmartMenu
 
         UpdateModeDescription();
         CreateElementBindings();
-        NetworkDomain.OnLobbyJoined += OnlineManager_OnLobbyJoined;
+        NetworkDomain.OnLobbyJoined += OnLobbyJoined;
     }
+
+    public void OnLobbyJoined(bool ok, string error = "")
+    {
+        if (!ok)
+        {
+            ShowErrorDialog(error);
+        }
+        else
+        {
+            if (this.lobbyAnniversaryGags?.GetValueBool() ?? false)
+            {
+                OnlineManager.lobby.configurableBools.Add("MEADOW_ANNIVERSARY", true);
+            }
+        }
+    }
+
     public override void Init()
     {
         base.Init();
@@ -161,7 +208,7 @@ public class LobbyCreateMenu : SmartMenu
         RainMeadow.DebugMe();
         Enum.TryParse<NetworkDomain.LobbyVisibility>(visibilityDropDown.value, out var value);
         string? password = passwordInputBox.value.IsNullOrWhiteSpace() ? null : passwordInputBox.value;
-        NetworkDomain.instances[domain].CreateLobby(value, modeDropDown.value, password, maxPlayerCount);
+        NetworkDomain.currentInstance.CreateLobby(value, modeDropDown.value, password, maxPlayerCount, this.lobbyPinnedCheckBox?.GetValueBool() ?? false);
     }
 
     private void ShowLoadingDialog(string text)
@@ -199,15 +246,7 @@ public class LobbyCreateMenu : SmartMenu
 
     public override void ShutDownProcess()
     {
-        NetworkDomain.OnLobbyJoined -= OnlineManager_OnLobbyJoined;
+        NetworkDomain.OnLobbyJoined -= OnLobbyJoined;
         base.ShutDownProcess();
-    }
-
-    private void OnlineManager_OnLobbyJoined(bool ok, string error)
-    {
-        if (!ok)
-        {
-            ShowErrorDialog(Translate("Failed to create lobby.<LINE>") + error);
-        }
     }
 }
