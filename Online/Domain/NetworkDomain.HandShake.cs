@@ -25,7 +25,7 @@ namespace RainMeadow
     {
         public abstract void RequestLobbyList(); // todo custom filters?
 
-        public abstract void CreateLobby(LobbyVisibility visibility, string gameMode, string? password, int? maxPlayerCount);
+        public abstract void CreateLobby(LobbyVisibility visibility, string gameMode, string? password, int? maxPlayerCount, bool pinned = false);
 
         public virtual bool canDirectConnect => false;
         public virtual LobbyInfo GenerateDCLobbyInfo(string connectstr) // throws FormatException or NotImplementedException

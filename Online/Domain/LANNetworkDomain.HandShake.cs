@@ -65,7 +65,7 @@ namespace RainMeadow
         }
 
         public int maxplayercount = 0;
-        public override void CreateLobby(LobbyVisibility visibility, string gameMode, string? password, int? maxPlayerCount)
+        public override void CreateLobby(LobbyVisibility visibility, string gameMode, string? password, int? maxPlayerCount, bool pinned = false)
         {
             NetworkDomain.currentDomain = NetworkDomainType.LAN;
             maxplayercount = maxPlayerCount ?? 0;

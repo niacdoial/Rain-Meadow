@@ -73,6 +73,7 @@ namespace RainMeadow
         public static string MODE_KEY = "mode";
         public static string MODS_KEY = "mods";
         public static string BANNED_MODS_KEY = "banned_mods";
+        public static string PINNED_KEY = "pinned";
         public static string PASSWORD_KEY = "password";
         public static int MAX_LOBBY = 4;
 

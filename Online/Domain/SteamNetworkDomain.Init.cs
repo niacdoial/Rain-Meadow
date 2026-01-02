@@ -23,6 +23,13 @@ namespace RainMeadow
                 base(name, mode, playerCount, hasPassword, maxPlayerCount, highImpactMods, bannedMods)
             {
                 iD = id;
+                if (NetworkDomain.instances[NetworkDomain.NetworkDomainType.Steam].IsTrustedCommunity(new SteamPlayerId(SteamMatchmaking.GetLobbyOwner(iD))))
+                {
+                    if (bool.TryParse(SteamMatchmaking.GetLobbyData(iD, PINNED_KEY), out pinned))
+                    {
+                        RainMeadow.Debug("Successfully read pinned lobby data");
+                    }
+                }
             }
             public override bool Equals(LobbyInfo other)
             {

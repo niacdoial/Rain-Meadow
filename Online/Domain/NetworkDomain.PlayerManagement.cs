@@ -20,6 +20,9 @@ namespace RainMeadow
         public abstract OnlinePlayer? GetLobbyOwner();
         public abstract MeadowPlayerId GetEmptyId();
 
+        public virtual bool IsDev(MeadowPlayerId player) => false;
+        public virtual bool IsTrustedCommunity(MeadowPlayerId player) => false;
+
         public virtual OnlinePlayer GetPlayer(MeadowPlayerId id)
         {
             return OnlineManager.players.FirstOrDefault(p => p.id == id);

@@ -26,7 +26,7 @@ namespace RainMeadow
             //OnlineManager.instance.manager.ShowDialog(new DialogNotify("No lobby in this server: you can create one.", OnlineManager.instance.manager, null));
         }
 
-        public override void CreateLobby(LobbyVisibility visibility, string gameMode, string? password, int? maxPlayerCount)
+        public override void CreateLobby(LobbyVisibility visibility, string gameMode, string? password, int? maxPlayerCount, bool pinned = false)
         {
             if (serverPeer != null && !serverPeer.isBlackHole()) {
                 var maxplayercount = maxPlayerCount ?? 0;

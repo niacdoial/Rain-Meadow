@@ -46,10 +46,11 @@ namespace RainMeadow
             }
         }
 
-        public override void CreateLobby(LobbyVisibility visibility, string gameMode, string? password, int? maxPlayerCount)
+        public override void CreateLobby(LobbyVisibility visibility, string gameMode, string? password, int? maxPlayerCount, bool pinned = false)
         {
             NetworkDomain.currentDomain = NetworkDomainType.Steam;
             creatingWithMode = gameMode;
+            creatingPinned = pinned;
             lobbyPassword = password;
             MAX_LOBBY = (int)maxPlayerCount;
             ELobbyType eLobbyTypeeLobbyType = visibility switch
@@ -88,6 +89,7 @@ namespace RainMeadow
         }
 
         private static string creatingWithMode;
+        private static bool creatingPinned;
         private static string? lobbyPassword;
         private void LobbyCreated(LobbyCreated_t param, bool bIOFailure)
         {
@@ -104,6 +106,7 @@ namespace RainMeadow
                     SteamMatchmaking.SetLobbyData(lobbyID, MODS_KEY, RainMeadowModManager.ModArrayToString(RainMeadowModManager.GetRequiredMods()));
                     SteamMatchmaking.SetLobbyData(lobbyID, BANNED_MODS_KEY, RainMeadowModManager.ModArrayToString(RainMeadowModManager.GetBannedMods()));
                     SteamMatchmaking.SetLobbyData(lobbyID, PASSWORD_KEY, lobbyPassword != null ? "true" : "false");
+                    SteamMatchmaking.SetLobbyData(lobbyID, PINNED_KEY, creatingPinned? "true" : "false");
                     SteamMatchmaking.SetLobbyMemberLimit(lobbyID, MAX_LOBBY);
                     OnlineManager.lobby = new Lobby(new OnlineGameMode.OnlineGameModeType(creatingWithMode), OnlineManager.mePlayer, lobbyPassword);
                     SteamFriends.SetRichPresence("connect", lobbyID.ToString());

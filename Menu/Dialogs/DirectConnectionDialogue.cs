@@ -5,6 +5,7 @@ using System.Text.RegularExpressions;
 using Menu;
 using Menu.Remix;
 using Menu.Remix.MixedUI;
+using RainMeadow.UI.Components;
 using UnityEngine;
 namespace RainMeadow
 {
@@ -13,11 +14,11 @@ namespace RainMeadow
         protected MenuTabWrapper tabWrapper;
         public SymbolButton cancelButton;
         public SimpleButton continueButton;
-        public OpTextBox IPBox;
+        public OpTypeBox IPBox;
         public OpComboBox domainDropDown;
 
         public CheckBox passwordCheckBox;
-        public OpTextBox passwordBox;
+        public OpTypeBox passwordBox;
         public UIelementWrapper textBoxWrapper;
         public UIelementWrapper passwordBoxWrapper;
         public UIelementWrapper passwordLabelWrapper;
@@ -45,7 +46,7 @@ namespace RainMeadow
             subObjects.Add(tabWrapper);
 
             Vector2 center = size / 2f;
-            IPBox = new OpTextBox(new Configurable<string>(""), center + new Vector2(-80f, -15f), 160f);
+            IPBox = new OpTypeBox(new Configurable<string>(""), center + new Vector2(-80f, -15f), 160f);
             IPBox.accept = OpTextBox.Accept.StringASCII;
             IPBox.allowSpace = true;
             IPBox.maxLength = 100;
@@ -54,7 +55,7 @@ namespace RainMeadow
 
             Vector2 where = new Vector2((center.x - 55f), 20f);
             passwordLabelWrapper = new UIelementWrapper(this.tabWrapper, new OpLabel(center + new Vector2(-80f, -40f), new Vector2(100f, 20f), menu.Translate("Password:")));
-            passwordBox = new OpTextBox(new Configurable<string>(""), center + new Vector2(-80f, -60f), 160f);
+            passwordBox = new OpTypeBox(new Configurable<string>(""), center + new Vector2(-80f, -60f), 160f);
             passwordBox.greyedOut = true;
             passwordBox.accept = OpTextBox.Accept.StringASCII;
             passwordBox.allowSpace = true;
@@ -64,7 +65,7 @@ namespace RainMeadow
             subObjects.Add(passwordCheckBox);
 
             domainDropDown = new OpComboBox2(new Configurable<NetworkDomain.NetworkDomainType>(
-                NetworkDomain.currentDomain), new Vector2((center.x - 55f), 70f), 160f - 35f, 
+                NetworkDomain.currentDomain), new Vector2((center.x - 55f), 70f), 160f - 35f,
                 NetworkDomain.supportedDomains.Where(x => NetworkDomain.instances[x].canDirectConnect).Select(x => new ListItem(x.value, Utils.Translate(x.value))).ToList()) { colorEdge = MenuColorEffect.rgbWhite };
             subObjects.Add(new UIelementWrapper(this.tabWrapper, domainDropDown));
 

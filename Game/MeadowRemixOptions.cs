@@ -3,9 +3,9 @@ using Menu.Remix.MixedUI;
 using RWCustom;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using UnityEngine;
-
 namespace RainMeadow;
 
 public class RainMeadowOptions : OptionInterface
@@ -78,6 +78,8 @@ public class RainMeadowOptions : OptionInterface
     public readonly Configurable<bool> EnableAchievementsOnline;
 
     public readonly Configurable<IntroRoll> PickedIntroRoll;
+    private readonly Configurable<string> LobbyMusic;
+    public readonly Configurable<bool> AnniversaryCape;
 
     public enum IntroRoll
     {
@@ -171,6 +173,8 @@ public class RainMeadowOptions : OptionInterface
 
 
         PickedIntroRoll = config.Bind("PickedIntroRoll", IntroRoll.Meadow);
+        LobbyMusic = config.Bind("MeadowLobbyMusic", "default"); // Happy One Year, Meadow
+
         LanUserName = config.Bind("LanUserName", "");
         RouterExposeIP = config.Bind("RouterExposeIP", false);
         UdpTimeout = config.Bind("UdpTimeout", 3000);
@@ -185,6 +189,8 @@ public class RainMeadowOptions : OptionInterface
         DevNightskySkin = config.Bind("DevNightskySkin", false);
 
         EnableAchievementsOnline = config.Bind("EnableAchievementsOnline", false);
+        AnniversaryCape = config.Bind("AnniversaryCape", true);
+
     }
 
     public override void Initialize()
@@ -293,6 +299,7 @@ public class RainMeadowOptions : OptionInterface
             meadowTab.AddItems(OnlineMeadowSettings);
 
             OpComboBox2 introroll;
+            OpComboBox2 music;
             OpLabel downpourWarning;
             OpLabel watcherWarning;
 
@@ -318,13 +325,18 @@ public class RainMeadowOptions : OptionInterface
                 new OpLabel(10, 420, Translate("Playtesting Gift")),
                 new OpCheckBox(WearingCape, new Vector2(10, 390f)),
 
-                new OpLabel(10, 370, Translate("Introroll")),
-               introroll = new OpComboBox2(PickedIntroRoll, new Vector2(10, 340f), 160f, OpResourceSelector.GetEnumNames(null, typeof(IntroRoll)).Select(li => { li.displayName = Translate(li.displayName); return li; }).ToList()) { colorEdge = Menu.MenuColorEffect.rgbWhite },
-               downpourWarning = new OpLabel(introroll.pos.x + 170, 70, Translate("Downpour DLC is not activated, vanilla intro will be used instead")),
-               watcherWarning = new OpLabel(introroll.pos.x + 170, 70, Translate("Watcher DLC is not activated, vanilla intro will be used instead")),
+                new OpLabel(120, 420, Translate("Anniversary Gift")),
+                new OpCheckBox(AnniversaryCape, new Vector2(120, 390f)),
 
+                new OpLabel(10, 370, Translate("Introroll")),
+                introroll = new OpComboBox2(PickedIntroRoll, new Vector2(10, 340f), 160f, OpResourceSelector.GetEnumNames(null, typeof(IntroRoll)).Select(li => { li.displayName = Translate(li.displayName); return li; }).ToList()) { colorEdge = Menu.MenuColorEffect.rgbWhite },
+                downpourWarning = new OpLabel(introroll.pos.x + 170, 70, Translate("Downpour DLC is not activated, vanilla intro will be used instead")),
+                watcherWarning = new OpLabel(introroll.pos.x + 170, 70, Translate("Watcher DLC is not activated, vanilla intro will be used instead")),
+
+                new OpLabel(10, 310, Translate("Lobby Music")),
+                music = new OpComboBox2(LobbyMusic, new Vector2(10, 280f), 160f, SongsItemList()) { colorEdge = Menu.MenuColorEffect.rgbWhite },
             };
-            if (!RainMeadow.IsDev(OnlineManager.mePlayer.id))
+            if (!NetworkDomain.instances.Values.OfType<NetworkDomain>().Any(x => x.IsDev(OnlineManager.mePlayer.id)))
             {
                 GeneralUIArrPlayerOptions.Skip(GeneralUIArrPlayerOptions.IndexOf(devOptions)).Take(3).Do(e => e.Hidden = true);
             }
@@ -488,5 +500,76 @@ public class RainMeadowOptions : OptionInterface
 
     public override void Update()
     {
+    }
+
+    private const string DefaultLobbyMusic = "Woodback"; // Happy One Year, Meadow
+    public bool GetLobbyMusic(out string result)
+    {
+        if (LobbyMusic.Value == "default")
+        {
+            result = DefaultLobbyMusic;
+            return true;
+        }
+        if (LobbyMusic.Value == "none")
+        {
+            result = null;
+            return false;
+        }
+        if (GetSongNames().Contains(LobbyMusic.Value))
+        {
+            result = LobbyMusic.Value;
+            return true;
+        }
+        result = null;
+        return false;
+    }
+
+    private static List<ListItem> SongsItemList()
+    {
+        int i = -1;
+        return
+        [
+            new ListItem
+            {
+                displayName = Translate("Default"),
+                name = "default",
+                value = i++
+            },
+            new ListItem
+            {
+                displayName = Translate("None"),
+                name = "none",
+                value = i++
+            },
+            .. GetSongNames().Select(songName => new ListItem
+            {
+                displayName = songName,
+                name = songName,
+                value = i++
+            }),
+        ];
+    }
+
+    private static List<string> GetSongNames()
+    {
+        string[] rawDirData = AssetManager.ListDirectory("Music/Songs");
+        List<string> allOggFiles = new List<string>();
+
+        for (int j = 0; j < rawDirData.Length; j++)
+        {
+            string fileName = rawDirData[j];
+
+            if (fileName.EndsWith(".ogg", StringComparison.OrdinalIgnoreCase))
+            {
+                string[] nameParts = fileName.Split(Path.DirectorySeparatorChar);
+                string cleanFileNameWithExtension = nameParts[nameParts.Length - 1];
+
+                int extensionIndex = cleanFileNameWithExtension.LastIndexOf('.');
+
+                string cleanFileName = cleanFileNameWithExtension.Substring(0, extensionIndex);
+                allOggFiles.Add(cleanFileName);
+            }
+        }
+        return allOggFiles;
     }
 }
