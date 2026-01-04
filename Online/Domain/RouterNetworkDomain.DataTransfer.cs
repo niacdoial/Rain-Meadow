@@ -166,19 +166,19 @@ namespace RainMeadow
                 message
             );
 
-            foreach (OnlinePlayer player in OnlineManager.players)
-            {
-                if (player.isMe) continue;
-                RouterPlayerId playerId = (RouterPlayerId)player.id;
-                if (playerId.endPoint == serverPeer) {
-                    needSendToServer = true;
-                } else {
-                    Send(playerId.endPoint, packet, BasePeerManager.PacketType.Reliable, false);
-                }
-            }
-            if (needSendToServer) {
+            // foreach (OnlinePlayer player in OnlineManager.players)
+            // {
+            //     if (player.isMe) continue;
+            //     RouterPlayerId playerId = (RouterPlayerId)player.id;
+            //     if (playerId.endPoint == serverPeer) {
+            //         needSendToServer = true;
+            //     } else {
+            //         Send(playerId.endPoint, packet, BasePeerManager.PacketType.Reliable, false);
+            //     }
+            // }
+            // if (needSendToServer) {
                 Send(serverPeer, packet, BasePeerManager.PacketType.Reliable, false);
-            }
+            // }
 
             RecieveChatMessage(OnlineManager.mePlayer, message);
         }
