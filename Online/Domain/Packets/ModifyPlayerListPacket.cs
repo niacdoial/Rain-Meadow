@@ -30,21 +30,12 @@ namespace RainMeadow
         public override void Serialize(BinaryWriter writer)
         {
             writer.Write((byte)modifyOperation);
-            var lanids = players.Select(x => (LANNetworkDomain.LANPlayerId)x.id);
-            lanids = lanids.Where(x => x.endPoint != null);
-
-            bool includeme = lanids.FirstOrDefault(x => x.IsMe()) is not null;
-
-            lanids = lanids.Where(x => !x.IsMe());
-            SecuredPeerId.SerializePeerIDs(writer, lanids.Select(x => x.endPoint).ToArray(), processingEndpoint, includeme);
+            var lanids = players.Select(x => (LANNetworkDomain.LANPlayerId)x.id).Where(x => x.endPoint != null);
+            SecuredPeerId.SerializeArray(writer, lanids.Select(x => x.endPoint).OfType<SecuredPeerId>().ToArray(), processingEndpoint);
 
             if (modifyOperation == Operation.Add) {
-                if (includeme) {
-                    writer.WriteNullTerminatedString(OnlineManager.mePlayer.id.name);
-                }
-
                 foreach (LANNetworkDomain.LANPlayerId lanid in lanids){
-                    writer.WriteNullTerminatedString(lanid.name);
+                    writer.Write(lanid.name);
                 }
             }
 
@@ -53,17 +44,17 @@ namespace RainMeadow
         public override void Deserialize(BinaryReader reader)
         {
             modifyOperation = (Operation)reader.ReadByte();
-            var endpoints = SecuredPeerId.DeserializePeerIDs(reader, processingEndpoint);
+            SecuredPeerId[] ids = SecuredPeerId.DeserializeArray(reader, processingEndpoint);
 
             if (modifyOperation == Operation.Add) {
-                players = endpoints.Select(x => new OnlinePlayer(new LANNetworkDomain.LANPlayerId(x))).ToArray();
+                players = ids.Select(x => NetworkDomain.LAN.GetPlayerLAN(x, true)).ToArray();
                 for (int i = 0; i < players.Length; i++){
-                    players[i].id.name = reader.ReadNullTerminatedString();
+                    players[i].id.name = reader.ReadString();
                 }
             }
 
             else if (modifyOperation == Operation.Remove)
-                players = endpoints.Select(x => NetworkDomain.LAN.GetPlayerLAN(x)).OfType<OnlinePlayer>().ToArray();
+                players = ids.Select(x => NetworkDomain.LAN.GetPlayerLAN(x)).OfType<OnlinePlayer>().ToArray();
 
         }
 
@@ -76,7 +67,8 @@ namespace RainMeadow
                     RainMeadow.Debug("Adding players...\n\t" + string.Join<OnlinePlayer>("\n\t", players));
                     for (int i = 0; i < players.Length; i++)
                     {
-                        if (((LANNetworkDomain.LANPlayerId)players[i].id).IsMe()) {
+                        if (((LANNetworkDomain.LANPlayerId)players[i].id).IsMe()) 
+                        {
                             // That's me
                             // Put me where I belong.
                             OnlineManager.players.Remove(OnlineManager.mePlayer);

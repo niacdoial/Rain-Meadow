@@ -282,7 +282,7 @@ namespace RainMeadow
             {
                 if (routid.endPoint == serverPeer) return;   // do not forget the server accidentally!
                 if (routid.endPoint is null) return;
-                PlatformPeerManager.GetRemotePeer(routid.endPoint)?.Terminate();
+                PlatformPeerManager.ForgetPeer(routid.endPoint);
             }
         }
 

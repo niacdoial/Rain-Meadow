@@ -28,6 +28,7 @@ namespace RainMeadow
 
         public override void CreateLobby(LobbyVisibility visibility, string gameMode, string? password, int? maxPlayerCount, bool pinned = false)
         {
+            currentDomain = NetworkDomainType.Router;
             if (serverPeer != null) 
             {
                 var maxplayercount = maxPlayerCount ?? 0;

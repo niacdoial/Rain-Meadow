@@ -17,7 +17,7 @@ namespace RainMeadow
                 OnlineManager.serializer.WriteData(toPlayer);
                 SecuredPeerId? peerID = GetPeerIDFromPlayer(toPlayer);
                 if (peerID is null) throw new InvalidProgrammerException("no peerid");
-                SendPacket(peerID, new SessionPacket(OnlineManager.serializer.buffer, (ushort)OnlineManager.serializer.Position), PacketReliability.Reliable, true);
+                SendPacket(peerID, new SessionPacket(OnlineManager.serializer.buffer, (ushort)OnlineManager.serializer.Position), PacketReliability.Unreliable, true);
                 OnlineManager.serializer.EndWrite();
             }
             catch (Exception e)
@@ -49,8 +49,7 @@ namespace RainMeadow
         {
             if (PlatformPeerManager is null) return;
             RainMeadow.DebugMe();
-            SecuredPeerId[] broadcastables = PlatformPeerManager.GetBroadcastPeerIDs();
-            foreach(SecuredPeerId broadId in broadcastables)
+            foreach(SecuredPeerId broadId in PlatformPeerManager.GetBroadcastPeerIDs())
             {
                 using (MemoryStream memory = new MemoryStream(128))
                 using (BinaryWriter writer = new BinaryWriter(memory))
@@ -64,7 +63,7 @@ namespace RainMeadow
             }
         }
 
-        public void SendPacket(SecuredPeerId peer, Packet packet, PacketReliability sendType, bool boxed)
+        public void SendPacket(SecuredPeerId peer, Packet packet, PacketReliability sendType, bool boxed = false, bool broadcast = false)
         {
             if (PlatformPeerManager is null) return;
             using (MemoryStream memory = new MemoryStream(128))
@@ -75,7 +74,7 @@ namespace RainMeadow
                     sendType switch  
                     {
                         PacketReliability.Reliable => SecuredPeerManager.PacketFlags.Reliable,
-                        _ => SecuredPeerManager.PacketFlags.Unreliable,
+                        _ => broadcast? SecuredPeerManager.PacketFlags.Broadcast : SecuredPeerManager.PacketFlags.Unreliable,
                     },
                     boxed);
             }
@@ -121,18 +120,14 @@ namespace RainMeadow
             SecuredPeerId? peerID = GetPeerIDFromPlayer(player);
             if (peerID is not null)
             {
-                PlatformPeerManager.GetRemotePeer(peerID)?.Terminate();
+                PlatformPeerManager.ForgetPeer(peerID);
             }
         }
 
         public override void ForgetEverything()
         {
             if (PlatformPeerManager is null) return;
-            PlatformPeerManager.TerminateAllPeers();
-            while (PlatformPeerManager.AnyPendingTermination())
-            {
-                PlatformPeerManager.Update();
-            }
+            PlatformPeerManager.ForgetAllPeers();
         }
     }
 }

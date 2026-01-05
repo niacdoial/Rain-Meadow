@@ -208,7 +208,7 @@ public class LobbyCreateMenu : SmartMenu
         RainMeadow.DebugMe();
         Enum.TryParse<NetworkDomain.LobbyVisibility>(visibilityDropDown.value, out var value);
         string? password = passwordInputBox.value.IsNullOrWhiteSpace() ? null : passwordInputBox.value;
-        NetworkDomain.currentInstance.CreateLobby(value, modeDropDown.value, password, maxPlayerCount, this.lobbyPinnedCheckBox?.GetValueBool() ?? false);
+        NetworkDomain.instances[domain].CreateLobby(value, modeDropDown.value, password, maxPlayerCount, this.lobbyPinnedCheckBox?.GetValueBool() ?? false);
     }
 
     private void ShowLoadingDialog(string text)

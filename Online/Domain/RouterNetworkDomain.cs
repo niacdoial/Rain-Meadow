@@ -45,7 +45,7 @@ namespace RainMeadow
 
                 if (peer.id == serverPeer) 
                 {
-                    OnlineManager.QuitWithError("Lost contact with the lobby server. Shutting down...");
+                    OnlineManager.QuitWithError("Connection Lost...");
                 }
 
                 // first, check if this endpoint is managed by the current NetworkDomain
