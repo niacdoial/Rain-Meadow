@@ -13,60 +13,57 @@ namespace RainMeadow
 {
     public partial class RouterNetworkDomain
     {
-        void OnLobbyServerEmpty(LobbyIsEmpty packet)
-        {
-            RainMeadow.Debug("Received LobbyEmpty");
-            if (!ValidateIsFromServer(packet)) return;
-            // serverPeer has been set by the original RequestJoinLobby
-            // we have been chosen to be the lobby host, set our routingID to 1 now so that we don't get confused by the ModifyPlayerList packet
-            ((RouterPlayerId)OnlineManager.mePlayer.id).routingID = 1;
+        // void OnLobbyServerEmpty(LobbyIs packet)
+        // {
+        //     RainMeadow.Debug("Received LobbyEmpty");
+        //     if (!ValidateIsFromServer(packet)) return;
+        //     // serverPeer has been set by the original RequestJoinLobby
+        //     // we have been chosen to be the lobby host, set our routingID to 1 now so that we don't get confused by the ModifyPlayerList packet
+        //     ((RouterPlayerId)OnlineManager.mePlayer.id).routingID = 1;
 
-            // the user can create the lobby now, and it will be published to the server.
-            OnLobbyJoinedEvent(false, Utils.Translate("Connection successful! You can now use the \"create lobby\" menu to start playing."));
-            //OnlineManager.instance.manager.ShowDialog(new DialogNotify("No lobby in this server: you can create one.", OnlineManager.instance.manager, null));
-        }
+        //     // the user can create the lobby now, and it will be published to the server.
+        //     OnLobbyJoinedEvent(false, Utils.Translate("Connection successful! You can now use the \"create lobby\" menu to start playing."));
+        //     //OnlineManager.instance.manager.ShowDialog(new DialogNotify("No lobby in this server: you can create one.", OnlineManager.instance.manager, null));
+        // }
 
-        public override void CreateLobby(LobbyVisibility visibility, string gameMode, string? password, int? maxPlayerCount, bool pinned = false)
-        {
-            currentDomain = NetworkDomainType.Router;
-            if (serverPeer != null) 
-            {
-                var maxplayercount = maxPlayerCount ?? 0;
-                var lobbyInfo = new RouterLobbyInfo(
-                    serverPeer,
-                    "UNNAMED", gameMode,
-                    1, (password is string), maxplayercount,
-                    RainMeadowModManager.ModArrayToString(RainMeadowModManager.GetRequiredMods()),
-                    RainMeadowModManager.ModArrayToString(RainMeadowModManager.GetBannedMods())
-                );
-                RequestPublishLobby(lobbyInfo);
+        // public override void CreateLobby(LobbyVisibility visibility, string gameMode, string? password, int? maxPlayerCount, bool pinned = false)
+        // {
+        //     currentDomain = NetworkDomainType.Router;
+        //     if (serverPeer != null) 
+        //     {
+        //         var maxplayercount = maxPlayerCount ?? 0;
+        //         var lobbyInfo = new RouterLobbyInfo(
+        //             serverPeer,
+        //             "UNNAMED", gameMode,
+        //             1, (password is string), maxplayercount,
+        //             RainMeadowModManager.ModArrayToString(RainMeadowModManager.GetRequiredMods()),
+        //             RainMeadowModManager.ModArrayToString(RainMeadowModManager.GetBannedMods())
+        //         );
+        //         OnlineManager.lobby = new Lobby(new OnlineGameMode.OnlineGameModeType(gameMode), OnlineManager.mePlayer, password);
+        //         OnLobbyJoinedEvent(true, "");
+        //     } else {
+        //         OnLobbyJoinedEvent(false, Utils.Translate("You need attempt a direct-connect to the lobby server first, and if it is empty you can create the lobby."));
+        //     }
+        // }
 
-                OnlineManager.lobby = new Lobby(new OnlineGameMode.OnlineGameModeType(gameMode), OnlineManager.mePlayer, password);
-                OnLobbyJoinedEvent(true, "");
-            } else {
-                OnLobbyJoinedEvent(false, Utils.Translate("You need attempt a direct-connect to the lobby server first, and if it is empty you can create the lobby."));
-            }
-        }
+        // void RequestPublishLobby(RouterLobbyInfo lobby)
+        // {
+        //     // do not set currentDomain because it has been set when setting up the direct connect
+        //     // also setting it now would destroy the serverPeer
+        //     //NetworkDomain.currentDomain = NetworkDomainType.Router;
+        //     OnlineManager.currentlyJoiningLobby = lobby;
 
-        void RequestPublishLobby(RouterLobbyInfo lobby)
-        {
-            // do not set currentDomain because it has been set when setting up the direct connect
-            // also setting it now would destroy the serverPeer
-            //NetworkDomain.currentDomain = NetworkDomainType.Router;
-            OnlineManager.currentlyJoiningLobby = lobby;
-
-            RainMeadow.Debug("Sending Request to join lobby...");
-            string meName = OnlineManager.mePlayer.id.name;
-            SendPacket(
-                serverPeer,
-                new PublishRouterLobby(
-                    lobby.maxPlayerCount, lobby.name,  lobby.mode, lobby.hasPassword,
-                    lobby.requiredMods, lobby.bannedMods
-                ),
-                PacketReliability.Reliable,
-                false
-            );
-            ((RouterPlayerId)OnlineManager.mePlayer.id).routingID = 1; // we have to be the first for us to send this
-        }
+        //     RainMeadow.Debug("Sending Request to join lobby...");
+        //     string meName = OnlineManager.mePlayer.id.name;
+        //     SendPacket(
+        //         serverPeer,
+        //         new PublishRouterLobby(
+        //             lobby.maxPlayerCount, lobby.name,  lobby.mode, lobby.hasPassword,
+        //             lobby.requiredMods, lobby.bannedMods
+        //         ),
+        //         PacketReliability.Reliable
+        //     );
+        //     ((RouterPlayerId)OnlineManager.mePlayer.id).routingID = 1; // we have to be the first for us to send this
+        // }
     }
 }

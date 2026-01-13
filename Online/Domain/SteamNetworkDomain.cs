@@ -217,6 +217,8 @@ namespace RainMeadow
         public override void CreateLobby(LobbyVisibility visibility, string gameMode, string? password, int? maxPlayerCount, bool pinned = false)
         {
             NetworkDomain.currentDomain = NetworkDomainType.Steam;
+            OnlineManager.LeaveLobby();
+
             creatingWithMode = gameMode;
             creatingPinned = pinned;
             lobbyPassword = password;
@@ -234,6 +236,8 @@ namespace RainMeadow
         public override void RequestJoinLobby(LobbyInfo lobby, string? password)
         {
             NetworkDomain.currentDomain = NetworkDomainType.Steam;
+            OnlineManager.LeaveLobby();
+
             lobbyPassword = password;
             m_JoinLobbyCall.Set(SteamMatchmaking.JoinLobby((lobby as SteamLobbyInfo).iD));
         }
@@ -492,8 +496,8 @@ namespace RainMeadow
         {
             if (NetworkDomain.currentDomain != NetworkDomainType.Steam)
             {
-                OnlineManager.LeaveLobby();
                 NetworkDomain.currentDomain = NetworkDomainType.Steam;
+                OnlineManager.LeaveLobby();
             }
 
             try

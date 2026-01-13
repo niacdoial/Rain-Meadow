@@ -196,16 +196,20 @@ namespace RainMeadow
             //     }
             // }
 
-            SendPacket(serverPeer, packet, PacketReliability.Reliable, true);
+            SendPacket(serverPeer, packet, PacketReliability.Reliable);
             RecieveChatMessage(OnlineManager.mePlayer, message);
         }
 
-        // public override void CreateLobby(LobbyVisibility visibility, string gameMode, string? password, int? maxPlayerCount)
-        // {
-        //     maxplayercount = maxPlayerCount ?? 0;
-        //     OnlineManager.lobby = new Lobby(new OnlineGameMode.OnlineGameModeType(gameMode), OnlineManager.mePlayer, password);
-        //     NetworkDomain.OnLobbyJoinedEvent(true, "");
-        // }
+        public override void CreateLobby(LobbyVisibility visibility, string gameMode, string? password, int? maxPlayerCount, bool pinned)
+        {
+            NetworkDomain.OnLobbyJoinedEvent(false, "Create servers via the command line for now.");
+
+
+
+            // maxplayercount = maxPlayerCount ?? 0;
+            // OnlineManager.lobby = new Lobby(new OnlineGameMode.OnlineGameModeType(gameMode), OnlineManager.mePlayer, password);
+            // NetworkDomain.OnLobbyJoinedEvent(true, "");
+        }
 
         public void LobbyAcknoledgedUs(ushort mePlayerid)
         {
@@ -285,8 +289,9 @@ namespace RainMeadow
         string lobbyPassword = "";
         public override void RequestJoinLobby(LobbyInfo lobby, string? password)
         {
-            RainMeadow.DebugMe();
             NetworkDomain.currentDomain = NetworkDomainType.Router;
+            OnlineManager.LeaveLobby();
+            
             if (lobby is RouterLobbyInfo routerLobbyInfo)
             {
                 lobbyPassword = password ?? "";
@@ -300,7 +305,7 @@ namespace RainMeadow
 
                 RainMeadow.Debug("Sending Request to join lobby...");
                 string meName = OnlineManager.mePlayer.id.name;
-                SendPacket(serverPeer, new BeginRouterSession(RainMeadow.rainMeadowOptions.RouterExposeIP.Value, meName), PacketReliability.Reliable, true);
+                SendPacket(serverPeer, new BeginRouterSession(RainMeadow.rainMeadowOptions.RouterExposeIP.Value, meName), PacketReliability.Reliable);
             }
             else
             {
@@ -320,25 +325,14 @@ namespace RainMeadow
                 SendPacket(
                     serverPeer,
                     new PlayerJoiningDecision(joiningId.routingID, decision),
-                    PacketReliability.Reliable,
-                    false
+                    PacketReliability.Reliable
                 );
             }
         }
 
         public override void HandleLeavingLobby()
         {
-            if (serverPeer != null)  // because this also gets called on startup
-            {
-                RainMeadow.Debug("Telling lobby server we're leavin'");
-                // SendPacket(
-                //     serverPeer,
-                //     new EndRou(),
-                //     PacketReliability.Reliable,
-                //     false
-                // );
-                // serverPeer = null;  // prevent infinite recursion
-            }
+            serverPeer = null;
             ForgetEverything();
         }
 

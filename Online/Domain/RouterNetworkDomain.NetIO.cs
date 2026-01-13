@@ -22,7 +22,7 @@ namespace RainMeadow
         {
             Packet.packetFactory += Packet.RouterFactory;
             JoinRouterLobby.ProcessAction += HandleJoinRouterLobby;
-            LobbyIsEmpty.ProcessAction += OnLobbyServerEmpty;
+            // LobbyIsEmpty.ProcessAction += OnLobbyServerEmpty;
             RouteSessionData.ProcessAction += HandleRouteSessionData;
             RouterModifyPlayerListPacket.ProcessAction += HandleModifyPlayerList;
             RouterChatMessage.ProcessAction += HandleChatMessage;
@@ -214,7 +214,7 @@ namespace RainMeadow
                     (ushort)OnlineManager.serializer.Position
                 );
 
-                SendPacket(playerID.endPoint is null? serverPeer : playerID.endPoint, routerPacket, PacketReliability.Unreliable, true);
+                SendPacket(playerID.endPoint is null? serverPeer : playerID.endPoint, routerPacket, PacketReliability.Unreliable);
             }
             catch (Exception e)
             {
@@ -236,7 +236,8 @@ namespace RainMeadow
                 RouterPlayerId playerID = (RouterPlayerId)toPlayer.id;
                 RouterPlayerId meID = (RouterPlayerId)OnlineManager.mePlayer.id;
                 var packet = new RouterCustomPacket(playerID.routingID, meID.routingID, key, data, (ushort)data.Length);
-                SendPacket(playerID.endPoint is null? serverPeer : playerID.endPoint, packet, sendType, boxed);
+                packet.boxed = boxed;
+                SendPacket(playerID.endPoint is null? serverPeer : playerID.endPoint, packet, sendType);
             }
             catch (Exception e)
             {
@@ -255,7 +256,7 @@ namespace RainMeadow
             {
                 try
                 {
-                    byte[]? data = PlatformPeerManager.Receive(out SecuredPeerId? remoteEndpoint);
+                    byte[]? data = PlatformPeerManager.Receive(out SecuredPeerId? remoteEndpoint, out bool boxed);
                     if (data == null) continue;
                     if (remoteEndpoint is null) continue;
                     serverPeer?.CompareAndUpdate(remoteEndpoint);  // the server might need to be updated on how to be contacted
@@ -264,7 +265,7 @@ namespace RainMeadow
                     using (BinaryReader netReader = new BinaryReader(netStream))
                     {
                         if (netReader.BaseStream.Position == ((MemoryStream)netReader.BaseStream).Length) continue; // nothing to read somehow?
-                        Packet.Decode(netReader, remoteEndpoint);
+                        Packet.Decode(netReader, remoteEndpoint, boxed);
                     }
                 }
                 catch (Exception e)

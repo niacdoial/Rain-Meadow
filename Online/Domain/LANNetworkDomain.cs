@@ -187,7 +187,7 @@ namespace RainMeadow
                     RainMeadowModManager.ModArrayToString(RainMeadowModManager.GetRequiredMods()), RainMeadowModManager.ModArrayToString(RainMeadowModManager.GetBannedMods()));
                 for (int i = 0; i < 8; i++)
                 {
-                    SendPacket(endPoint, packet, PacketReliability.Unreliable, false, true);
+                    SendPacket(endPoint, packet, PacketReliability.Unreliable, true);
                 }
             }
         }
@@ -241,6 +241,7 @@ namespace RainMeadow
         public override void CreateLobby(LobbyVisibility visibility, string gameMode, string? password, int? maxPlayerCount, bool pinned = false)
         {
             NetworkDomain.currentDomain = NetworkDomainType.LAN;
+            OnlineManager.LeaveLobby();
             maxplayercount = maxPlayerCount ?? 0;
             OnlineManager.lobby = new Lobby(new OnlineGameMode.OnlineGameModeType(gameMode), OnlineManager.mePlayer, password);
             NetworkDomain.OnLobbyJoinedEvent(true, "");
@@ -323,6 +324,7 @@ namespace RainMeadow
         public override void RequestJoinLobby(LobbyInfo lobby, string? password)
         {
             NetworkDomain.currentDomain = NetworkDomainType.LAN;
+            OnlineManager.LeaveLobby();
             RainMeadow.DebugMe();
             if (lobby is LANLobbyInfo lobbyinfo)
             {
