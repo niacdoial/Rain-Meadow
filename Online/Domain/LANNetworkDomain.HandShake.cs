@@ -29,7 +29,7 @@ namespace RainMeadow
                 if (lobbies[i].Equals(newlobby))
                 {
                     lobbies[i] = newlobby;
-                    is_new = true;  // REVIEW: whoops!
+                    is_new = false;
                 }
             }
 
@@ -49,7 +49,6 @@ namespace RainMeadow
                     RainMeadowModManager.ModArrayToString(RainMeadowModManager.GetRequiredMods()), RainMeadowModManager.ModArrayToString(RainMeadowModManager.GetBannedMods()));
                 for (int i = 0; i < 8; i++)
                 {
-                    // REVIEW: check this line later (method name, boxing status)
                     SendPacket(endPoint, packet, PacketReliability.Unreliable, true);
                 }
             }

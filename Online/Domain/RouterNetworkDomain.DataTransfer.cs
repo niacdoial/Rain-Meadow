@@ -149,29 +149,10 @@ namespace RainMeadow
         public override void SendChatMessage(string message)
         {
             if (serverPeer is null) throw new InvalidProgrammerException("serverPeer is null");
-            // bool needSendToServer = false;
             var packet = new RouterChatMessage(
                 ((RouterPlayerId)OnlineManager.mePlayer.id).routingID,
                 message
             );
-
-
-            // since we're broadcasting this anyway, let's delegate the work to the server completey.
-            // this way we don't get any duplicate messages.
-
-            // REVIEW: approved, though this comment is technically wrong, because the server already avoids duplicate messages for these types of packets (that's not the source of the issue I pointed out to you the other day)
-            // however, there's a scenario where chat messages go completely missing because of this same logic.
-
-            // foreach (OnlinePlayer player in OnlineManager.players)
-            // {
-            //     if (player.isMe) continue;
-            //     RouterPlayerId playerId = (RouterPlayerId)player.id;
-            //     if (playerId.endPoint == serverPeer) {
-            //         needSendToServer = true;
-            //     } else {
-            //         Send(playerId.endPoint, packet, SecuredPeerId..PacketType.Reliable, false);
-            //     }
-            // }
 
             SendPacket(serverPeer, packet, PacketReliability.Reliable);
             RecieveChatMessage(OnlineManager.mePlayer, message);

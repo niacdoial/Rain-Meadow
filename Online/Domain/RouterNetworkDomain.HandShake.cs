@@ -45,12 +45,7 @@ namespace RainMeadow
             }
             else
             {
-                if (PlatformPeerManager is SecuredPeerManager) {
-                    // REVIEW: uniformise this message with the one from LANNetworkDomain
-                    throw new FormatException("IP Address format should be superLongStringThatIsTheServerPublicKey@xxx.xxx.xxx.xxx:port or xxx.xxx.xxx.xxx:port");
-                } else {
-                    throw new FormatException("IP Address format should be xxx.xxx.xxx.xxx:port");
-                }
+                throw new FormatException("IP Address format should be public_key@xxx.xxx.xxx.xxx:port");
             }
         }
 
@@ -140,8 +135,7 @@ namespace RainMeadow
             if (joiningPlayer.id is RouterPlayerId joiningId) {
                 // if all two players send unprompted packets to their respective endpoints, it should pierce NAT layers on both sides,
                 // allowing them to communicate.
-                // REVIEW: ??? that "different from" feels very incorrect
-                if (joiningId.routingID != ((RouterPlayerId)OnlineManager.mePlayer.id).routingID) {
+                if (joiningId.routingID == ((RouterPlayerId)OnlineManager.mePlayer.id).routingID) {
                     // RainMeadow.Debug("No NAT-piercing needed for self");
                 } else if (joiningId.endPoint != null) {
                     RainMeadow.Debug("Piercing for peer " + joiningId.routingID.ToString() + " at " + joiningId.endPoint);
@@ -154,8 +148,6 @@ namespace RainMeadow
 
         public override void HandleLeavingLobby()
         {
-            // REVIEW: doesn't ForgetEverything risk calling this function back?
-            // I'll need to check that, see if we need a guard at the start of this function
             serverPeer = null;
             ForgetEverything();
         }

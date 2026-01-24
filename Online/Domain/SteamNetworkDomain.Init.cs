@@ -23,7 +23,14 @@ namespace RainMeadow
                 base(name, mode, playerCount, hasPassword, maxPlayerCount, highImpactMods, bannedMods)
             {
                 iD = id;
-                // REVIEW: missing dev detection?
+                // REVIEW: is the following block something that has been removed upstream, or something that was not re-added to the RouterDomain branch?
+                if (NetworkDomain.instances[NetworkDomain.NetworkDomainType.Steam].IsTrustedCommunity(new SteamPlayerId(SteamMatchmaking.GetLobbyOwner(iD))))
+                {
+                    if (bool.TryParse(SteamMatchmaking.GetLobbyData(iD, PINNED_KEY), out pinned))
+                    {
+                        RainMeadow.Debug("Successfully read pinned lobby data");
+                    }
+                }
             }
             public override bool Equals(LobbyInfo other)
             {
