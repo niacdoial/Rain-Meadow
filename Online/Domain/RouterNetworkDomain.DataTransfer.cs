@@ -1,0 +1,181 @@
+using System;
+using System.Collections.Generic;
+using System.ComponentModel;
+using System.IO;
+using System.Linq;
+using System.Net;
+using HarmonyLib;
+using Menu;
+using RainMeadow.Shared;
+
+namespace RainMeadow
+{
+    public partial class NetworkDomain
+    {
+        static partial void PlatformRouterAvailable(ref bool val) { val = NetworkDomain.PlatformPeerManager is not null; }
+    }
+
+    public partial class RouterNetworkDomain
+    {
+
+        public void HandleRouteSessionData(RouteSessionData packet)
+        {
+            var maybePlayer = GetValidatedSenderPlayer(packet, packet.fromRouterID);
+            if (OnlineManager.lobby is not null && maybePlayer is OnlinePlayer player)
+            {
+                if (packet.toRouterID != ((RouterPlayerId)OnlineManager.mePlayer.id).routingID) {
+                    RainMeadow.Error("mis-received a packet meant for " + packet.toRouterID.ToString());
+                    return;
+                }
+
+                unsafe
+                {
+                    fixed (byte* data = packet.data)
+                    {
+                        maybePlayer.UpdateSessionBuffer((IntPtr)data, packet.data.Length);
+                    }
+                }
+            }
+        }
+
+        public void HandleChatMessage(RouterChatMessage packet) {
+            var maybePlayer = GetValidatedSenderPlayer(packet, packet.fromRouterID);
+            if (maybePlayer is OnlinePlayer player) {
+                RecieveChatMessage(player, packet.message);
+            }
+        }
+
+        public void HandleCustomData(RouterCustomPacket packet) {
+            if (packet.key == "" || packet.data == null)
+            {
+                return;
+            }
+            if (packet.key.Length > 16 || packet.data.Length > 32768)
+            {
+                RainMeadow.Error($"Custom Packet was too large, the maximum size is 32768");
+                return;
+            }
+            var maybePlayer = GetValidatedSenderPlayer(packet, packet.fromRouterID);
+            if (maybePlayer is OnlinePlayer player) {
+                if (packet.toRouterID != ((RouterPlayerId)OnlineManager.mePlayer.id).routingID) {
+                    RainMeadow.Error("mis-received a packet meant for " + packet.toRouterID.ToString());
+                    return;
+                }
+                // convert the RouterCustomPacket into a CustomPacket to process it further
+                CustomManager.HandlePacket(player, new CustomPacket(packet.key, packet.data, (ushort)packet.data.Length));
+            }
+        }
+
+        SecuredPeerId? serverPeer = null;
+        public override void SendSessionData(OnlinePlayer toPlayer)
+        {
+            if (PlatformPeerManager is null) return;
+            if (serverPeer is null) throw new InvalidProgrammerException("No lobby server");
+            try
+            {
+                OnlineManager.serializer.WriteData(toPlayer);
+                var playerID = (RouterPlayerId)toPlayer.id;
+                var myId = (RouterPlayerId)OnlineManager.mePlayer.id;
+                var routerPacket = new RouteSessionData(
+                    playerID.routingID,
+                    myId.routingID,
+                    OnlineManager.serializer.buffer,
+                    (ushort)OnlineManager.serializer.Position
+                );
+
+                SendPacket(playerID.endPoint is null? serverPeer : playerID.endPoint, routerPacket, PacketReliability.Unreliable);
+            }
+            catch (Exception e)
+            {
+                RainMeadow.Error(e);
+                throw;
+            }
+            finally
+            {
+                OnlineManager.serializer.EndWrite();
+            }
+        }
+
+        public override void SendCustomData(OnlinePlayer toPlayer, string key, byte[] data, PacketReliability sendType, bool boxed = false)
+        {
+            if (PlatformPeerManager is null) return;
+            if (serverPeer is null) throw new InvalidProgrammerException("No lobby server");
+            try
+            {
+                RouterPlayerId playerID = (RouterPlayerId)toPlayer.id;
+                RouterPlayerId meID = (RouterPlayerId)OnlineManager.mePlayer.id;
+                var packet = new RouterCustomPacket(playerID.routingID, meID.routingID, key, data, (ushort)data.Length);
+                packet.boxed = boxed;
+                SendPacket(playerID.endPoint is null? serverPeer : playerID.endPoint, packet, sendType);
+            }
+            catch (Exception e)
+            {
+                RainMeadow.Error(e);
+                throw;
+            }
+        }
+
+        public override void RecieveData()
+        {
+            if (PlatformPeerManager is null) return;
+            PlatformPeerManager.Update();
+
+            int packetlimit = 4; // TODO: Add to remix menu
+            for (int i = 0; (i < packetlimit) && PlatformPeerManager.IsPacketAvailable(); i++)
+            {
+                try
+                {
+                    byte[]? data = PlatformPeerManager.Receive(out SecuredPeerId? remoteEndpoint, out bool boxed);
+                    if (data == null) continue;
+                    if (remoteEndpoint is null) continue;
+                    serverPeer?.CompareAndUpdate(remoteEndpoint);  // the server might need to be updated on how to be contacted
+
+                    using (MemoryStream netStream = new MemoryStream(data))
+                    using (BinaryReader netReader = new BinaryReader(netStream))
+                    {
+                        if (netReader.BaseStream.Position == ((MemoryStream)netReader.BaseStream).Length) continue; // nothing to read somehow?
+                        Packet.Decode(netReader, remoteEndpoint, boxed);
+                    }
+                }
+                catch (Exception e)
+                {
+                    RainMeadow.Error(e);
+                    OnlineManager.serializer.EndRead();
+                }
+            }
+        }
+
+        public override bool canSendChatMessages => true;
+        public override void SendChatMessage(string message)
+        {
+            if (serverPeer is null) throw new InvalidProgrammerException("serverPeer is null");
+            // bool needSendToServer = false;
+            var packet = new RouterChatMessage(
+                ((RouterPlayerId)OnlineManager.mePlayer.id).routingID,
+                message
+            );
+
+
+            // since we're broadcasting this anyway, let's delegate the work to the server completey.
+            // this way we don't get any duplicate messages.
+
+            // REVIEW: approved, though this comment is technically wrong, because the server already avoids duplicate messages for these types of packets (that's not the source of the issue I pointed out to you the other day)
+            // however, there's a scenario where chat messages go completely missing because of this same logic.
+
+            // foreach (OnlinePlayer player in OnlineManager.players)
+            // {
+            //     if (player.isMe) continue;
+            //     RouterPlayerId playerId = (RouterPlayerId)player.id;
+            //     if (playerId.endPoint == serverPeer) {
+            //         needSendToServer = true;
+            //     } else {
+            //         Send(playerId.endPoint, packet, SecuredPeerId..PacketType.Reliable, false);
+            //     }
+            // }
+
+            SendPacket(serverPeer, packet, PacketReliability.Reliable);
+            RecieveChatMessage(OnlineManager.mePlayer, message);
+        }
+
+    }
+}

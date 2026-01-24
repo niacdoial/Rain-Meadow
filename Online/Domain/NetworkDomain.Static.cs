@@ -47,15 +47,6 @@ namespace RainMeadow
         public static event PlayerListReceived_t OnPlayerListReceived = delegate { };
         public static event LobbyJoined_t OnLobbyJoined = delegate { };
 
-        public static void AbortJoinLobby(string error = "")
-        {
-            if (OnlineManager.currentlyJoiningLobby == null) return;
-            if (OnlineManager.lobby != null) OnlineManager.LeaveLobby();
-            OnlineManager.currentlyJoiningLobby = null!;
-            OnLobbyJoined?.Invoke(false, error);
-            return;
-        }
-
         protected static void OnLobbyJoinedEvent(bool ok, string error = "") => OnLobbyJoined?.Invoke(ok, error);
         protected static void OnPlayerListReceivedEvent(MeadowPlayerId[] players) => OnPlayerListReceived?.Invoke(players);
         protected static void OnLobbyListReceivedEvent(bool ok, LobbyInfo[] lobbies) => OnLobbyListReceived?.Invoke(ok, lobbies);
@@ -151,69 +142,5 @@ namespace RainMeadow
         public delegate void PlayerListReceived_t(MeadowPlayerId[] players);
         public delegate void LobbyJoined_t(bool ok, string error = "");
 
-        public abstract OnlinePlayer CreateMePlayer();
-        public abstract void RequestLobbyList(); // todo custom filters?
-
-        public abstract void CreateLobby(LobbyVisibility visibility, string gameMode, string? password, int? maxPlayerCount, bool pinned = false);
-
-        public virtual bool canDirectConnect => false;
-        public virtual LobbyInfo GenerateDCLobbyInfo(string connectstr) // throws FormatException or NotImplementedException
-        {
-            throw new NotImplementedException();
-        }
-
-
-        public abstract void RequestJoinLobby(LobbyInfo lobby, string? password);
-        public virtual void AcceptOrRejectPlayer(OnlinePlayer player, bool accept) {}
-        public void JoinLobby(bool success, string error = "")
-        {
-            if (success)
-            {
-                RainMeadow.Debug("Joining lobby");
-                OnLobbyJoinedEvent(true);
-            }
-            else
-            {
-                OnlineManager.LeaveLobby();
-                RainMeadow.Debug($"Failed to join local game. {error}");
-                OnLobbyJoinedEvent(false, Utils.Translate(error));
-            }
-        }
-        public abstract void HandleLeavingLobby();
-
-        public abstract OnlinePlayer? GetLobbyOwner();
-
-        public virtual OnlinePlayer GetPlayer(MeadowPlayerId id)
-        {
-            return OnlineManager.players.FirstOrDefault(p => p.id == id);
-        }
-
-        // the idea here was to decide by ping some day
-        public virtual OnlinePlayer BestTransferCandidate(OnlineResource onlineResource, List<OnlinePlayer> subscribers)
-        {
-            if (onlineResource.isAvailable && onlineResource.isActive && subscribers.Contains(OnlineManager.mePlayer) && !OnlineManager.mePlayer.isActuallySpectating) return OnlineManager.mePlayer;
-            if (subscribers.Count < 1) return null;
-            return subscribers.FirstOrDefault(p => !p.hasLeft && OnlineManager.lobby.gameMode.PlayerCanOwnResource(p, onlineResource));
-        }
-
-        public virtual bool canSendChatMessages => false;
-        public virtual void FilterMessage(ref string message) { }
-        public virtual void SendChatMessage(string message) { }
-        public virtual void RecieveChatMessage(OnlinePlayer player, string message)
-        {
-            ChatLogManager.LogMessage($"{player.id.GetPersonaName()}", $"{message}");
-        }
-
-        public abstract MeadowPlayerId GetEmptyId();
-
-
-        public abstract bool canOpenInvitations { get; }
-        public virtual void OpenInvitationOverlay()
-        {
-            OnlineManager.instance.manager.ShowDialog(new DialogNotify("You cannot use this feature here.", OnlineManager.instance.manager, null));
-        }
-
-        public virtual bool IsDev(MeadowPlayerId player) => false;
-        public virtual bool IsTrustedCommunity(MeadowPlayerId player) => false;
     }
 }

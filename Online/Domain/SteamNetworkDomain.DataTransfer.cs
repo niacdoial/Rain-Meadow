@@ -162,14 +162,65 @@ namespace RainMeadow
             }
         }
 
-        public override void ForgetPlayer(OnlinePlayer player)
+        public override bool canSendChatMessages => true;
+        public override void SendChatMessage(string message)
         {
+            byte[] msgBytes = System.Text.Encoding.UTF8.GetBytes(message);
+            bool outputted = SteamMatchmaking.SendLobbyChatMsg(lobbyID, msgBytes, msgBytes.Length);
 
+            if (!outputted) RainMeadow.Debug($"Failed to send message: {msgBytes} {msgBytes.Length}");
         }
 
-        public override void ForgetEverything()
+        private void LobbyChatMessageReceived(LobbyChatMsg_t callback)
         {
+            CSteamID senderID;
+            byte[] msgData = new byte[1024];
+            int msgDataLength = SteamMatchmaking.GetLobbyChatEntry((CSteamID)callback.m_ulSteamIDLobby, (int)callback.m_iChatID, out senderID, msgData, msgData.Length, out EChatEntryType _);
 
+            string message = System.Text.Encoding.UTF8.GetString(msgData, 0, msgDataLength);
+            RainMeadow.Debug($"Message from {SteamFriends.GetFriendPersonaName(senderID)}: {message}");
+            RecieveChatMessage(GetPlayerSteam(senderID.m_SteamID), message);
+        }
+
+
+        private void LobbyChatUpdated(LobbyChatUpdate_t param)
+        {
+            try
+            {
+                RainMeadow.Debug($"{param.m_ulSteamIDLobby} : {param.m_ulSteamIDUserChanged} : {param.m_ulSteamIDMakingChange} : {param.m_rgfChatMemberStateChange}");
+                if (OnlineManager.lobby == null)
+                {
+                    RainMeadow.Error("got lobby event with no lobby!");
+                    return;
+                }
+
+                if ((CSteamID)param.m_ulSteamIDLobby != lobbyID)
+                {
+                    RainMeadow.Error("got lobby event for wrong lobby!");
+                    return;
+                }
+
+                UpdatePlayersList();
+            }
+            catch (Exception e)
+            {
+                RainMeadow.Error(e);
+                throw;
+            }
+        }
+
+        public bool filteringAvailable;
+        /// <summary>
+        /// Filters a message using Steam if ProfanityFilter is enabled in Remix options.
+        /// </summary>
+        /// <param name="message"></param>
+        public override void FilterMessage(ref string message)
+        {
+            if (!filteringAvailable || !RainMeadow.rainMeadowOptions.ProfanityFilter.Value || OnlineManager.lobby == null) return;
+            if (SteamUtils.FilterText(ETextFilteringContext.k_ETextFilteringContextChat, CSteamID.Nil, message, out string pchOutFilteredText, (uint)(message.Length * 2 + 1)) > 0)
+            {
+                message = pchOutFilteredText;
+            }
         }
 
     }
