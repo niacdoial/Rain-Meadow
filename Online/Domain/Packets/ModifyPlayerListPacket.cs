@@ -70,7 +70,7 @@ namespace RainMeadow
                         if (((LANNetworkDomain.LANPlayerId)players[i].id).IsMe()) 
                         {
                             // That's me
-                            // Put me where I belong.
+                            // move me in the list, instead of creating a new me from scratch
                             OnlineManager.players.Remove(OnlineManager.mePlayer);
                             OnlineManager.players.Add(OnlineManager.mePlayer);
                             continue;

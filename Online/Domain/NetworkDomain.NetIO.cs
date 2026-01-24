@@ -26,8 +26,8 @@ namespace RainMeadow
             Reliable
         }
         
-        public virtual bool CustomDataSupported => false;
-        public virtual bool SupportsBoxedEncryption => false;
+        public virtual bool CustomDataSupported => false;  // REVIEW: override this in the individual Domains
+        public virtual bool SupportsBoxedEncryption => false;  // REVIEW: either use or discard
         public virtual void SendCustomData(OnlinePlayer toPlayer, string key, byte[] data, PacketReliability sendType, bool boxed = false) => throw new NotImplementedException();
     }
 }

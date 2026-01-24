@@ -20,7 +20,6 @@ namespace RainMeadow
             NetworkDomain.PlatformPeerManager.OnPeerForgotten += (SecuredPeerManager.RemotePeer endPoint) => {
                 // first, check if this endpoint is managed by the current NetworkDomain
                 // then, check if the peer timed out or if we booted them already (done in the callee)
-                
 
                 if (NetworkDomain.currentDomain == NetworkDomainType.LAN)
                 {
@@ -33,6 +32,7 @@ namespace RainMeadow
                     {
                         if (endPoint.id.Equals(lobbyInfo.endPoint))
                         {
+                            // REVIEW: are we giving up on rotating who hosts?
                             OnlineManager.QuitWithError("Connection Lost...");
                         }
                     }
@@ -82,7 +82,7 @@ namespace RainMeadow
                         dialogue += Environment.NewLine + ip.ToString() + ":" + PlatformPeerManager.port.ToString();
                     }
                 }
-                else dialogue += Utils.Translate("<NAME> network interface is ").Replace("<NAME>", name) + endPoint.ToString();
+                else dialogue += Utils.Translate("<NAME>'s network interface is ").Replace("<NAME>", name) + endPoint.ToString();
                 if (OnlineManager.lobby?.owner?.id?.Equals(this) ?? false)
                 {
                     string isMe0 = isMe ? "You are" : "This player is";
@@ -187,6 +187,7 @@ namespace RainMeadow
                     RainMeadowModManager.ModArrayToString(RainMeadowModManager.GetRequiredMods()), RainMeadowModManager.ModArrayToString(RainMeadowModManager.GetBannedMods()));
                 for (int i = 0; i < 8; i++)
                 {
+                    // REVIEW: check this line later (method name, boxing status)
                     SendPacket(endPoint, packet, PacketReliability.Unreliable, true);
                 }
             }
@@ -273,17 +274,17 @@ namespace RainMeadow
             SendAcknoledgement(lanid.endPoint);
             RainMeadow.Debug($"Added {joiningPlayer} to the lobby matchmaking player list");
 
-            if (OnlineManager.lobby != null && OnlineManager.lobby.isOwner)
+            if (OnlineManager.lobby is not null && OnlineManager.lobby.isOwner)
             {
 
                 // Tell the other players to create this player
+                var newPlayerPacket = new ModifyPlayerListPacket(ModifyPlayerListPacket.Operation.Add, new OnlinePlayer[] { joiningPlayer });
                 foreach (OnlinePlayer player in OnlineManager.players)
                 {
                     if (player.isMe || player == joiningPlayer)
                         continue;
 
-                    SendP2P(player, new ModifyPlayerListPacket(ModifyPlayerListPacket.Operation.Add, new OnlinePlayer[] { joiningPlayer }),
-                        PacketReliability.Reliable, true);
+                    SendP2P(player, newPlayerPacket, PacketReliability.Reliable, true);
                 }
 
                 // Tell joining peer to create everyone in the server
@@ -300,23 +301,21 @@ namespace RainMeadow
             StackTrace stackTrace = new();
             RainMeadow.Debug(stackTrace.ToString());
 
-
             if (leavingPlayer.isMe) return;
             if (!OnlineManager.players.Contains(leavingPlayer)) { return; }
             OnlineManager.RemovePlayer(leavingPlayer);
-            if (OnlineManager.lobby is not null)
-                if (OnlineManager.lobby.isOwner)
+            if (OnlineManager.lobby is not null && OnlineManager.lobby.isOwner)
+              {
+                // Tell the other players to remove this player
+                var removalPacket = new ModifyPlayerListPacket(ModifyPlayerListPacket.Operation.Remove, new OnlinePlayer[] { leavingPlayer });
+                foreach (OnlinePlayer player in OnlineManager.players)
                 {
-                    // Tell the other players to remove this player
-                    foreach (OnlinePlayer player in OnlineManager.players)
-                    {
-                        if (player.isMe)
-                            continue;
+                    if (player.isMe)
+                        continue;
 
-                        SendP2P(player, new ModifyPlayerListPacket(ModifyPlayerListPacket.Operation.Remove, new OnlinePlayer[] { leavingPlayer }),
-                            PacketReliability.Reliable, true);
-                    }
+                    SendP2P(player, removalPacket, PacketReliability.Reliable, true);
                 }
+            }
             ForgetPlayer(leavingPlayer);
             OnPlayerListReceivedEvent(OnlineManager.players.Select(x => x.id).ToArray());
         }
@@ -358,14 +357,14 @@ namespace RainMeadow
             if (OnlineManager.lobby.owner is null || OnlineManager.lobby.owner.hasLeft)
             {
                 // select a new owner.
-                // The order of players should be
+                // The order of players should be consistant across players, so everyone should agree on this
                 for (int i = 0; i < OnlineManager.players.Count; i++)
                 {
                     OnlinePlayer onlinePlayer = OnlineManager.players[i];
                     if (onlinePlayer.hasLeft) continue;
                     return onlinePlayer;
                 }
-
+                RainMeadow.Error("All players (including us!) seem to have left the lobby.");
                 return null;
             }
 

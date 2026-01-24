@@ -332,6 +332,7 @@ public class LobbyCardsList : RectangularMenuObject, Slider.ISliderOwner
             "EmptiestLobby" => filteredLobbies.OrderBy(lobby => lobby.playerCount).ToList(),
             _ => filteredLobbies.OrderBy(lobby => lobby.name).ToList()
         };
+        filteredLobbies = filteredLobbies.OrderBy(lobby => !lobby.pinned).ToList();
 
         foreach (var lobby in allLobbies)
         {

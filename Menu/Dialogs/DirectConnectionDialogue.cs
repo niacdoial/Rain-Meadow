@@ -14,7 +14,7 @@ namespace RainMeadow
         protected MenuTabWrapper tabWrapper;
         public SymbolButton cancelButton;
         public SimpleButton continueButton;
-        public OpTextBox IPBox;
+        public OpTypeBox IPBox;
         public OpComboBox domainDropDown;
 
         public CheckBox passwordCheckBox;
@@ -65,7 +65,7 @@ namespace RainMeadow
             subObjects.Add(passwordCheckBox);
 
             domainDropDown = new OpComboBox2(new Configurable<NetworkDomain.NetworkDomainType>(
-                NetworkDomain.currentDomain), new Vector2((center.x - 55f), 70f), 160f - 35f, 
+                NetworkDomain.currentDomain), new Vector2((center.x - 55f), 70f), 160f - 35f,
                 NetworkDomain.supportedDomains.Where(x => NetworkDomain.instances[x].canDirectConnect).Select(x => new ListItem(x.value, Utils.Translate(x.value))).ToList()) { colorEdge = MenuColorEffect.rgbWhite };
             subObjects.Add(new UIelementWrapper(this.tabWrapper, domainDropDown));
 

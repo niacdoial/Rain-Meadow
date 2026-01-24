@@ -24,7 +24,7 @@ public class LobbyCreateMenu : SmartMenu
     private OpComboBox2 modeDropDown;
     private ProperlyAlignedMenuLabel modeDescriptionLabel;
     private OpComboBox2 domainDropdown;
-    private OpTextBox passwordInputBox;
+    private OpTypeBox passwordInputBox;
     private MenuDialogBox? popupDialog;
     public override MenuScene.SceneID GetScene => ModManager.MMF ? manager.rainWorld.options.subBackground : MenuScene.SceneID.Landscape_SU;
 
@@ -107,6 +107,7 @@ public class LobbyCreateMenu : SmartMenu
         domainDropdown = new OpComboBox2(new Configurable<string>(
                 NetworkDomain.supportedDomains.Last().value), where, 160f - 35f, NetworkDomain.supportedDomains.Select(x => new ListItem(x.value, Utils.Translate(x.value))).ToList()) { colorEdge = MenuColorEffect.rgbWhite };
         new UIelementWrapper(this.tabWrapper, domainDropdown);
+
         where.x += 80;
 
         if (NetworkDomain.instances.OfType<NetworkDomain>().Any(x => x.IsTrustedCommunity(OnlineManager.mePlayer.id)))
