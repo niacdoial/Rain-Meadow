@@ -31,7 +31,7 @@ namespace RainMeadow
         {
             writer.Write((byte)modifyOperation);
             var lanids = players.Select(x => (LANNetworkDomain.LANPlayerId)x.id).Where(x => x.endPoint != null);
-            SecuredPeerId.SerializeArray(writer, lanids.Select(x => x.endPoint).OfType<SecuredPeerId>().ToArray(), processingEndpoint);
+            SecuredPeerId.SerializeArray(writer, lanids.Select(x => x.endPoint).OfType<SecuredPeerId>().ToArray(), processingPeer, mePeer);
 
             if (modifyOperation == Operation.Add) {
                 foreach (LANNetworkDomain.LANPlayerId lanid in lanids){
@@ -44,7 +44,7 @@ namespace RainMeadow
         public override void Deserialize(BinaryReader reader)
         {
             modifyOperation = (Operation)reader.ReadByte();
-            SecuredPeerId[] ids = SecuredPeerId.DeserializeArray(reader, processingEndpoint);
+            SecuredPeerId[] ids = SecuredPeerId.DeserializeArray(reader, processingPeer, mePeer);
 
             if (modifyOperation == Operation.Add) {
                 players = ids.Select(x => NetworkDomain.LAN.GetPlayerLAN(x, true)).ToArray();

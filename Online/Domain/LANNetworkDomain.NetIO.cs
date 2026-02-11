@@ -42,24 +42,12 @@ namespace RainMeadow
             Packet.packetFactory += PacketFactory;
         }
 
-        public void SendP2P(OnlinePlayer player, Packet packet, PacketReliability sendType, bool boxed = false)
+        public void SendP2P(OnlinePlayer player, Packet packet, PacketReliability sendType)
         {
             if (PlatformPeerManager is null) return;
             if (player.id is LANNetworkDomain.LANPlayerId lanid)
             {
-                using (MemoryStream memory = new MemoryStream(128))
-                using (BinaryWriter writer = new BinaryWriter(memory))
-                {
-                    Packet.Encode(packet, writer, lanid.endPoint);
-                    PlatformPeerManager.Send(memory.GetBuffer(), lanid.endPoint, 
-                        sendType switch  
-                        {
-                            PacketReliability.Reliable => SecuredPeerManager.PacketFlags.Reliable,
-                            _ => SecuredPeerManager.PacketFlags.Unreliable,
-                        },
-
-                        boxed);
-                }
+                SendPacket(lanid.endPoint, packet, sendType, false);
             }
         }
     }

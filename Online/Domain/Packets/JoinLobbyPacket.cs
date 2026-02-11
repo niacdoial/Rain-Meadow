@@ -22,7 +22,7 @@ namespace RainMeadow
                     if (oldLobbyInfo.endPoint == newLobbyInfo.endPoint)
                     {
                         OnlineManager.currentlyJoiningLobby = newLobbyInfo;
-                        var processingPlayer = NetworkDomain.LAN.GetPlayerLAN(processingEndpoint, true);
+                        var processingPlayer = NetworkDomain.LAN.GetPlayerLAN(processingPeer, true);
                         NetworkDomain.LAN.maxplayercount = newLobbyInfo.maxPlayerCount;
                         NetworkDomain.LAN.LobbyAcknoledgedUs(processingPlayer);
                     }

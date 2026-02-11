@@ -8,6 +8,7 @@ using System.Diagnostics;
 using UnityEngine;
 using RainMeadow.Shared;
 using System.Net.Sockets;
+using BepInEx;
 
 /// //////////////////////////////////////////////////
 /// NetworkDomain describes the common interface for the middle part of the network stack
@@ -43,9 +44,10 @@ namespace RainMeadow
                 // ignore player removal / recursive call if we are leaving the lobby
                 if (serverPeer == null) return;
 
-                if (peer.id == serverPeer) 
+                if (peer == serverPeer) 
                 {
                     OnlineManager.QuitWithError("Connection Lost...");
+                    return;
                 }
 
                 // first, check if this endpoint is managed by the current NetworkDomain
@@ -196,7 +198,7 @@ namespace RainMeadow
             //     }
             // }
 
-            SendPacket(serverPeer, packet, PacketReliability.Reliable);
+            SendPacket(serverPeer.id, packet, PacketReliability.Reliable);
             RecieveChatMessage(OnlineManager.mePlayer, message);
         }
 
@@ -224,7 +226,7 @@ namespace RainMeadow
                         "list of players (with just our player ID inside) should arrive before arrival ack", true);
                     return;
                 }
-                OnlineManager.mePlayer.id.name = RainMeadow.rainMeadowOptions.LanUserName.Value;
+                // OnlineManager.mePlayer.id.name = RainMeadow.rainMeadowOptions.LanUserName.Value;
                 OnlineManager.mePlayer.isMe = true;
             }
 
@@ -301,11 +303,15 @@ namespace RainMeadow
                     RainMeadow.Debug("Failed to join local game...");
                     return;
                 }
-                serverPeer = routerLobbyInfo.endPoint;
+                serverPeer = PlatformPeerManager.GetRemotePeer(routerLobbyInfo.endPoint, true);
 
                 RainMeadow.Debug("Sending Request to join lobby...");
-                string meName = OnlineManager.mePlayer.id.name;
-                SendPacket(serverPeer, new BeginRouterSession(RainMeadow.rainMeadowOptions.RouterExposeIP.Value, meName), PacketReliability.Reliable);
+                string meName = RainMeadow.rainMeadowOptions.LanUserName.Value;
+                if (meName.IsNullOrWhiteSpace()) meName = UsernameGenerator.GenerateRandomUsername(PlatformPeerManager.Me.GetHashCode());
+                SendPacket(serverPeer.id, new BeginRouterSession(
+                        RainMeadow.rainMeadowOptions.RouterExposeIP.Value, 
+                        meName
+                    ), PacketReliability.Reliable);
             }
             else
             {
@@ -323,7 +329,7 @@ namespace RainMeadow
                 };
 
                 SendPacket(
-                    serverPeer,
+                    serverPeer.id,
                     new PlayerJoiningDecision(joiningId.routingID, decision),
                     PacketReliability.Reliable
                 );

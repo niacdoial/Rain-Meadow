@@ -39,7 +39,7 @@ namespace RainMeadow
                 string key = reader.ReadString();
                 ushort size = reader.ReadUInt16();
                 byte[] customData = reader.ReadBytes(size);
-                HandlePacket(fromPlayer, new CustomPacket(key, customData, size));
+                HandlePacket(fromPlayer, new CustomPacket(key, new ArraySegment<byte>(customData, 0, size)));
             }
         }
 

@@ -17,7 +17,7 @@ namespace RainMeadow
                 OnlineManager.serializer.WriteData(toPlayer);
                 SecuredPeerId? peerID = GetPeerIDFromPlayer(toPlayer);
                 if (peerID is null) throw new InvalidProgrammerException("no peerid");
-                SendPacket(peerID, new SessionPacket(OnlineManager.serializer.buffer, (ushort)OnlineManager.serializer.Position), PacketReliability.Unreliable);
+                SendPacket(peerID, new SessionPacket(new ArraySegment<byte>(OnlineManager.serializer.buffer, 0, (int)OnlineManager.serializer.Position)), PacketReliability.Unreliable);
                 OnlineManager.serializer.EndWrite();
             }
             catch (Exception e)
@@ -34,7 +34,7 @@ namespace RainMeadow
             {
                 SecuredPeerId? peerID = GetPeerIDFromPlayer(toPlayer);
                 if (peerID is null) throw new InvalidProgrammerException("no peerid");
-                SendPacket(peerID, new CustomPacket(key, data, (ushort)data.Length) {boxed = boxed}, sendType);
+                SendPacket(peerID, new CustomPacket(key, new ArraySegment<byte>(data, 0, data.Length)) {boxed = boxed}, sendType);
             }
 
             catch (Exception e)
@@ -56,15 +56,7 @@ namespace RainMeadow
             RainMeadow.DebugMe();
             foreach(SecuredPeerId broadId in PlatformPeerManager.GetBroadcastPeerIDs())
             {
-                using (MemoryStream memory = new MemoryStream(128))
-                using (BinaryWriter writer = new BinaryWriter(memory))
-                {
-                    Packet.Encode(packet, writer, broadId);
-
-                    for (int i = 0; i < 4; i++)
-                        PlatformPeerManager.Send(memory.GetBuffer(), broadId,
-                            SecuredPeerManager.PacketFlags.Broadcast, false);
-                }
+                SendPacket(broadId, packet, PacketReliability.Unreliable, true);
             }
         }
 
@@ -74,7 +66,7 @@ namespace RainMeadow
             using (MemoryStream memory = new MemoryStream(128))
             using (BinaryWriter writer = new BinaryWriter(memory))
             {
-                Packet.Encode(packet, writer, peer);
+                Packet.Encode(packet, writer, peer, PlatformPeerManager.Me);
                 PlatformPeerManager.Send(memory.GetBuffer(), peer, 
                     sendType switch  
                     {
@@ -103,7 +95,7 @@ namespace RainMeadow
                     using (BinaryReader netReader = new BinaryReader(netStream))
                     {
                         if (netReader.BaseStream.Position == ((MemoryStream)netReader.BaseStream).Length) continue; // nothing to read somehow?
-                        Packet.Decode(netReader, remoteEndpoint, boxed);
+                        Packet.Decode(netReader, remoteEndpoint, PlatformPeerManager.Me, boxed);
                     }
                 }
                 catch (Exception e)

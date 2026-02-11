@@ -30,7 +30,7 @@ namespace RainMeadow
 
         public override void Process() {
             var matchmaker = (LANNetworkDomain)NetworkDomain.instances[NetworkDomain.NetworkDomainType.LAN];
-            var processingPlayer = matchmaker.GetPlayerLAN(processingEndpoint, true);
+            var processingPlayer = matchmaker.GetPlayerLAN(processingPeer, true);
             NetworkDomain.currentInstance.RecieveChatMessage(processingPlayer, message);
         }
     }

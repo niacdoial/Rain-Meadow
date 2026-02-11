@@ -62,7 +62,7 @@ namespace RainMeadow
 
         public LANNetworkDomain.LANLobbyInfo MakeLobbyInfo()
         {
-            return new LANNetworkDomain.LANLobbyInfo(processingEndpoint, name, mode, currentplayercount, passwordprotected, maxplayers, mods, bannedMods);
+            return new LANNetworkDomain.LANLobbyInfo(processingPeer, name, mode, currentplayercount, passwordprotected, maxplayers, mods, bannedMods);
         }
 
     }

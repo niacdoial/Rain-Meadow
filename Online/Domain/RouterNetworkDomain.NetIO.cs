@@ -37,9 +37,9 @@ namespace RainMeadow
                 RainMeadow.Error($"serverPeer is null, cannot check that the packet is from the right peer");
                 return false;
             }
-            if (packet.processingEndpoint != serverPeer)
+            if (packet.processingPeer != serverPeer.id)
             {
-                RainMeadow.Error($"Recieved from-server packet from {packet.processingEndpoint}, not server: {serverPeer}");
+                RainMeadow.Error($"Recieved from-server packet from {packet.processingPeer}, not server: {serverPeer}");
                 return false;
             }
             return true;
@@ -52,13 +52,13 @@ namespace RainMeadow
             if (GetPlayerRouter(fromRouterID, false) is OnlinePlayer player
                 && player.id is RouterPlayerId senderID
             ) {
-                if (packet.processingEndpoint == senderID.endPoint) {
+                if (packet.processingPeer == senderID.endPoint) {
                     return player;
-                } else if (packet.processingEndpoint == serverPeer) {
+                } else if (packet.processingPeer == serverPeer?.id) {
                     // we also tolerate players switching to server-proxying halfway
                     return player;
                 } else {
-                    RainMeadow.Error($"Possible impersonation: player {fromRouterID} can't come from endpoint {packet.processingEndpoint}");
+                    RainMeadow.Error($"Possible impersonation: player {fromRouterID} can't come from endpoint {packet.processingPeer}");
                     return null;
                 }
             } else {
@@ -73,7 +73,7 @@ namespace RainMeadow
             if (!ValidateIsFromServer(packet)) return;
 
             if (NetworkDomain.currentDomain != NetworkDomain.NetworkDomainType.Router) return;
-            var newLobbyInfo = new RouterLobbyInfo(packet.processingEndpoint, packet.name, packet.mode, 1, packet.passwordprotected, packet.maxplayers, packet.mods, packet.bannedMods);
+            var newLobbyInfo = new RouterLobbyInfo(packet.processingPeer, packet.name, packet.mode, 1, packet.passwordprotected, packet.maxplayers, packet.mods, packet.bannedMods);
             // If we don't have a lobby and we a currently joining a lobby
             if (OnlineManager.lobby is null && OnlineManager.currentlyJoiningLobby is not null)
             {
@@ -103,9 +103,9 @@ namespace RainMeadow
 
                 unsafe
                 {
-                    fixed (byte* data = packet.data)
+                    fixed (byte* data = packet.data.Array)
                     {
-                        maybePlayer.UpdateSessionBuffer((IntPtr)data, packet.data.Length);
+                        maybePlayer.UpdateSessionBuffer((IntPtr)(data + packet.data.Offset), packet.data.Count);
                     }
                 }
             }
@@ -123,14 +123,6 @@ namespace RainMeadow
                     for (int i = 0; i < packet.routerIds.Count; i++)
                     {
                         RouterPlayerId playerID = new RouterPlayerId(packet.routerIds[i]);
-                        if (!RainMeadow.rainMeadowOptions.RouterExposeIP.Value || packet.endPoints[i] == null)
-                        {
-                            playerID.endPoint = null;
-                        } 
-                        else 
-                        {
-                            playerID.endPoint = packet.endPoints[i];
-                        }
                         playerID.name = packet.userNames[i];
 
                         OnlinePlayer? addedPlayer = GetPlayerRouter(packet.routerIds[i], false);
@@ -181,7 +173,7 @@ namespace RainMeadow
             {
                 return;
             }
-            if (packet.key.Length > 16 || packet.data.Length > 32768)
+            if (packet.key.Length > 16 || packet.data.Count > 32768)
             {
                 RainMeadow.Error($"Custom Packet was too large, the maximum size is 32768");
                 return;
@@ -193,11 +185,11 @@ namespace RainMeadow
                     return;
                 }
                 // convert the RouterCustomPacket into a CustomPacket to process it further
-                CustomManager.HandlePacket(player, new CustomPacket(packet.key, packet.data, (ushort)packet.data.Length));
+                CustomManager.HandlePacket(player, new CustomPacket(packet.key, packet.data));
             }
         }
 
-        SecuredPeerId? serverPeer = null;
+        SecuredPeerManager.RemotePeer? serverPeer = null;
         public override void SendSessionData(OnlinePlayer toPlayer)
         {
             if (PlatformPeerManager is null) return;
@@ -206,15 +198,16 @@ namespace RainMeadow
             {
                 OnlineManager.serializer.WriteData(toPlayer);
                 var playerID = (RouterPlayerId)toPlayer.id;
+                byte[] buffer = new byte[OnlineManager.serializer.Position];
+                Buffer.BlockCopy(OnlineManager.serializer.buffer, 0, buffer, 0, (int)OnlineManager.serializer.Position);
                 var myId = (RouterPlayerId)OnlineManager.mePlayer.id;
                 var routerPacket = new RouteSessionData(
                     playerID.routingID,
                     myId.routingID,
-                    OnlineManager.serializer.buffer,
-                    (ushort)OnlineManager.serializer.Position
+                    new ArraySegment<byte>(buffer, 0, (int)OnlineManager.serializer.Position)
                 );
 
-                SendPacket(playerID.endPoint is null? serverPeer : playerID.endPoint, routerPacket, PacketReliability.Unreliable);
+                SendPacket(playerID.endPoint is null? serverPeer.id : playerID.endPoint, routerPacket, PacketReliability.Unreliable);
             }
             catch (Exception e)
             {
@@ -235,9 +228,9 @@ namespace RainMeadow
             {
                 RouterPlayerId playerID = (RouterPlayerId)toPlayer.id;
                 RouterPlayerId meID = (RouterPlayerId)OnlineManager.mePlayer.id;
-                var packet = new RouterCustomPacket(playerID.routingID, meID.routingID, key, data, (ushort)data.Length);
+                var packet = new RouterCustomPacket(playerID.routingID, meID.routingID, key, new ArraySegment<byte>(data, 0, data.Length));
                 packet.boxed = boxed;
-                SendPacket(playerID.endPoint is null? serverPeer : playerID.endPoint, packet, sendType);
+                SendPacket(playerID.endPoint is null? serverPeer.id : playerID.endPoint, packet, sendType);
             }
             catch (Exception e)
             {
@@ -259,13 +252,12 @@ namespace RainMeadow
                     byte[]? data = PlatformPeerManager.Receive(out SecuredPeerId? remoteEndpoint, out bool boxed);
                     if (data == null) continue;
                     if (remoteEndpoint is null) continue;
-                    serverPeer?.CompareAndUpdate(remoteEndpoint);  // the server might need to be updated on how to be contacted
 
                     using (MemoryStream netStream = new MemoryStream(data))
                     using (BinaryReader netReader = new BinaryReader(netStream))
                     {
                         if (netReader.BaseStream.Position == ((MemoryStream)netReader.BaseStream).Length) continue; // nothing to read somehow?
-                        Packet.Decode(netReader, remoteEndpoint, boxed);
+                        Packet.Decode(netReader, remoteEndpoint, PlatformPeerManager.Me, boxed);
                     }
                 }
                 catch (Exception e)
@@ -281,7 +273,7 @@ namespace RainMeadow
             if (PlatformPeerManager is null) return;
             if (player.id is RouterNetworkDomain.RouterPlayerId routid)
             {
-                if (routid.endPoint == serverPeer) return;   // do not forget the server accidentally!
+                if (routid.endPoint == serverPeer?.id) return;   // do not forget the server accidentally!
                 if (routid.endPoint is null) return;
                 PlatformPeerManager.ForgetPeer(routid.endPoint);
             }

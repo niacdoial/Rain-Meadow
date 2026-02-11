@@ -19,7 +19,7 @@ namespace RainMeadow
             RainMeadow.DebugMe();
             if (OnlineManager.lobby != null && NetworkDomain.currentDomain == NetworkDomain.NetworkDomainType.LAN)
             {
-                var processingPlayer = NetworkDomain.LAN?.GetPlayerLAN(processingEndpoint, true);
+                var processingPlayer = NetworkDomain.LAN?.GetPlayerLAN(processingPeer, true);
 
                 if (LanUserName.Length > 0)
                 {

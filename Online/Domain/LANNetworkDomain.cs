@@ -108,14 +108,14 @@ namespace RainMeadow
                     if (endPoint is null) throw new Exception("Can't serialize null endpoint");
                     if (serializer.currPlayer?.id is not LANPlayerId to) throw new Exception("Can't serialize to non LAN player");
                     if (to.endPoint is null) throw new Exception("Can't serialize to null endpoint");
-                    endPoint.Serialize(serializer.writer, to.endPoint);
+                    endPoint.Serialize(serializer.writer, to.endPoint, PlatformPeerManager.Me);
                 }
                 else if (serializer.IsReading)
                 {
                     if (NetworkDomain.PlatformPeerManager is null) throw new Exception("Peermanager is null");
                     if (serializer.currPlayer?.id is not LANPlayerId from) throw new Exception("Can't serialize from non LAN player");
                     if (from.endPoint is null) throw new Exception("Can't serialize from null endpoint");
-                    endPoint = SecuredPeerId.Deserialize(serializer.reader, from.endPoint);
+                    endPoint = SecuredPeerId.Deserialize(serializer.reader, from.endPoint, PlatformPeerManager.Me);
                 }
             }
 
@@ -231,7 +231,7 @@ namespace RainMeadow
             foreach (OnlinePlayer player in OnlineManager.players)
             {
                 if (player.isMe) continue;
-                SendP2P(player, new ChatMessagePacket(message), PacketReliability.Reliable, true);
+                SendP2P(player, new ChatMessagePacket(message), PacketReliability.Reliable);
             }
 
             RecieveChatMessage(OnlineManager.mePlayer, message);
@@ -283,13 +283,13 @@ namespace RainMeadow
                         continue;
 
                     SendP2P(player, new ModifyPlayerListPacket(ModifyPlayerListPacket.Operation.Add, new OnlinePlayer[] { joiningPlayer }),
-                        PacketReliability.Reliable, true);
+                        PacketReliability.Reliable);
                 }
 
                 // Tell joining peer to create everyone in the server
                 SendP2P(joiningPlayer, new ModifyPlayerListPacket(ModifyPlayerListPacket.Operation.Add,
                     OnlineManager.players.ToArray()),
-                    PacketReliability.Reliable, true);
+                    PacketReliability.Reliable);
             }
 
             OnPlayerListReceivedEvent(OnlineManager.players.Select(x => x.id).ToArray());
@@ -314,7 +314,7 @@ namespace RainMeadow
                             continue;
 
                         SendP2P(player, new ModifyPlayerListPacket(ModifyPlayerListPacket.Operation.Remove, new OnlinePlayer[] { leavingPlayer }),
-                            PacketReliability.Reliable, true);
+                            PacketReliability.Reliable);
                     }
                 }
             ForgetPlayer(leavingPlayer);
@@ -339,7 +339,7 @@ namespace RainMeadow
 
                 RainMeadow.Debug("Sending Request to join lobby...");
                 SendP2P(new OnlinePlayer(new LANPlayerId(lobbyInfo.endPoint)),
-                    new RequestJoinPacket(OnlineManager.mePlayer.id.name), PacketReliability.Reliable, true);
+                    new RequestJoinPacket(OnlineManager.mePlayer.id.name), PacketReliability.Reliable);
             }
             else
             {
