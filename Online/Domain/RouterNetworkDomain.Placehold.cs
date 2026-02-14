@@ -29,11 +29,11 @@ namespace RainMeadow
         // public override void CreateLobby(LobbyVisibility visibility, string gameMode, string? password, int? maxPlayerCount, bool pinned = false)
         // {
         //     currentDomain = NetworkDomainType.Router;
-        //     if (serverPeer != null) 
+        //     if (serverPeer != null)
         //     {
         //         var maxplayercount = maxPlayerCount ?? 0;
         //         var lobbyInfo = new RouterLobbyInfo(
-        //             serverPeer,
+        //             serverPeer.id,
         //             "UNNAMED", gameMode,
         //             1, (password is string), maxplayercount,
         //             RainMeadowModManager.ModArrayToString(RainMeadowModManager.GetRequiredMods()),
@@ -56,7 +56,7 @@ namespace RainMeadow
         //     RainMeadow.Debug("Sending Request to join lobby...");
         //     string meName = OnlineManager.mePlayer.id.name;
         //     SendPacket(
-        //         serverPeer,
+        //         serverPeer.id,
         //         new PublishRouterLobby(
         //             lobby.maxPlayerCount, lobby.name,  lobby.mode, lobby.hasPassword,
         //             lobby.requiredMods, lobby.bannedMods

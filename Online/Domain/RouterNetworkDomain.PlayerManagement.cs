@@ -109,14 +109,15 @@ namespace RainMeadow
                     for (int i = 0; i < packet.routerIds.Count; i++)
                     {
                         RouterPlayerId playerID = new RouterPlayerId(packet.routerIds[i]);
-                        if (!RainMeadow.rainMeadowOptions.RouterExposeIP.Value || packet.endPoints[i] == null)
-                        {
-                            playerID.endPoint = null;
-                        }
-                        else
-                        {
-                            playerID.endPoint = packet.endPoints[i];
-                        }
+                        // // REVIEW: why was the following code removed?
+                        // if (!RainMeadow.rainMeadowOptions.RouterExposeIP.Value || packet.endPoints[i] == null)
+                        // {
+                        //     playerID.endPoint = null;
+                        // }
+                        // else
+                        // {
+                        //     playerID.endPoint = packet.endPoints[i];
+                        // }
                         playerID.name = packet.userNames[i];
 
                         OnlinePlayer? addedPlayer = GetPlayerRouter(packet.routerIds[i], false);
@@ -165,7 +166,7 @@ namespace RainMeadow
                 };
 
                 SendPacket(
-                    serverPeer,
+                    serverPeer.id,
                     new PlayerJoiningDecision(joiningId.routingID, decision),
                     PacketReliability.Reliable
                 );
@@ -206,7 +207,7 @@ namespace RainMeadow
             if (PlatformPeerManager is null) return;
             if (player.id is RouterNetworkDomain.RouterPlayerId routid)
             {
-                if (routid.endPoint == serverPeer) return;   // do not forget the server accidentally!
+                if (routid.endPoint == serverPeer?.id) return;   // do not forget the server accidentally!
                 if (routid.endPoint is null) return;
                 PlatformPeerManager.ForgetPeer(routid.endPoint);
             }

@@ -47,7 +47,7 @@ namespace RainMeadow
                     using (MemoryStream ms = new MemoryStream())
                     using (BinaryWriter writer = new BinaryWriter(ms))
                     {
-                        var customPacket = new CustomPacket(key, data, (ushort)data.Length);
+                        var customPacket = new CustomPacket(key, new ArraySegment<byte>(data, 0, data.Length));
                         customPacket.SteamEncode(ms, writer);
                         writer.Flush();
                         buffer = ms.ToArray();

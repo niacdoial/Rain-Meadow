@@ -108,7 +108,7 @@ namespace RainMeadow
 
                 RainMeadow.Debug("Sending Request to join lobby...");
                 SendP2P(new OnlinePlayer(new LANPlayerId(lobbyInfo.endPoint)),
-                    new RequestJoinPacket(OnlineManager.mePlayer.id.name), PacketReliability.Reliable, true);
+                    new RequestJoinPacket(OnlineManager.mePlayer.id.name), PacketReliability.Reliable);
             }
             else
             {

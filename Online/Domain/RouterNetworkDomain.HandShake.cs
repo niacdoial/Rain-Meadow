@@ -64,11 +64,15 @@ namespace RainMeadow
                     RainMeadow.Debug("Failed to join local game...");
                     return;
                 }
-                serverPeer = routerLobbyInfo.endPoint;
+                serverPeer = PlatformPeerManager.GetRemotePeer(routerLobbyInfo.endPoint, true);
 
                 RainMeadow.Debug("Sending Request to join lobby...");
-                string meName = OnlineManager.mePlayer.id.name;
-                SendPacket(serverPeer, new BeginRouterSession(RainMeadow.rainMeadowOptions.RouterExposeIP.Value, meName), PacketReliability.Reliable);
+                string meName = RainMeadow.rainMeadowOptions.LanUserName.Value;
+                if (meName.IsNullOrWhiteSpace()) meName = UsernameGenerator.GenerateRandomUsername(PlatformPeerManager.Me.GetHashCode());
+                SendPacket(serverPeer.id, new BeginRouterSession(
+                        RainMeadow.rainMeadowOptions.RouterExposeIP.Value,
+                        meName
+                    ), PacketReliability.Reliable);
             }
             else
             {
@@ -82,7 +86,7 @@ namespace RainMeadow
             if (!ValidateIsFromServer(packet)) return;
 
             if (NetworkDomain.currentDomain != NetworkDomain.NetworkDomainType.Router) return;
-            var newLobbyInfo = new RouterLobbyInfo(packet.processingEndpoint, packet.name, packet.mode, 1, packet.passwordprotected, packet.maxplayers, packet.mods, packet.bannedMods);
+            var newLobbyInfo = new RouterLobbyInfo(packet.processingPeer, packet.name, packet.mode, 1, packet.passwordprotected, packet.maxplayers, packet.mods, packet.bannedMods);
             // If we don't have a lobby and we a currently joining a lobby
             if (OnlineManager.lobby is null && OnlineManager.currentlyJoiningLobby is not null)
             {
@@ -112,7 +116,6 @@ namespace RainMeadow
                         "list of players (with just our player ID inside) should arrive before arrival ack", true);
                     return;
                 }
-                OnlineManager.mePlayer.id.name = RainMeadow.rainMeadowOptions.LanUserName.Value;
                 OnlineManager.mePlayer.isMe = true;
             }
 

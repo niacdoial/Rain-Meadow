@@ -6,29 +6,29 @@ namespace RainMeadow
     public class CustomPacket : Packet
     {
         public string key = "";
-        public byte[] data;
+        public ArraySegment<byte> data;
         public override Type type => Type.CustomPacket;
 
         public CustomPacket() { }
-        public CustomPacket(string key, byte[] data, ushort size)
+        public CustomPacket(string key, ArraySegment<byte> data)
         {
             this.key = key;
             this.data = data;
-            this.size = size;
         }
 
         public override void Serialize(BinaryWriter writer)
         {
             base.Serialize(writer);
             writer.Write(this.key);
-            writer.Write(this.data, 0, this.size);
+            writer.Write(this.data.Array, this.data.Offset, this.size);
         }
 
         public override void Deserialize(BinaryReader reader)
         {
+            long orig = reader.BaseStream.Position;
             base.Deserialize(reader);
             this.key = reader.ReadString();
-            this.data = reader.ReadBytes(this.size);
+            this.data = new ArraySegment<byte>(reader.ReadBytes((int)(size-(reader.BaseStream.Position-orig))));
         }
 
         public override void Process()
@@ -37,32 +37,32 @@ namespace RainMeadow
             {
                 return;
             }
-            if (key.Length > 16 || data.Length > 32768)
+            if (key.Length > 16 || data.Count > 32768)
             {
                 RainMeadow.Error($"Custom Packet was too large, the maximum size is 32768");
                 return;
             }
-            
+
             if (NetworkDomain.currentInstance.CustomDataSupported && NetworkDomain.currentInstance is SecuredPeerNetworkDomain domain)
             {
-                if (domain.GetPlayerFromPeerID(processingEndpoint!) is OnlinePlayer player)
+                if (domain.GetPlayerFromPeerID(processingPeer!) is OnlinePlayer player)
                 {
                     CustomManager.HandlePacket(player, this);
                 }
                 else
                 {
-                    RainMeadow.Error($"Recieved custom packet from unknown player {processingEndpoint}");
+                    RainMeadow.Error($"Recieved custom packet from unknown player {processingPeer}");
                 }
-                
+
             }
-            
+
         }
 
         public void SteamEncode(MemoryStream ms, BinaryWriter writer)
         {
             writer.Write(this.key);
-            writer.Write(this.size);
-            writer.Write(this.data, 0, this.size);
+            writer.Write((ushort)this.data.Count);
+            writer.Write(this.data.Array, this.data.Offset, this.data.Count);
         }
     }
 }

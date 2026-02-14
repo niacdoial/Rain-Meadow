@@ -44,9 +44,10 @@ namespace RainMeadow
                 // ignore player removal / recursive call if we are leaving the lobby
                 if (serverPeer == null) return;
 
-                if (peer.id == serverPeer)
+                if (peer == serverPeer)
                 {
                     OnlineManager.QuitWithError("Connection Lost...");
+                    return;
                 }
 
                 // first, check if this endpoint is managed by the current NetworkDomain
@@ -101,9 +102,9 @@ namespace RainMeadow
                 RainMeadow.Error($"serverPeer is null, cannot check that the packet is from the right peer");
                 return false;
             }
-            if (packet.processingEndpoint != serverPeer)
+            if (packet.processingPeer != serverPeer.id)
             {
-                RainMeadow.Error($"Recieved from-server packet from {packet.processingEndpoint}, not server: {serverPeer}");
+                RainMeadow.Error($"Recieved from-server packet from {packet.processingPeer}, not server: {serverPeer.id}");
                 return false;
             }
             return true;
@@ -116,13 +117,13 @@ namespace RainMeadow
             if (GetPlayerRouter(fromRouterID, false) is OnlinePlayer player
                 && player.id is RouterPlayerId senderID
             ) {
-                if (packet.processingEndpoint == senderID.endPoint) {
+                if (packet.processingPeer == senderID.endPoint) {
                     return player;
-                } else if (packet.processingEndpoint == serverPeer) {
+                } else if (packet.processingPeer == serverPeer?.id) {
                     // we also tolerate players switching to server-proxying halfway
                     return player;
                 } else {
-                    RainMeadow.Error($"Possible impersonation: player {fromRouterID} can't come from endpoint {packet.processingEndpoint}");
+                    RainMeadow.Error($"Possible impersonation: player {fromRouterID} can't come from endpoint {packet.processingPeer}");
                     return null;
                 }
             } else {

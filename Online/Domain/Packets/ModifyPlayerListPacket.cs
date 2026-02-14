@@ -31,7 +31,7 @@ namespace RainMeadow
         {
             writer.Write((byte)modifyOperation);
             var lanids = players.Select(x => (LANNetworkDomain.LANPlayerId)x.id).Where(x => x.endPoint != null);
-            SecuredPeerId.SerializeArray(writer, lanids.Select(x => x.endPoint).OfType<SecuredPeerId>().ToArray(), processingEndpoint);
+            SecuredPeerId.SerializeArray(writer, lanids.Select(x => x.endPoint).OfType<SecuredPeerId>().ToArray(), processingPeer, mePeer);
 
             if (modifyOperation == Operation.Add) {
                 foreach (LANNetworkDomain.LANPlayerId lanid in lanids){
@@ -67,7 +67,7 @@ namespace RainMeadow
                     RainMeadow.Debug("Adding players...\n\t" + string.Join<OnlinePlayer>("\n\t", players));
                     for (int i = 0; i < players.Length; i++)
                     {
-                        if (((LANNetworkDomain.LANPlayerId)players[i].id).IsMe()) 
+                        if (((LANNetworkDomain.LANPlayerId)players[i].id).IsMe())
                         {
                             // That's me
                             // move me in the list, instead of creating a new me from scratch

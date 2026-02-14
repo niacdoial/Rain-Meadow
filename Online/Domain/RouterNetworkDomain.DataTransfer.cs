@@ -30,9 +30,9 @@ namespace RainMeadow
 
                 unsafe
                 {
-                    fixed (byte* data = packet.data)
+                    fixed (byte* data = packet.data.Array)
                     {
-                        maybePlayer.UpdateSessionBuffer((IntPtr)data, packet.data.Length);
+                        maybePlayer.UpdateSessionBuffer((IntPtr)(data + packet.data.Offset), packet.data.Count);
                     }
                 }
             }
@@ -50,7 +50,7 @@ namespace RainMeadow
             {
                 return;
             }
-            if (packet.key.Length > 16 || packet.data.Length > 32768)
+            if (packet.key.Length > 16 || packet.data.Count > 32768)
             {
                 RainMeadow.Error($"Custom Packet was too large, the maximum size is 32768");
                 return;
@@ -62,11 +62,11 @@ namespace RainMeadow
                     return;
                 }
                 // convert the RouterCustomPacket into a CustomPacket to process it further
-                CustomManager.HandlePacket(player, new CustomPacket(packet.key, packet.data, (ushort)packet.data.Length));
+                CustomManager.HandlePacket(player, new CustomPacket(packet.key, packet.data);
             }
         }
 
-        SecuredPeerId? serverPeer = null;
+        SecuredPeerManager.RemotePeer? serverPeer = null;
         public override void SendSessionData(OnlinePlayer toPlayer)
         {
             if (PlatformPeerManager is null) return;
@@ -75,15 +75,16 @@ namespace RainMeadow
             {
                 OnlineManager.serializer.WriteData(toPlayer);
                 var playerID = (RouterPlayerId)toPlayer.id;
+                byte[] buffer = new byte[OnlineManager.serializer.Position];
+                Buffer.BlockCopy(OnlineManager.serializer.buffer, 0, buffer, 0, (int)OnlineManager.serializer.Position);  // REVIEW can't we skip this?
                 var myId = (RouterPlayerId)OnlineManager.mePlayer.id;
                 var routerPacket = new RouteSessionData(
                     playerID.routingID,
                     myId.routingID,
-                    OnlineManager.serializer.buffer,
-                    (ushort)OnlineManager.serializer.Position
+                    new ArraySegment<byte>(buffer, 0, (int)OnlineManager.serializer.Position)
                 );
 
-                SendPacket(playerID.endPoint is null? serverPeer : playerID.endPoint, routerPacket, PacketReliability.Unreliable);
+                SendPacket(playerID.endPoint is null? serverPeer.id : playerID.endPoint, routerPacket, PacketReliability.Unreliable);
             }
             catch (Exception e)
             {
@@ -104,9 +105,9 @@ namespace RainMeadow
             {
                 RouterPlayerId playerID = (RouterPlayerId)toPlayer.id;
                 RouterPlayerId meID = (RouterPlayerId)OnlineManager.mePlayer.id;
-                var packet = new RouterCustomPacket(playerID.routingID, meID.routingID, key, data, (ushort)data.Length);
+                var packet = new RouterCustomPacket(playerID.routingID, meID.routingID, key, new ArraySegment<byte>(data, 0, data.Length));
                 packet.boxed = boxed;
-                SendPacket(playerID.endPoint is null? serverPeer : playerID.endPoint, packet, sendType);
+                SendPacket(playerID.endPoint is null? serverPeer.id : playerID.endPoint, packet, sendType);
             }
             catch (Exception e)
             {
@@ -128,13 +129,12 @@ namespace RainMeadow
                     byte[]? data = PlatformPeerManager.Receive(out SecuredPeerId? remoteEndpoint, out bool boxed);
                     if (data == null) continue;
                     if (remoteEndpoint is null) continue;
-                    serverPeer?.CompareAndUpdate(remoteEndpoint);  // the server might need to be updated on how to be contacted
 
                     using (MemoryStream netStream = new MemoryStream(data))
                     using (BinaryReader netReader = new BinaryReader(netStream))
                     {
                         if (netReader.BaseStream.Position == ((MemoryStream)netReader.BaseStream).Length) continue; // nothing to read somehow?
-                        Packet.Decode(netReader, remoteEndpoint, boxed);
+                        Packet.Decode(netReader, remoteEndpoint, PlatformPeerManager.Me, boxed);
                     }
                 }
                 catch (Exception e)
@@ -154,7 +154,7 @@ namespace RainMeadow
                 message
             );
 
-            SendPacket(serverPeer, packet, PacketReliability.Reliable);
+            SendPacket(serverPeer.id, packet, PacketReliability.Reliable);
             RecieveChatMessage(OnlineManager.mePlayer, message);
         }
 

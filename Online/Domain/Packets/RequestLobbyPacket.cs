@@ -12,7 +12,7 @@ namespace RainMeadow
             if (OnlineManager.lobby != null)
             {
                 RainMeadow.DebugMe();
-                NetworkDomain.LAN?.SendLobbyInfo(processingEndpoint);
+                NetworkDomain.LAN?.SendLobbyInfo(processingPeer);
             }
 
         }
