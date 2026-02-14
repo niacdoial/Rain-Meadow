@@ -4,7 +4,7 @@ using RainMeadow.Shared;
 
 namespace RainMeadow
 {
-    public abstract class SecuredPeerNetworkDomain : NetworkDomain
+    public abstract partial class SecuredPeerNetworkDomain : NetworkDomain
     {
         public abstract SecuredPeerId? GetPeerIDFromPlayer(OnlinePlayer player);
         public abstract OnlinePlayer? GetPlayerFromPeerID(SecuredPeerId id);

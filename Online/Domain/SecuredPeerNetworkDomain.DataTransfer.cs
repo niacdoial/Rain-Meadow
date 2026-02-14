@@ -4,7 +4,7 @@ using RainMeadow.Shared;
 
 namespace RainMeadow
 {
-    public abstract class SecuredPeerNetworkDomain : NetworkDomain
+    public abstract partial class SecuredPeerNetworkDomain : NetworkDomain
     {
 
         public override void SendSessionData(OnlinePlayer toPlayer)
