@@ -27,7 +27,7 @@ namespace RainMeadow
             foreach (OnlinePlayer player in OnlineManager.players)
             {
                 if (player.isMe) continue;
-                SendP2P(player, new ChatMessagePacket(message), PacketReliability.Reliable, true);
+                SendP2P(player, new ChatMessagePacket(message), PacketReliability.Reliable);
             }
 
             RecieveChatMessage(OnlineManager.mePlayer, message);

@@ -44,7 +44,7 @@ namespace RainMeadow
         public override void Deserialize(BinaryReader reader)
         {
             modifyOperation = (Operation)reader.ReadByte();
-            SecuredPeerId[] ids = SecuredPeerId.DeserializeArray(reader, processingEndpoint);
+            SecuredPeerId[] ids = SecuredPeerId.DeserializeArray(reader, processingPeer, mePeer);
 
             if (modifyOperation == Operation.Add) {
                 players = ids.Select(x => NetworkDomain.LAN.GetPlayerLAN(x, true)).ToArray();

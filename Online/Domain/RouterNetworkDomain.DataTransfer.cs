@@ -62,7 +62,7 @@ namespace RainMeadow
                     return;
                 }
                 // convert the RouterCustomPacket into a CustomPacket to process it further
-                CustomManager.HandlePacket(player, new CustomPacket(packet.key, packet.data);
+                CustomManager.HandlePacket(player, new CustomPacket(packet.key, packet.data));
             }
         }
 
