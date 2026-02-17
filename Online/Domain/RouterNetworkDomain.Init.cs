@@ -7,6 +7,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using UnityEngine;
 using RainMeadow.Shared;
+using RainMeadow.Shared.Models;
 using System.Net.Sockets;
 
 /// //////////////////////////////////////////////////
@@ -74,6 +75,25 @@ namespace RainMeadow
                 base(name, mode, playerCount, hasPassword, maxPlayerCount, highImpactMods, bannedMods)
             {
                 this.endPoint = endPoint;
+            }
+
+            public RouterLobbyInfo(SecuredPeerId endPoint, string name, LobbyParameters parameters) :
+                base(name, parameters.Mode, 1, parameters.PasswordProtected, parameters.MaxPlayers, parameters.Mods, parameters.BannedMods)
+            {
+                this.endPoint = endPoint;
+            }
+
+            public LobbyParameters GetParameters()
+            {
+                return new LobbyParameters()
+                {
+                    Mode = mode,
+                    MaxPlayers = maxPlayerCount,
+                    PasswordProtected = hasPassword,
+                    Mods = requiredMods,
+                    BannedMods = bannedMods,
+                    Pinned = false,
+                };
             }
 
             public override bool Equals(LobbyInfo other)

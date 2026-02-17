@@ -119,7 +119,7 @@ namespace RainMeadow
                         // {
                         //     playerID.endPoint = packet.endPoints[i];
                         // }
-                        playerID.name = packet.userNames[i];
+                        playerID.name = packet.userData[i].username;
 
                         OnlinePlayer? addedPlayer = GetPlayerRouter(packet.routerIds[i], false);
                         if (addedPlayer is OnlinePlayer existingPlayer)

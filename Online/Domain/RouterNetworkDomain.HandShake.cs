@@ -70,7 +70,7 @@ namespace RainMeadow
                 if (string.IsNullOrWhiteSpace(meName)) meName = UsernameGenerator.GenerateRandomUsername(PlatformPeerManager.Me.GetHashCode());
                 SendPacket(serverPeer.id, new BeginRouterSession(
                         RainMeadow.rainMeadowOptions.RouterExposeIP.Value,
-                        meName
+                        meName, null
                     ), PacketReliability.Reliable);
             }
             else
@@ -85,7 +85,7 @@ namespace RainMeadow
             if (!ValidateIsFromServer(packet)) return;
 
             if (NetworkDomain.currentDomain != NetworkDomain.NetworkDomainType.Router) return;
-            var newLobbyInfo = new RouterLobbyInfo(packet.processingPeer, packet.name, packet.mode, 1, packet.passwordprotected, packet.maxplayers, packet.mods, packet.bannedMods);
+            var newLobbyInfo = new RouterLobbyInfo(packet.processingPeer, packet.name, packet.lobbyParameters);
             // If we don't have a lobby and we a currently joining a lobby
             if (OnlineManager.lobby is null && OnlineManager.currentlyJoiningLobby is not null)
             {
