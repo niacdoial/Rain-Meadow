@@ -1,4 +1,5 @@
-﻿using RWCustom;
+﻿using RainMeadow.Shared.Models;
+using RWCustom;
 using Steamworks;
 using System;
 using System.Collections.Generic;
@@ -21,10 +22,23 @@ namespace RainMeadow
             public override string directJoinCode => iD.m_SteamID.ToString();
 
             public CSteamID iD;
-            public SteamLobbyInfo(CSteamID id, string name, string mode, int playerCount, bool hasPassword, int? maxPlayerCount, string highImpactMods = "", string bannedMods = "") :
-                base(name, mode, playerCount, hasPassword, maxPlayerCount, highImpactMods, bannedMods)
+            public SteamLobbyInfo(CSteamID id) : base("", 0, new LobbyParameters())
             {
                 iD = id;
+                try
+                {
+                    name = Utils.GetTranslatedLobbyName(SteamMatchmaking.GetLobbyData(id, NAME_KEY));
+                    playerCount = SteamMatchmaking.GetNumLobbyMembers(id);
+                    parameters.Mode = SteamMatchmaking.GetLobbyData(id, MODE_KEY);
+                    parameters.PasswordProtected = bool.TryParse(SteamMatchmaking.GetLobbyData(id, PASSWORD_KEY), out var hasPass) && hasPass;
+                    parameters.MaxPlayers = SteamMatchmaking.GetLobbyMemberLimit(id);
+                    parameters.Mods = SteamMatchmaking.GetLobbyData(id, MODS_KEY);
+                    parameters.BannedMods = SteamMatchmaking.GetLobbyData(id, BANNED_MODS_KEY);
+                }
+                catch (Exception except)
+                {
+                    RainMeadow.Error(except);
+                }
             }
             public override bool Equals(LobbyInfo other)
             {
@@ -136,14 +150,7 @@ namespace RainMeadow
                     for (int i = 0; i < pCallback.m_nLobbiesMatching; i++)
                     {
                         CSteamID id = SteamMatchmaking.GetLobbyByIndex(i);
-
-                        lobbies[i] = new SteamLobbyInfo(id,
-                            Utils.GetTranslatedLobbyName(SteamMatchmaking.GetLobbyData(id, NAME_KEY)),
-                            SteamMatchmaking.GetLobbyData(id, MODE_KEY), SteamMatchmaking.GetNumLobbyMembers(id),
-                            bool.TryParse(SteamMatchmaking.GetLobbyData(id, PASSWORD_KEY), out var hasPass) && hasPass,
-                            SteamMatchmaking.GetLobbyMemberLimit(id),
-                            SteamMatchmaking.GetLobbyData(id, MODS_KEY),
-                            SteamMatchmaking.GetLobbyData(id, BANNED_MODS_KEY));
+                        lobbies[i] = new SteamLobbyInfo(id);
                     }
                 }
 
@@ -248,11 +255,11 @@ namespace RainMeadow
         {
             if (ulong.TryParse(connectstr, out var result))
             {
-                return new SteamLobbyInfo(new CSteamID(result), "Direct Connection", "Meadow", 0, true, 2);
+                return new SteamLobbyInfo(new CSteamID(result));
             }
             else
             {
-                throw new FormatException("IP Address format should be xxx.xxx.xxx.xxx:port");
+                throw new FormatException("Connection should use a valid SteamID64");
             }
         }
 
@@ -515,7 +522,7 @@ namespace RainMeadow
                     HandleLeavingLobby();
                 }
 
-                OnlineManager.currentlyJoiningLobby = new SteamLobbyInfo(param.m_steamIDLobby, "", "", 0, false, MAX_LOBBY);
+                OnlineManager.currentlyJoiningLobby = new SteamLobbyInfo(param.m_steamIDLobby);
                 Custom.rainWorld.processManager.RequestMainProcessSwitch(RainMeadow.Ext_ProcessID.LobbySelectMenu);
 
                 m_JoinLobbyCall.Set(SteamMatchmaking.JoinLobby(param.m_steamIDLobby));

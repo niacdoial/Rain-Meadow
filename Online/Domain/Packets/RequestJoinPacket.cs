@@ -29,18 +29,6 @@ namespace RainMeadow
                 // Tell everyone else about them
                 RainMeadow.Debug("Telling client they got in.");
                 NetworkDomain.LAN?.AcknoledgeLANPlayer(processingPlayer);
-
-                // Tell them they are in
-                NetworkDomain.LAN?.SendP2P(processingPlayer, new JoinLobbyPacket(
-                    NetworkDomain.LAN.maxplayercount,
-                    "LAN Lobby",
-                    OnlineManager.lobby.hasPassword,
-                    OnlineManager.lobby.gameModeType.value,
-                    OnlineManager.players.Count,
-                    RainMeadowModManager.ModArrayToString(RainMeadowModManager.GetRequiredMods()),
-                    RainMeadowModManager.ModArrayToString(RainMeadowModManager.GetBannedMods())
-                ), NetworkDomain.PacketReliability.Reliable);
-
             }
         }
 

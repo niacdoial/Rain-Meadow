@@ -7,6 +7,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using UnityEngine;
 using RainMeadow.Shared;
+using RainMeadow.Shared.Models;
 
 
 namespace RainMeadow
@@ -49,9 +50,19 @@ namespace RainMeadow
             public override string directJoinCode => endPoint.ToString();
 
             public SecuredPeerId endPoint;
-            public LANLobbyInfo(SecuredPeerId endPoint, string name, string mode, int playerCount, bool hasPassword, int maxPlayerCount, string highImpactMods = "", string bannedMods = "") :
-                base(name, mode, playerCount, hasPassword, maxPlayerCount, highImpactMods, bannedMods)
+            public LANLobbyInfo(SecuredPeerId endPoint, int playerCount, LobbyParameters parameters) :
+                base("LAN Lobby", playerCount, parameters)
             {
+                string dnsName = endPoint.endPoint.Address.ToString();
+                try
+                {
+                    dnsName = Dns.GetHostEntry(endPoint.endPoint.Address).HostName;
+                }
+                catch (Exception except)
+                {
+                    RainMeadow.Error(except);
+                }
+                name = dnsName + ":" + endPoint.endPoint.Port;
                 this.endPoint = endPoint;
             }
             public override bool Equals(LobbyInfo other)
@@ -176,15 +187,24 @@ namespace RainMeadow
             OnLobbyListReceivedEvent(true, lobbies.ToArray());
         }
 
+        public LobbyParameters GetLobbyParameters()
+        {
+            return new LobbyParameters()
+            {
+                MaxPlayers = maxplayercount,
+                PasswordProtected = OnlineManager.lobby.hasPassword,
+                Mode = OnlineManager.lobby.gameModeType.value,
+                Mods = RainMeadowModManager.ModArrayToString(RainMeadowModManager.GetRequiredMods()), 
+                BannedMods = RainMeadowModManager.ModArrayToString(RainMeadowModManager.GetBannedMods())
+            };
+        }
+
 
         public void SendLobbyInfo(SecuredPeerId endPoint)
         {
             if (OnlineManager.lobby != null && OnlineManager.lobby.isOwner)
             {
-                var packet = new InformLobbyPacket(
-                    maxplayercount, Utils.Translate("LAN Lobby"), OnlineManager.lobby.hasPassword,
-                    OnlineManager.lobby.gameModeType.value, OnlineManager.players.Count,
-                    RainMeadowModManager.ModArrayToString(RainMeadowModManager.GetRequiredMods()), RainMeadowModManager.ModArrayToString(RainMeadowModManager.GetBannedMods()));
+                var packet = new InformLobbyPacket(OnlineManager.lobby.participants.Count, GetLobbyParameters());
                 for (int i = 0; i < 8; i++)
                 {
                     SendPacket(endPoint, packet, PacketReliability.Unreliable, true);
@@ -198,7 +218,7 @@ namespace RainMeadow
             var endpoint = SecuredPeerId.GetPeerIdByName(connectstr);
             if (endpoint != null)
             {
-                return new LANNetworkDomain.LANLobbyInfo(endpoint, "Direct Connection", "Meadow", 0, true, 2);
+                return new LANLobbyInfo(endpoint, 1, new LobbyParameters());
             }
             else
             {
@@ -290,8 +310,10 @@ namespace RainMeadow
                 SendP2P(joiningPlayer, new ModifyPlayerListPacket(ModifyPlayerListPacket.Operation.Add,
                     OnlineManager.players.ToArray()),
                     PacketReliability.Reliable);
-            }
 
+                // tell them they're in
+                SendP2P(joiningPlayer, new JoinLobbyPacket(OnlineManager.lobby.participants.Count, GetLobbyParameters()), NetworkDomain.PacketReliability.Reliable);
+            }
             OnPlayerListReceivedEvent(OnlineManager.players.Select(x => x.id).ToArray());
         }
 

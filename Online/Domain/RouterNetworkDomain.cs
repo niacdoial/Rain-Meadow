@@ -9,6 +9,7 @@ using UnityEngine;
 using RainMeadow.Shared;
 using System.Net.Sockets;
 using BepInEx;
+using RainMeadow.Shared.Models;
 
 /// //////////////////////////////////////////////////
 /// NetworkDomain describes the common interface for the middle part of the network stack
@@ -70,11 +71,11 @@ namespace RainMeadow
         public class RouterLobbyInfo : LobbyInfo
         {
             public override NetworkDomainType domain => NetworkDomainType.Router;
-            public override string directJoinCode => endPoint.ToString();
+            public override string directJoinCode => endPoint.ToString(false);
 
             public SecuredPeerId endPoint;
-            public RouterLobbyInfo(SecuredPeerId endPoint, string name, string mode, int playerCount, bool hasPassword, int maxPlayerCount, string highImpactMods = "", string bannedMods = "") :
-                base(name, mode, playerCount, hasPassword, maxPlayerCount, highImpactMods, bannedMods)
+            public RouterLobbyInfo(SecuredPeerId endPoint, string name, int playerCount, LobbyParameters parameters) :
+                base(name, playerCount, parameters)
             {
                 this.endPoint = endPoint;
             }
@@ -90,9 +91,16 @@ namespace RainMeadow
         {
             public ushort routingID;
             public SecuredPeerId? endPoint;
-            public RouterPlayerId(ushort routingID) : base(
+            public PlayerInfo? info;
+            public RouterPlayerId(ushort routingID, PlayerInfo? info) : base(
                     UsernameGenerator.GenerateRandomUsername(routingID))
             {
+                this.info = info;
+                if (info is not null)
+                {
+                    this.name = info.username;
+                }
+                      
                 this.routingID = routingID;
                 endPoint = null;
             }
@@ -131,7 +139,7 @@ namespace RainMeadow
 
         public override OnlinePlayer CreateMePlayer()
         {
-            return new OnlinePlayer(new RouterPlayerId(0)
+            return new OnlinePlayer(new RouterPlayerId(0, new PlayerInfo() { username = RainMeadow.rainMeadowOptions.LanUserName.Value })
                 { name = RainMeadow.rainMeadowOptions.LanUserName.Value })
                 { isMe = true };
             // note: we don't set our IP here, because it's not useful to anyone else (because NAT)
@@ -155,7 +163,7 @@ namespace RainMeadow
             return false;
         });
 
-        public OnlinePlayer? GetPlayerRouter(ushort routingID, bool create = false)
+        public OnlinePlayer? GetPlayerRouter(ushort routingID)
         {
             var player = OnlineManager.players.FirstOrDefault(p =>
             {
@@ -163,12 +171,6 @@ namespace RainMeadow
                     if (route.routingID != 0) return route.routingID == routingID;
                 return false;
             });
-
-            if (player is null && create)
-            {
-                RainMeadow.Debug($"Couldn't find player with routing ID {routingID}. Creating one...");
-                player = new OnlinePlayer(new RouterPlayerId(routingID));
-            }
 
             return player;
         }
@@ -219,7 +221,7 @@ namespace RainMeadow
             if (((RouterPlayerId)OnlineManager.mePlayer.id).routingID == 0)
             {
                 OnlineManager.players.Remove(OnlineManager.mePlayer);
-                OnlineManager.mePlayer = GetPlayerRouter(mePlayerid, false);
+                OnlineManager.mePlayer = GetPlayerRouter(mePlayerid);
                 if (OnlineManager.mePlayer is null)
                 {
                     OnlineManager.QuitWithError("Recieved connection packets out of order:" +
@@ -276,7 +278,7 @@ namespace RainMeadow
             var endpoint = SecuredPeerId.GetPeerIdByName(connectstr);
             if (endpoint != null)
             {
-                return new RouterLobbyInfo(endpoint, "Direct Connection", "Meadow", 0, true, 2);
+                return new RouterLobbyInfo(endpoint, "Router Lobby", 1, new LobbyParameters());
             }
             else
             {
@@ -310,8 +312,8 @@ namespace RainMeadow
                 if (meName.IsNullOrWhiteSpace()) meName = UsernameGenerator.GenerateRandomUsername(PlatformPeerManager.Me.GetHashCode());
                 SendPacket(serverPeer.id, new BeginRouterSession(
                         RainMeadow.rainMeadowOptions.RouterExposeIP.Value, 
-                        meName
-                    ), PacketReliability.Reliable);
+                        meName, null
+                    ) { boxed = true }, PacketReliability.Reliable);
             }
             else
             {
@@ -364,7 +366,7 @@ namespace RainMeadow
 
         public override MeadowPlayerId GetEmptyId()
         {
-            return new RouterPlayerId(0);
+            return new RouterPlayerId(0, null);
         }
 
         public override void OpenInvitationOverlay()

@@ -49,7 +49,7 @@ namespace RainMeadow
         {
             if (NetworkDomain.currentDomain != NetworkDomain.NetworkDomainType.Router) return null;
 
-            if (GetPlayerRouter(fromRouterID, false) is OnlinePlayer player
+            if (GetPlayerRouter(fromRouterID) is OnlinePlayer player
                 && player.id is RouterPlayerId senderID
             ) {
                 if (packet.processingPeer == senderID.endPoint) {
@@ -73,7 +73,7 @@ namespace RainMeadow
             if (!ValidateIsFromServer(packet)) return;
 
             if (NetworkDomain.currentDomain != NetworkDomain.NetworkDomainType.Router) return;
-            var newLobbyInfo = new RouterLobbyInfo(packet.processingPeer, packet.name, packet.mode, 1, packet.passwordprotected, packet.maxplayers, packet.mods, packet.bannedMods);
+            var newLobbyInfo = new RouterLobbyInfo(packet.processingPeer, packet.name, 0, packet.lobbyParameters);
             // If we don't have a lobby and we a currently joining a lobby
             if (OnlineManager.lobby is null && OnlineManager.currentlyJoiningLobby is not null)
             {
@@ -122,22 +122,11 @@ namespace RainMeadow
                 case RouterModifyPlayerListPacket.Operation.Add:
                     for (int i = 0; i < packet.routerIds.Count; i++)
                     {
-                        RouterPlayerId playerID = new RouterPlayerId(packet.routerIds[i]);
-                        playerID.name = packet.userNames[i];
-
-                        OnlinePlayer? addedPlayer = GetPlayerRouter(packet.routerIds[i], false);
+                        RouterPlayerId playerID = new RouterPlayerId(packet.routerIds[i], packet.userData[i]);
+                        OnlinePlayer? addedPlayer = GetPlayerRouter(packet.routerIds[i]);
                         if (addedPlayer is OnlinePlayer existingPlayer) 
                         {
-                            if (packet.operation == RouterModifyPlayerListPacket.Operation.Update) 
-                            {
-                                // FIXME: add checks once the PeerManager guarantees player identity
-                                existingPlayer.id = playerID;
-                                RainMeadow.Debug(String.Format("updating player: {0}, name {1}", playerID.routingID, playerID.name));
-                            } 
-                            else 
-                            {
-                                RainMeadow.Debug(String.Format("redundant add-player: {0}, 'name' {1}", playerID.routingID, playerID.name));
-                            }
+                            existingPlayer.id = playerID;
                             NATPierce(existingPlayer);  // just in case
                         } 
                         else 
@@ -154,7 +143,11 @@ namespace RainMeadow
                 case RouterModifyPlayerListPacket.Operation.Remove:
                     for (int i = 0; i < packet.routerIds.Count; i++)
                     {
-                        RemoveRouterPlayer(GetPlayerRouter(packet.routerIds[i], true));
+                        if (GetPlayerRouter(packet.routerIds[i]) is OnlinePlayer p)
+                        {
+                            RemoveRouterPlayer(p);
+                        }
+                        
                     }
                     break;
             }
