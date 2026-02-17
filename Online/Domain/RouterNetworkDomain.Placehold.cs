@@ -47,11 +47,12 @@ namespace RainMeadow
             OnlineManager.currentlyJoiningLobby = lobbyInfo;
             ((RouterPlayerId)OnlineManager.mePlayer.id).routingID = 1; // we have to be the first for us to send this
 
-            // var lobbyPublishPacket = new PublishRouterLobby(
-            //     lobby.maxPlayerCount, lobby.name,  lobby.mode, lobby.hasPassword,
-            //     lobby.requiredMods, lobby.bannedMods
-            // );
-            //SendPacket(serverPeer.id, lobbyPublishPacket, PacketReliability.Reliable);
+            var lobbyPublishPacket = new PublishRouterLobby(
+                lobbyInfo.name,
+                lobbyInfo.GetParameters(),
+                RainMeadow.rainMeadowOptions.RouterExposeIP.Value
+            );
+            SendPacket(serverPeer.id, lobbyPublishPacket, PacketReliability.Reliable);
 
             OnlineManager.lobby = new Lobby(new OnlineGameMode.OnlineGameModeType(gameMode), OnlineManager.mePlayer, password);
             OnLobbyJoinedEvent(true, "");
