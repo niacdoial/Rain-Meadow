@@ -237,7 +237,13 @@ public class LobbyCreateMenu : SmartMenu
 
     private void RequestLobbyCreate()
     {
-        var domain = (NetworkDomain.NetworkDomainType)ExtEnumBase.Parse(typeof(NetworkDomain.NetworkDomainType), domainDropdown.value, true); ;
+        var domain = (NetworkDomain.NetworkDomainType)ExtEnumBase.Parse(typeof(NetworkDomain.NetworkDomainType), domainDropdown.value, true);
+        if (domain == NetworkDomain.NetworkDomainType.Router)
+        {
+            RainMeadow.Debug("override value: " + lobbyServerOverrideBox.value);
+            NetworkDomain.Router.PreconfigureLobbyServerForCreation(lobbyServerOverrideBox.value);
+        }
+
         RainMeadow.DebugMe();
         Enum.TryParse<NetworkDomain.LobbyVisibility>(visibilityDropDown.value, out var value);
         string? password = passwordInputBox.value.IsNullOrWhiteSpace() ? null : passwordInputBox.value;

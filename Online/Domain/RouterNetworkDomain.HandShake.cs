@@ -19,15 +19,14 @@ namespace RainMeadow
             lobbyinfo.Clear();
         }
 
-        public override void CreateLobby(LobbyVisibility visibility, string gameMode, string? password, int? maxPlayerCount, bool pinned)
-        {
-            // REVIEW: I want to know what you think the workflow should be here
-            NetworkDomain.OnLobbyJoinedEvent(false, "Create servers via the command line for now.");
+        // public override void CreateLobby(LobbyVisibility visibility, string gameMode, string? password, int? maxPlayerCount, bool pinned)
+        // {
+        //     NetworkDomain.OnLobbyJoinedEvent(false, "Create servers via the command line for now.");
 
-            // maxplayercount = maxPlayerCount ?? 0;
-            // OnlineManager.lobby = new Lobby(new OnlineGameMode.OnlineGameModeType(gameMode), OnlineManager.mePlayer, password);
-            // NetworkDomain.OnLobbyJoinedEvent(true, "");
-        }
+        //     // maxplayercount = maxPlayerCount ?? 0;
+        //     // OnlineManager.lobby = new Lobby(new OnlineGameMode.OnlineGameModeType(gameMode), OnlineManager.mePlayer, password);
+        //     // NetworkDomain.OnLobbyJoinedEvent(true, "");
+        // }
 
         public override bool canOpenInvitations => false;
         public override void OpenInvitationOverlay()
