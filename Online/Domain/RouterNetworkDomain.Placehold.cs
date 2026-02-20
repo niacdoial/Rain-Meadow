@@ -13,12 +13,13 @@ namespace RainMeadow
 {
     public partial class RouterNetworkDomain
     {
+        SecuredPeerManager.RemotePeer preloadedServerPeer;
         public void PreconfigureLobbyServerForCreation(string lobbyEndPointString)
         {
             var lobbyEndpoint = SecuredPeerId.GetPeerIdByName(lobbyEndPointString);
             if (lobbyEndpoint != null)
             {
-                serverPeer = PlatformPeerManager.GetRemotePeer(lobbyEndpoint, true);
+                preloadedServerPeer = PlatformPeerManager.GetRemotePeer(lobbyEndpoint, true);
             }
             else
             {
@@ -29,11 +30,16 @@ namespace RainMeadow
         public override void CreateLobby(LobbyVisibility visibility, string gameMode, string? password, int? maxPlayerCount, bool pinned = false)
         {
             currentDomain = NetworkDomainType.Router;
-            if (serverPeer == null)
+            if (preloadedServerPeer == null)
             {
                 OnLobbyJoinedEvent(false, Utils.Translate("Global matchmaking is not yet implemented, you need to provide a lobby server override."));
                 // FIXME: this is where we would insert the global-matchmaking-negociation to find our assigned lobby server
                 return;
+            }
+            else
+            {
+                serverPeer = preloadedServerPeer;
+                preloadedServerPeer = null;
             }
 
             var maxplayercount = maxPlayerCount ?? 0;
@@ -47,9 +53,13 @@ namespace RainMeadow
             OnlineManager.currentlyJoiningLobby = lobbyInfo;
             ((RouterPlayerId)OnlineManager.mePlayer.id).routingID = 1; // we have to be the first for us to send this
 
+            string meName = RainMeadow.rainMeadowOptions.LanUserName.Value;
+            if (string.IsNullOrWhiteSpace(meName)) meName = UsernameGenerator.GenerateRandomUsername(PlatformPeerManager.Me.GetHashCode());
+
             var lobbyPublishPacket = new PublishRouterLobby(
                 lobbyInfo.name,
                 lobbyInfo.GetParameters(),
+                meName,
                 RainMeadow.rainMeadowOptions.RouterExposeIP.Value
             );
             SendPacket(serverPeer.id, lobbyPublishPacket, PacketReliability.Reliable);

@@ -171,8 +171,10 @@ public class LobbyCreateMenu : SmartMenu
         where.x += 80;
         lobbyServerOverrideBox = new OpTypeBox(new Configurable<string>(""), where, 160f)
         {
+            accept = OpTextBox.Accept.StringASCII,
             allowSpace = true,
             defaultValue = "",
+            maxLength = 100,
             description = Utils.Translate("In Router network, specify the endpoint (pubkey@ip:port) for a custom lobby server instead of submitting the lobby to the global matchmaking server"),
             password = RainMeadow.rainMeadowOptions.StreamerMode.Value == RainMeadowOptions.StreamMode.Me || RainMeadow.rainMeadowOptions.StreamerMode.Value == RainMeadowOptions.StreamMode.Everyone,
         };
