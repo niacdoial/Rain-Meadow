@@ -7,6 +7,7 @@ namespace RainMeadow
     public class SessionPacket : Packet
     {
         public override Type type => Type.Session;
+        public override bool requireBoxed => false;
         private ArraySegment<byte> data;
 
         public SessionPacket() : base() { }
