@@ -168,7 +168,7 @@ namespace RainMeadow
 
                 SendPacket(
                     serverPeer.id,
-                    new PlayerJoiningDecision(joiningId.routingID, decision),
+                    new PlayerJoiningDecision(joiningId.routingID, decision){boxed=true},
                     PacketReliability.Reliable
                 );
             }

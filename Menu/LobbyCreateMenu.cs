@@ -11,10 +11,6 @@ using System.Linq;
 using UnityEngine;
 using Menu.Remix.MixedUI.ValueTypes;
 
-// TODO: remove those debug imports
-using System.Reflection;
-using System.Reflection.Emit;
-
 namespace RainMeadow;
 
 public class LobbyCreateMenu : SmartMenu
@@ -63,14 +59,6 @@ public class LobbyCreateMenu : SmartMenu
               .ToList()
         ) { colorEdge = MenuColorEffect.rgbWhite };
         modeDropDown.OnChanged += UpdateModeDescription;
-        RainMeadow.Debug("FOUND UI SHIT ##################################################################################################################################################################");
-        foreach(var prop in modeDropDown.GetType().GetProperties()) {
-            RainMeadow.Debug(prop.Name.ToString());// + "=" + prop.GetValue(modeDropDown, null).ToString());
-        }
-        RainMeadow.Debug("MORE UI SHIT");
-        foreach(var meth in modeDropDown.GetType().GetMethods(BindingFlags.Public|BindingFlags.Instance|BindingFlags.DeclaredOnly)) {
-            RainMeadow.Debug(meth.Name.ToString());
-        }
 
         new UIelementWrapper(this.tabWrapper, modeDropDown);
         where.x -= 80;
@@ -147,7 +135,6 @@ public class LobbyCreateMenu : SmartMenu
         domainDropdown = new OpComboBox2(new Configurable<string>(
                 NetworkDomain.supportedDomains.Last().value), where, 160f - 35f, NetworkDomain.supportedDomains.Select(x => new ListItem(x.value, Utils.Translate(x.value))).ToList()) { colorEdge = MenuColorEffect.rgbWhite };
         new UIelementWrapper(this.tabWrapper, domainDropdown);
-        // domainDropdown.OnChanged += UpdateDomain;
         where.x -= 80;
 
 
@@ -187,15 +174,6 @@ public class LobbyCreateMenu : SmartMenu
         mainPage.subObjects.Add(lobbyServerOverrideLabel);
         where.x -= 200;
 
-        // RainMeadow.Debug("FOUND UI SHIT ##################################################################################################################################################################");
-        // foreach(var prop in lobbyServerOverrideWrapper.GetType().GetProperties()) {
-        //     RainMeadow.Debug(prop.Name.ToString());// + "=" + prop.GetValue(lobbyServerOverrideWrapper, null).ToString());
-        // }
-        // RainMeadow.Debug("MORE UI SHIT");
-        // foreach(var meth in lobbyServerOverrideWrapper.GetType().GetMethods(BindingFlags.Public|BindingFlags.Instance|BindingFlags.DeclaredOnly)) {
-        //     RainMeadow.Debug(meth.Name.ToString());
-        // }
-
         // display version
         where.x += 80;
         MenuLabel versionLabel = new MenuLabel(this, pages[0], $"{Utils.Translate("Rain Meadow Version:")} {RainMeadow.MeadowVersionStr}", new Vector2((1336f - manager.rainWorld.screenSize.x) / 2f + 20f, manager.rainWorld.screenSize.y - 768f), new Vector2(200f, 20f), false, null);
@@ -205,7 +183,6 @@ public class LobbyCreateMenu : SmartMenu
         if (backObject is SimplerButton backButton) backButton.menuLabel.text = Utils.Translate("CANCEL");
 
         UpdateModeDescription();
-        // UpdateDomain();
         CreateElementBindings();
         NetworkDomain.OnLobbyJoined += OnLobbyJoined;
     }
@@ -235,38 +212,6 @@ public class LobbyCreateMenu : SmartMenu
     {
         modeDescriptionLabel.text = Custom.ReplaceLineDelimeters(Translate(OnlineGameMode.OnlineGameModeType.descriptions[new OnlineGameMode.OnlineGameModeType(modeDropDown.value)]));
     }
-    // private void UpdateDomain()
-    // {
-    //     RainMeadow.Debug("UI set to domain:" + domainDropdown.value);
-    //     RainMeadow.Debug("UI set to domain:" + visibilityDropDown.size.ToString());
-    //     switch (domainDropdown.value)
-    //     {
-    //         case "Router":
-    //             //visibilityDropDown.size = new Vector2(24f, 24f);
-    //             // visibilityDropDown.PosX = centerXCoord + 9000f;
-    //             visibilityDropDown.Hidden = true;
-    //             visibilityWrapper.GreyedOut = true;
-    //             lobbyServerOverrideBox.Hidden = false;
-    //             break;
-    //         case "Steam":
-    //             //visibilityDropDown.size = new Vector2(160f, 24f);
-    //             // visibilityDropDown.PosX = centerXCoord;
-    //             visibilityWrapper.GreyedOut = false;
-    //             visibilityDropDown.Hidden = false;
-    //             lobbyServerOverrideBox.Hidden = true;
-    //             break;
-    //         case "Local":
-    //             //visibilityDropDown.size = new Vector2(24f, 24f);
-    //             // visibilityDropDown.PosX = centerXCoord + 9000f;
-    //             visibilityDropDown.Hidden = true;
-    //             visibilityWrapper.GreyedOut = true;
-    //             lobbyServerOverrideBox.Hidden = true;
-    //             break;
-    //         default:
-    //             RainMeadow.Error("whoepsie");
-    //             break;
-    //     }
-    // }
 
     public void CreateElementBindings()
     {

@@ -12,7 +12,6 @@ namespace RainMeadow
 {
     public partial class LANNetworkDomain
     {
-        // REVIEW: is this method redundant?
         public void SendP2P(OnlinePlayer player, Packet packet, PacketReliability sendType)
         {
             if (player.id is LANNetworkDomain.LANPlayerId lanid)
@@ -27,7 +26,7 @@ namespace RainMeadow
             foreach (OnlinePlayer player in OnlineManager.players)
             {
                 if (player.isMe) continue;
-                SendP2P(player, new ChatMessagePacket(message), PacketReliability.Reliable);
+                SendP2P(player, new ChatMessagePacket(message){boxed=true}, PacketReliability.Reliable);
             }
 
             RecieveChatMessage(OnlineManager.mePlayer, message);

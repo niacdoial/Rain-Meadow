@@ -68,10 +68,8 @@ namespace RainMeadow
                 RainMeadow.Debug("Sending Request to join lobby...");
                 string meName = RainMeadow.rainMeadowOptions.LanUserName.Value;
                 if (string.IsNullOrWhiteSpace(meName)) meName = UsernameGenerator.GenerateRandomUsername(PlatformPeerManager.Me.GetHashCode());
-                SendPacket(serverPeer.id, new BeginRouterSession(
-                        RainMeadow.rainMeadowOptions.RouterExposeIP.Value,
-                        meName, null
-                    ), PacketReliability.Reliable);
+                var packet = new BeginRouterSession(RainMeadow.rainMeadowOptions.RouterExposeIP.Value, meName, null) {boxed=true};
+                SendPacket(serverPeer.id, packet, PacketReliability.Reliable);
             }
             else
             {

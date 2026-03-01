@@ -80,7 +80,7 @@ namespace RainMeadow
                     playerID.routingID,
                     myId.routingID,
                     new ArraySegment<byte>(OnlineManager.serializer.buffer, 0, (int)OnlineManager.serializer.Position)
-                );
+                );  // TODO: detect if personal data is passed through (lobby password, player names, etc.)
 
                 SendPacket(playerID.endPoint is null? serverPeer.id : playerID.endPoint, routerPacket, PacketReliability.Unreliable);
             }
@@ -121,7 +121,7 @@ namespace RainMeadow
             var packet = new RouterChatMessage(
                 ((RouterPlayerId)OnlineManager.mePlayer.id).routingID,
                 message
-            );
+            ) {boxed=true};
 
             SendPacket(serverPeer.id, packet, PacketReliability.Reliable);
             RecieveChatMessage(OnlineManager.mePlayer, message);

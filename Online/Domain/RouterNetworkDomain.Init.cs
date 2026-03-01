@@ -47,7 +47,12 @@ namespace RainMeadow
 
                 if (peer == serverPeer)
                 {
-                    OnlineManager.QuitWithError("Connection Lost...");
+                    try
+                    {
+                        OnlineManager.QuitWithError("Connection Lost...");
+                    }
+                    catch (Exception except) // who decided that QuitWithError was responsible for throwing a error?
+                        {}
                     return;
                 }
 

@@ -138,7 +138,7 @@ namespace RainMeadow
             {
 
                 // Tell the other players to create this player
-                var newPlayerPacket = new ModifyPlayerListPacket(ModifyPlayerListPacket.Operation.Add, new OnlinePlayer[] { joiningPlayer });
+                var newPlayerPacket = new ModifyPlayerListPacket(ModifyPlayerListPacket.Operation.Add, new OnlinePlayer[] { joiningPlayer }) {boxed=true};
                 foreach (OnlinePlayer player in OnlineManager.players)
                 {
                     if (player.isMe || player == joiningPlayer)
@@ -167,7 +167,7 @@ namespace RainMeadow
             if (OnlineManager.lobby is not null && OnlineManager.lobby.isOwner)
               {
                 // Tell the other players to remove this player
-                var removalPacket = new ModifyPlayerListPacket(ModifyPlayerListPacket.Operation.Remove, new OnlinePlayer[] { leavingPlayer });
+                var removalPacket = new ModifyPlayerListPacket(ModifyPlayerListPacket.Operation.Remove, new OnlinePlayer[] { leavingPlayer }) {boxed=true};
                 foreach (OnlinePlayer player in OnlineManager.players)
                 {
                     if (player.isMe)

@@ -61,7 +61,7 @@ namespace RainMeadow
                 lobbyInfo.GetParameters(),
                 meName,
                 RainMeadow.rainMeadowOptions.RouterExposeIP.Value
-            );
+            ) {boxed = true};
             SendPacket(serverPeer.id, lobbyPublishPacket, PacketReliability.Reliable);
 
             OnlineManager.lobby = new Lobby(new OnlineGameMode.OnlineGameModeType(gameMode), OnlineManager.mePlayer, password);
