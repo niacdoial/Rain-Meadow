@@ -75,13 +75,11 @@ namespace RainMeadow
             {
                 OnlineManager.serializer.WriteData(toPlayer);
                 var playerID = (RouterPlayerId)toPlayer.id;
-                byte[] buffer = new byte[OnlineManager.serializer.Position];
-                Buffer.BlockCopy(OnlineManager.serializer.buffer, 0, buffer, 0, (int)OnlineManager.serializer.Position);  // REVIEW can't we skip this?
                 var myId = (RouterPlayerId)OnlineManager.mePlayer.id;
                 var routerPacket = new RouteSessionData(
                     playerID.routingID,
                     myId.routingID,
-                    new ArraySegment<byte>(buffer, 0, (int)OnlineManager.serializer.Position)
+                    new ArraySegment<byte>(OnlineManager.serializer.buffer, 0, (int)OnlineManager.serializer.Position)
                 );
 
                 SendPacket(playerID.endPoint is null? serverPeer.id : playerID.endPoint, routerPacket, PacketReliability.Unreliable);
@@ -113,35 +111,6 @@ namespace RainMeadow
             {
                 RainMeadow.Error(e);
                 throw;
-            }
-        }
-
-        public override void RecieveData()
-        {
-            if (PlatformPeerManager is null) return;
-            PlatformPeerManager.Update();
-
-            int packetlimit = 4; // TODO: Add to remix menu
-            for (int i = 0; (i < packetlimit) && PlatformPeerManager.IsPacketAvailable(); i++)
-            {
-                try
-                {
-                    byte[]? data = PlatformPeerManager.Receive(out SecuredPeerId? remoteEndpoint, out bool boxed);
-                    if (data == null) continue;
-                    if (remoteEndpoint is null) continue;
-
-                    using (MemoryStream netStream = new MemoryStream(data))
-                    using (BinaryReader netReader = new BinaryReader(netStream))
-                    {
-                        if (netReader.BaseStream.Position == ((MemoryStream)netReader.BaseStream).Length) continue; // nothing to read somehow?
-                        Packet.Decode(netReader, remoteEndpoint, PlatformPeerManager.Me, boxed);
-                    }
-                }
-                catch (Exception e)
-                {
-                    RainMeadow.Error(e);
-                    OnlineManager.serializer.EndRead();
-                }
             }
         }
 

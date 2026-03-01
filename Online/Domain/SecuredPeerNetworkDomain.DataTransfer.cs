@@ -15,15 +15,18 @@ namespace RainMeadow
                 OnlineManager.serializer.WriteData(toPlayer);
                 SecuredPeerId? peerID = GetPeerIDFromPlayer(toPlayer);
                 if (peerID is null) throw new InvalidProgrammerException("no peerid");
-                // REVIEW: @niac check whether this packet class works for router
-                SendPacket(peerID, new SessionPacket(new ArraySegment<byte>(OnlineManager.serializer.buffer, 0, (int)OnlineManager.serializer.Position)), PacketReliability.Unreliable);
-                OnlineManager.serializer.EndWrite();
+                var packet = new SessionPacket(new ArraySegment<byte>(OnlineManager.serializer.buffer, 0, (int)OnlineManager.serializer.Position));
+
+                SendPacket(peerID, packet, PacketReliability.Unreliable);
             }
             catch (Exception e)
             {
                 RainMeadow.Error(e);
-                OnlineManager.serializer.EndWrite();
                 throw;
+            }
+            finally
+            {
+                OnlineManager.serializer.EndWrite();
             }
         }
 
@@ -100,6 +103,7 @@ namespace RainMeadow
                 catch (Exception e)
                 {
                     RainMeadow.Error(e);
+                    OnlineManager.serializer.EndRead();
                 }
             }
         }
