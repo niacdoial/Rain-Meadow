@@ -105,6 +105,11 @@ namespace RainMeadow
                 supportedDomains.Add(NetworkDomainType.LAN);
                 instances.Add(NetworkDomainType.LAN, new LANNetworkDomain());
                 currentDomain = NetworkDomainType.LAN;
+                changedMatchMaker += (last, current) =>
+                {
+                    // only allow peerIDs without keys for early-handshake direct-connection to LAN lobby hosts
+                    PlatformPeerManager.allowKeylessPeerIDs = (current == NetworkDomainType.LAN);
+                };
             }
 
             if (isRouterAvailable) {
