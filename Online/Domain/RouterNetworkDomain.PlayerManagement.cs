@@ -217,7 +217,7 @@ namespace RainMeadow
         public override void ForgetEverything()
         {
             base.ForgetEverything();
-            //serverPeer = null;  // do not reset server, it can be re-used in "knocking" lobby setup.
+            serverPeer = null;
         }
     }
 }

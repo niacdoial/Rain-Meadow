@@ -45,14 +45,15 @@ namespace RainMeadow
                 // ignore player removal / recursive call if we are leaving the lobby
                 if (serverPeer == null) return;
 
-                if (peer == serverPeer)
+                if (object.ReferenceEquals(peer, serverPeer!))
                 {
                     try
                     {
-                        OnlineManager.QuitWithError("Connection Lost...");
+                        OnlineManager.QuitWithError("Connection Lost...", true);
                     }
                     catch (Exception except) // who decided that QuitWithError was responsible for throwing a error?
                         {}
+                    serverPeer = null;
                     return;
                 }
 

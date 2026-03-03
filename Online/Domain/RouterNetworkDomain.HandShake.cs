@@ -150,7 +150,6 @@ namespace RainMeadow
 
         public override void HandleLeavingLobby()
         {
-            serverPeer = null;
             ForgetEverything();
         }
 

@@ -149,7 +149,7 @@ namespace RainMeadow
 
                 // Tell joining peer to create everyone in the server
                 SendP2P(joiningPlayer, new ModifyPlayerListPacket(ModifyPlayerListPacket.Operation.Add,
-                    OnlineManager.players.ToArray()),
+                    OnlineManager.players.ToArray()){boxed=true},
                     PacketReliability.Reliable);
             }
 

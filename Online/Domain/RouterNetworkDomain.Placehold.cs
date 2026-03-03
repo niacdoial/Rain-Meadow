@@ -13,13 +13,13 @@ namespace RainMeadow
 {
     public partial class RouterNetworkDomain
     {
-        SecuredPeerManager.RemotePeer preloadedServerPeer;
+        SecuredPeerId preloadedServerPeer = null;
         public void PreconfigureLobbyServerForCreation(string lobbyEndPointString)
         {
-            var lobbyEndpoint = SecuredPeerId.GetPeerIdByName(lobbyEndPointString);
-            if (lobbyEndpoint != null)
+            preloadedServerPeer = SecuredPeerId.GetPeerIdByName(lobbyEndPointString);
+            if (preloadedServerPeer != null)
             {
-                preloadedServerPeer = PlatformPeerManager.GetRemotePeer(lobbyEndpoint, true);
+                RainMeadow.Debug("server set: " + preloadedServerPeer.ToString());
             }
             else
             {
@@ -38,7 +38,7 @@ namespace RainMeadow
             }
             else
             {
-                serverPeer = preloadedServerPeer;
+                serverPeer = PlatformPeerManager.GetRemotePeer(preloadedServerPeer, true);
                 preloadedServerPeer = null;
             }
 
