@@ -23,7 +23,7 @@ namespace RainMeadow
             }
             else
             {
-                throw new FormatException("IP Address format should be public_key@xxx.xxx.xxx.xxx:port");
+                throw new FormatException("LobbyServer Address format should be public_key@xxx.xxx.xxx.xxx:port");
             }
         }
 
@@ -38,7 +38,15 @@ namespace RainMeadow
             }
             else
             {
-                serverPeer = PlatformPeerManager.GetRemotePeer(preloadedServerPeer, true);
+                try
+                {
+                    serverPeer = PlatformPeerManager.GetRemotePeer(preloadedServerPeer, true);
+                }
+                catch (Exception exc)
+                {
+                    // there's pretty much only one reason why this can fail
+                    throw new Exception("LobbyServer Address format should be public_key@xxx.xxx.xxx.xxx:port. Omitting the public key is only allowed when joining Local-domain lobbies");
+                }
                 preloadedServerPeer = null;
             }
 
