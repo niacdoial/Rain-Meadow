@@ -1,10 +1,12 @@
 using HarmonyLib;
+using Menu;
 using Menu.Remix.MixedUI;
 using RWCustom;
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Threading.Tasks;
 using UnityEngine;
 namespace RainMeadow;
 
@@ -201,12 +203,12 @@ public class RainMeadowOptions : OptionInterface
             OpTab meadowTab = new OpTab(this, Translate("Meadow"));
             OpTab arenaTab = new OpTab(this, Translate("Arena"));
             OpTab storyTab = new OpTab(this, Translate("Story"));
-            OpTab lanTab = new OpTab(this, Translate("Network"));
+            OpTab networkTab = new OpTab(this, Translate("Network"));
             OpTab onlineTab = new OpTab(this, Translate("Gameplay"));
 
 
 
-            Tabs = new OpTab[] { opTab, meadowTab, arenaTab, storyTab, lanTab, onlineTab };
+            Tabs = new OpTab[] { opTab, meadowTab, arenaTab, storyTab, networkTab, onlineTab };
 
             List<UIelement> meadowCheats;
             OpTextBox meadowCheatBox;
@@ -466,7 +468,28 @@ public class RainMeadowOptions : OptionInterface
                 for (int i = 0; i < arenaPotentialSpoilerSettings.Length; i++) arenaPotentialSpoilerSettings[i].Show();
             };
 
-            OnlineNetworkSettings = new UIelement[9]
+            OpSimpleButton loginButton = new OpSimpleButton(new Vector2(10f, 195), new Vector2(30f, 110f), Translate("Login"));
+            loginButton.OnClick += (UIfocusable button) => 
+            { 
+                if (ModdingMenu.instance.manager.dialog != null) return;
+                DialogAsyncWaitCancellable dialog = new DialogAsyncWaitCancellable(ModdingMenu.instance.manager, "Launching Browser", new Vector2(480f, 320f));
+                ModdingMenu.instance.manager.ShowDialog(dialog);
+                Authentication.LoginFromWebView(TimeSpan.FromMinutes(2), new Progress<string>(message => {
+                    dialog.SetText(message);
+                }), dialog.cancellationTokenSource.Token)
+                .ContinueWith(async task => {
+                    if (task.IsCanceled) return;
+                    if (task.IsFaulted)
+                    {
+                        dialog.Error($"{task.Exception.Message}{Environment.NewLine}Please try again.");
+                        return;
+                    }
+                    dialog.Success($"You've sucessfully logged in as {task.Result._playerInfo.username}");
+                    loginButton.text = Translate("Change Account");
+                });
+            };
+
+            OnlineNetworkSettings = new UIelement[]
             {
                 new OpLabel(10f, 550f, Translate("Network"), bigText: true),
                 new OpLabel(10f, 505, Translate("Username"), bigText: false),
@@ -486,10 +509,11 @@ public class RainMeadowOptions : OptionInterface
                 new OpTextBox(UdpHeartbeat, new Vector2(10f, 345), 160f)
                 {
                     accept = OpTextBox.Accept.Int
-                }
-
-        };
-            lanTab.AddItems(OnlineNetworkSettings);
+                },
+                loginButton
+                
+            };
+            networkTab.AddItems(OnlineNetworkSettings);
         }
 
         catch (Exception ex)

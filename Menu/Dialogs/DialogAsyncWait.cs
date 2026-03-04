@@ -1,13 +1,16 @@
 ﻿using Menu;
+using System;
 using System.Collections.Generic;
+using System.Threading;
 using UnityEngine;
 
 namespace RainMeadow
 {
     public class DialogAsyncWait : Dialog
     {
-        public DialogAsyncWait(Menu.Menu menu, string description, Vector2 size)
-            : base(description, size, menu.manager)
+        public DialogAsyncWait(Menu.Menu menu, string description, Vector2 size) : this(menu.manager, description, size) { }
+        public DialogAsyncWait(ProcessManager manager, string description, Vector2 size)
+            : base(description, size, manager)
         {
             loadingSpinner = new AtlasAnimator(0, new Vector2((float)((int)(pos.x + size.x / 2f)) - HorizontalMoveToGetCentered(manager), (float)((int)(pos.y + size.y / 2f - 32f))), "sleep", "sleep", 20, true, false);
             loadingSpinner.animSpeed = 0.25f;
@@ -35,4 +38,63 @@ namespace RainMeadow
 
         private readonly AtlasAnimator loadingSpinner;
     }
+
+    public class DialogAsyncWaitCancellable : DialogAsyncWait
+    {
+        public readonly CancellationTokenSource cancellationTokenSource = new CancellationTokenSource();
+        public DialogAsyncWaitCancellable(Menu.Menu menu, string description, Vector2 size) : this(menu.manager, description, size) { }
+        public DialogAsyncWaitCancellable(ProcessManager manager, string description, Vector2 size)
+            : base(manager, description, size)
+        {                                       
+            okButton = new SimpleButton(this, pages[0], Translate("Cancel"), "CANCEL", new Vector2(pos.x + (size.x - 110f) * 0.5f, pos.y + Mathf.Max(size.y * 0.04f, 7f)), new Vector2(110f, 30f));
+            pages[0].subObjects.Add(okButton);
+        }
+
+        public SimpleButton okButton;
+        public float timeOut;
+        public override void Update()
+        {
+            base.Update();
+            if (okButton != null)
+            {
+                timeOut -= 0.025f;
+                if (timeOut < 0f)
+                {
+                    timeOut = 0f;
+                    okButton.buttonBehav.greyedOut = false;
+                }
+                else
+                {
+                    okButton.buttonBehav.greyedOut = true;
+                }
+            }
+        }
+
+
+        public void Error(string error)
+        {
+            SetText(error);
+            okButton.menuLabel.text = Translate("OK");
+            // TODO: set sprite to dead slugcat
+        }
+
+        public void Success(string message)
+        {
+            SetText(message);
+            okButton.menuLabel.text = Translate("OK");
+            // TODO: set sprite to alive slugcat
+        }
+
+
+        public override void Singal(MenuObject sender, string message)
+        {
+            base.Singal(sender, message);
+            if (message != null && message == "CANCEL")
+            {
+                cancellationTokenSource.Cancel();
+                manager.StopSideProcess(this);
+            }
+        }
+    }
+
 }
