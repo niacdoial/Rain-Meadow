@@ -2,6 +2,7 @@ using System;
 using System.Net;
 using System.Linq;
 using System.IO;
+using System.Text;
 using Menu;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -25,26 +26,37 @@ namespace RainMeadow
 
             public override void OpenProfileLink()
             {
-                string dialogue = "";
+                StringBuilder dialogue = new StringBuilder();
                 bool isMe = IsMe();
                 if (isMe)
                 {
-                    dialogue += Utils.Translate("Your network interface(s) are");
+                    dialogue.Append(Utils.Translate("Your network interface(s) are"));
                     foreach (var ip in SharedPlatform.InterfaceAddresses)
                     {
-                        dialogue += Environment.NewLine + ip.ToString() + ":" + PlatformPeerManager.port.ToString();
+                        dialogue.Append(Environment.NewLine);
+                        dialogue.Append(PlatformPeerManager.Me.publicKeyStr);
+                        dialogue.Append("@");
+                        dialogue.Append(ip.ToString());
+                        dialogue.Append(":");
+                        dialogue.Append(PlatformPeerManager.Me.endPoint.Port.ToString());
                     }
                 }
-                else dialogue += Utils.Translate("<NAME>'s network interface is ").Replace("<NAME>", name) + endPoint.ToString();
+                else
+                {
+                    dialogue.Append(Utils.Translate("<NAME>'s network interface is ").Replace("<NAME>", name));
+                    dialogue.Append(endPoint.ToString());
+                }
                 if (OnlineManager.lobby?.owner?.id?.Equals(this) ?? false)
                 {
+                    dialogue.Append(Environment.NewLine);
                     string isMe0 = isMe ? "You are" : "This player is";
                     string isMe1 = isMe ? "your" : "their";
-                    dialogue += Environment.NewLine + Utils.Translate($"{isMe0} the owner of the lobby.");
-                    dialogue += Environment.NewLine + Utils.Translate($"Players can “Direct Connect” to this lobby through {isMe1} interface(s).");
+                    dialogue.Append(Utils.Translate($"{isMe0} the owner of the lobby."));
+                    dialogue.Append(Environment.NewLine);
+                    dialogue.Append(Utils.Translate($"Players can “Direct Connect” to this lobby through {isMe1} interface(s)."));
                 }
                 OnlineManager.instance.manager.ShowDialog(
-                    new DialogNotify(dialogue, new Vector2(478.1f, 115.200005f * (1 + 0.2f * SharedPlatform.InterfaceAddresses.Count)),
+                    new DialogNotify(dialogue.ToString(), new Vector2(478.1f, 115.200005f * (1 + 0.2f * SharedPlatform.InterfaceAddresses.Count)),
                         OnlineManager.instance.manager, null));
             }
 

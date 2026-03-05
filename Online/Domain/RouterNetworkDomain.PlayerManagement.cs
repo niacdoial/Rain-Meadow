@@ -4,6 +4,7 @@ using System.ComponentModel;
 using System.IO;
 using System.Linq;
 using System.Net;
+using System.Text;
 using Menu;
 using RainMeadow.Shared;
 using UnityEngine;  // for Vector2
@@ -26,12 +27,19 @@ namespace RainMeadow
 
             public override void OpenProfileLink()
             {
-                string dialogue = "RoutingID: " + routingID.ToString();
+                StringBuilder dialogue = new StringBuilder();
                 if (routingID == (((RouterPlayerId)OnlineManager.mePlayer.id)?.routingID ?? 0)) {
-                    dialogue = "my " + dialogue;
+                    dialogue.Append("My ");
                 }
+                dialogue.Append("RoutingID: ");
+                dialogue.Append(routingID.ToString());
+                dialogue.Append(Environment.NewLine);
+                dialogue.Append(Utils.Translate("Players can “Direct Connect” to this lobby through the LobbyServer's address:"));
+                dialogue.Append(Environment.NewLine);
+                dialogue.Append(NetworkDomain.Router.serverPeer.id.ToString(false));
+
                 OnlineManager.instance.manager.ShowDialog(
-                    new DialogNotify(dialogue, new Vector2(478.1f, 115.200005f * (1 + 0.2f * 8)),
+                    new DialogNotify(dialogue.ToString(), new Vector2(478.1f, 115.200005f * (1 + 0.2f * 8)),
                         OnlineManager.instance.manager, null));
             }
 
