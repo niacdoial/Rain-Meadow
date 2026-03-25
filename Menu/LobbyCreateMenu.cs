@@ -29,7 +29,6 @@ public class LobbyCreateMenu : SmartMenu
     private UIelementWrapper lobbyServerOverrideWrapper;
     private OpTypeBox passwordInputBox;
     private MenuDialogBox? popupDialog;
-    private float centerXCoord = 0f;
     public override MenuScene.SceneID GetScene => ModManager.MMF ? manager.rainWorld.options.subBackground : MenuScene.SceneID.Landscape_SU;
 
     public LobbyCreateMenu(ProcessManager manager) : base(manager, RainMeadow.Ext_ProcessID.LobbyCreateMenu)
@@ -49,7 +48,6 @@ public class LobbyCreateMenu : SmartMenu
         var modeLabel = new ProperlyAlignedMenuLabel(this, mainPage, Translate("Mode:"), where, new Vector2(200, 20f), false);
         mainPage.subObjects.Add(modeLabel);
         where.x += 80;
-        centerXCoord = where.x;
         modeDropDown = new OpComboBox2(
             new Configurable<OnlineGameMode.OnlineGameModeType>(OnlineGameMode.OnlineGameModeType.Meadow),
             where,
@@ -138,7 +136,6 @@ public class LobbyCreateMenu : SmartMenu
         where.x -= 80;
 
 
-        // visibility setting in upper center
         where.y -= 45;
         var visibilityLabel = new ProperlyAlignedMenuLabel(this, mainPage, Translate("Visibility:"), where, new Vector2(200, 20f), false);
         mainPage.subObjects.Add(visibilityLabel);

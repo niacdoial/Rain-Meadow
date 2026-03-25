@@ -207,7 +207,7 @@ namespace RainMeadow
                 RequestLobbyJoin(RainMeadow.argumentsAutoConnect, RainMeadow.autoConnectPassword);
                 RainMeadow.argumentsAutoConnect = null;
             }
-
+            
             if (manager.musicPlayer != null)
             {
                 if (RainMeadow.rainMeadowOptions.GetLobbyMusic(out var song) && !string.IsNullOrEmpty(song))
