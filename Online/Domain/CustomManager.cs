@@ -8,7 +8,7 @@ namespace RainMeadow
 {
     public class CustomManager
     {
-        public const int maxKeyLength = 12; 
+        public const int maxKeyLength = 12;
         private static Dictionary<string, IUseCustomPackets> subscribers = new();
         public static void HandlePacket(OnlinePlayer player, CustomPacket packet)
         {

@@ -67,7 +67,7 @@ namespace RainMeadow
                     RainMeadow.Debug("Adding players...\n\t" + string.Join<OnlinePlayer>("\n\t", players));
                     for (int i = 0; i < players.Length; i++)
                     {
-                        if (((LANNetworkDomain.LANPlayerId)players[i].id).IsMe()) 
+                        if (((LANNetworkDomain.LANPlayerId)players[i].id).IsMe())
                         {
                             // That's me
                             // Put me where I belong.

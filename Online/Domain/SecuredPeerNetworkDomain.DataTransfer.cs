@@ -7,8 +7,6 @@ namespace RainMeadow
     public abstract class SecuredPeerNetworkDomain : NetworkDomain
     {
 
-        public abstract SecuredPeerId? GetPeerIDFromPlayer(OnlinePlayer player);
-        public abstract OnlinePlayer? GetPlayerFromPeerID(SecuredPeerId id);
         public override void SendSessionData(OnlinePlayer toPlayer)
         {
             if (PlatformPeerManager is null) return;
@@ -48,7 +46,7 @@ namespace RainMeadow
         public void SendBroadcast(Packet packet)
         {
             if (PlatformPeerManager is null) return;
-            if (packet.boxed) 
+            if (packet.boxed)
             {
                 RainMeadow.Error("Cannot broadcast boxed packet.");
                 return;
@@ -67,8 +65,8 @@ namespace RainMeadow
             using (BinaryWriter writer = new BinaryWriter(memory))
             {
                 Packet.Encode(packet, writer, peer, PlatformPeerManager.Me);
-                PlatformPeerManager.Send(memory.GetBuffer(), peer, 
-                    sendType switch  
+                PlatformPeerManager.Send(memory.GetBuffer(), peer,
+                    sendType switch
                     {
                         PacketReliability.Reliable => SecuredPeerManager.PacketFlags.Reliable,
                         _ => broadcast? SecuredPeerManager.PacketFlags.Broadcast : SecuredPeerManager.PacketFlags.Unreliable,
@@ -111,20 +109,5 @@ namespace RainMeadow
             PlatformPeerManager.Send(Array.Empty<byte>(), id, SecuredPeerManager.PacketFlags.Reliable);
         }
 
-        public override void ForgetPlayer(OnlinePlayer player)
-        {
-            if (PlatformPeerManager is null) return;
-            SecuredPeerId? peerID = GetPeerIDFromPlayer(player);
-            if (peerID is not null)
-            {
-                PlatformPeerManager.ForgetPeer(peerID);
-            }
-        }
-
-        public override void ForgetEverything()
-        {
-            if (PlatformPeerManager is null) return;
-            PlatformPeerManager.ForgetAllPeers();
-        }
     }
 }

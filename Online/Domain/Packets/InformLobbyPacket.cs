@@ -27,7 +27,7 @@ namespace RainMeadow
             base.Deserialize(reader);
             this.parameters = new LobbyParameters(reader);
         }
-        
+
         public override Type type => Type.InformLobby;
 
         public override void Process()

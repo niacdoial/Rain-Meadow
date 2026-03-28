@@ -38,7 +38,7 @@ namespace RainMeadow
                         player.UpdateSessionBuffer((IntPtr)(pdata + data.Offset), data.Count);
                     }
                 }
-                
+
             }
         }
     }
