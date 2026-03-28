@@ -14,6 +14,7 @@ namespace RainMeadow
     {
         public void SendP2P(OnlinePlayer player, Packet packet, PacketReliability sendType)
         {
+            if (PlatformPeerManager is null) return;
             if (player.id is LANNetworkDomain.LANPlayerId lanid)
             {
                 SendPacket(lanid.endPoint, packet, sendType, false);

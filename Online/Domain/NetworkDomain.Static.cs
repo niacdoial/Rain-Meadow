@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
+using System.Threading.Tasks;
 using HarmonyLib;
 using Menu;
 using RainMeadow.Shared;
@@ -116,6 +117,7 @@ namespace RainMeadow
                 supportedDomains.Add(NetworkDomainType.Router);
                 instances.Add(NetworkDomainType.Router, new RouterNetworkDomain());
                 currentDomain = NetworkDomainType.Router;
+                new Task(async () => await Authentication.LoginWithSavedToken()).RunSynchronously();
             }
 
             if (isSteamAvailable)

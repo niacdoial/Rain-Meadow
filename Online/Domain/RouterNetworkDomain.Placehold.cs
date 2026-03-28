@@ -7,6 +7,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using UnityEngine;
 using RainMeadow.Shared;
+using RainMeadow.Shared.Models;
 
 // TODO: delete this whole file once HTTP-based matchmaking exists
 namespace RainMeadow
@@ -51,13 +52,16 @@ namespace RainMeadow
             }
 
             var maxplayercount = maxPlayerCount ?? 0;
-            var lobbyInfo = new RouterLobbyInfo(
-                serverPeer.id,
-                "UNNAMED", gameMode,
-                1, (password is string), maxplayercount,
-                RainMeadowModManager.ModArrayToString(RainMeadowModManager.GetRequiredMods()),
-                RainMeadowModManager.ModArrayToString(RainMeadowModManager.GetBannedMods())
-            );
+            var lobbyParams = new LobbyParameters()
+            {
+                Mode = gameMode,
+                MaxPlayers = maxplayercount,
+                PasswordProtected = (password is string),
+                Mods = RainMeadowModManager.ModArrayToString(RainMeadowModManager.GetRequiredMods()),
+                BannedMods = RainMeadowModManager.ModArrayToString(RainMeadowModManager.GetBannedMods()),
+            };
+            var lobbyInfo = new RouterLobbyInfo(serverPeer.id, "UNNAMED", 1, lobbyParams);
+
             OnlineManager.currentlyJoiningLobby = lobbyInfo;
             ((RouterPlayerId)OnlineManager.mePlayer.id).routingID = 1; // we have to be the first for us to send this
 
@@ -66,7 +70,7 @@ namespace RainMeadow
 
             var lobbyPublishPacket = new PublishRouterLobby(
                 lobbyInfo.name,
-                lobbyInfo.GetParameters(),
+                lobbyParams,
                 meName,
                 RainMeadow.rainMeadowOptions.RouterExposeIP.Value
             ) {boxed = true};

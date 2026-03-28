@@ -10,11 +10,6 @@ using RainMeadow.Shared;
 
 namespace RainMeadow
 {
-    public partial class NetworkDomain
-    {
-        static partial void PlatformRouterAvailable(ref bool val) { val = NetworkDomain.PlatformPeerManager is not null; }
-    }
-
     public partial class RouterNetworkDomain
     {
 
@@ -75,11 +70,13 @@ namespace RainMeadow
             {
                 OnlineManager.serializer.WriteData(toPlayer);
                 var playerID = (RouterPlayerId)toPlayer.id;
+                byte[] buffer = new byte[OnlineManager.serializer.Position];
+                Buffer.BlockCopy(OnlineManager.serializer.buffer, 0, buffer, 0, (int)OnlineManager.serializer.Position);
                 var myId = (RouterPlayerId)OnlineManager.mePlayer.id;
                 var routerPacket = new RouteSessionData(
                     playerID.routingID,
                     myId.routingID,
-                    new ArraySegment<byte>(OnlineManager.serializer.buffer, 0, (int)OnlineManager.serializer.Position)
+                    new ArraySegment<byte>(buffer, 0, (int)OnlineManager.serializer.Position)
                 );  // TODO: detect if personal data is passed through (lobby password, player names, etc.)
 
                 SendPacket(playerID.endPoint is null? serverPeer.id : playerID.endPoint, routerPacket, PacketReliability.Unreliable);

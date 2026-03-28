@@ -1,10 +1,13 @@
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.IO;
 using System.Linq;
 using System.Net;
+using HarmonyLib;
 using Menu;
 using RainMeadow.Shared;
+using RainMeadow.Shared.Models;
 
 namespace RainMeadow
 {
@@ -43,10 +46,7 @@ namespace RainMeadow
         {
             if (OnlineManager.lobby != null && OnlineManager.lobby.isOwner)
             {
-                var packet = new InformLobbyPacket(
-                    maxplayercount, Utils.Translate("LAN Lobby"), OnlineManager.lobby.hasPassword,
-                    OnlineManager.lobby.gameModeType.value, OnlineManager.players.Count,
-                    RainMeadowModManager.ModArrayToString(RainMeadowModManager.GetRequiredMods()), RainMeadowModManager.ModArrayToString(RainMeadowModManager.GetBannedMods()));
+                var packet = new InformLobbyPacket(OnlineManager.lobby.participants.Count, GetLobbyParameters());
                 for (int i = 0; i < 8; i++)
                 {
                     SendPacket(endPoint, packet, PacketReliability.Unreliable, true);
@@ -60,7 +60,7 @@ namespace RainMeadow
             var endpoint = SecuredPeerId.GetPeerIdByName(connectstr);
             if (endpoint != null)
             {
-                return new LANNetworkDomain.LANLobbyInfo(endpoint, "Direct Connection", "Meadow", 0, true, 2);
+                return new LANLobbyInfo(endpoint, 1, new LobbyParameters());
             }
             else
             {

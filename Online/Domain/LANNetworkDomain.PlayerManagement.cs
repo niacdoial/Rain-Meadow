@@ -163,8 +163,10 @@ namespace RainMeadow
                 SendP2P(joiningPlayer, new ModifyPlayerListPacket(ModifyPlayerListPacket.Operation.Add,
                     OnlineManager.players.ToArray()){boxed=true},
                     PacketReliability.Reliable);
-            }
 
+                // tell them they're in
+                SendP2P(joiningPlayer, new JoinLobbyPacket(OnlineManager.lobby.participants.Count, GetLobbyParameters()), NetworkDomain.PacketReliability.Reliable);
+            }
             OnPlayerListReceivedEvent(OnlineManager.players.Select(x => x.id).ToArray());
         }
 

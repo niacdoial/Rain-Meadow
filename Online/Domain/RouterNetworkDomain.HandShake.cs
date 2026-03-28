@@ -6,6 +6,7 @@ using System.Linq;
 using System.Net;
 using Menu;
 using RainMeadow.Shared;
+using RainMeadow.Shared.Models;
 
 namespace RainMeadow
 {
@@ -40,7 +41,7 @@ namespace RainMeadow
             var endpoint = SecuredPeerId.GetPeerIdByName(connectstr);
             if (endpoint != null)
             {
-                return new RouterLobbyInfo(endpoint, "Direct Connection", "Meadow", 0, true, 2);
+                return new RouterLobbyInfo(endpoint, "Router Lobby", 1, new LobbyParameters());
             }
             else
             {
@@ -83,9 +84,7 @@ namespace RainMeadow
             if (!ValidateIsFromServer(packet)) return;
 
             if (NetworkDomain.currentDomain != NetworkDomain.NetworkDomainType.Router) return;
-            //var newLobbyInfo = new RouterLobbyInfo(packet.processingPeer, packet.name, packet.mode, 1, packet.passwordprotected, packet.maxplayers, packet.mods, packet.bannedMods);
-            var newLobbyInfo = new RouterLobbyInfo(packet.processingPeer, packet.name, packet.lobbyParameters);
-
+            var newLobbyInfo = new RouterLobbyInfo(packet.processingPeer, packet.name, 0, packet.lobbyParameters);
             // If we don't have a lobby and we a currently joining a lobby
             if (OnlineManager.lobby is null && OnlineManager.currentlyJoiningLobby is not null)
             {
@@ -108,7 +107,7 @@ namespace RainMeadow
             if (((RouterPlayerId)OnlineManager.mePlayer.id).routingID == 0)
             {
                 OnlineManager.players.Remove(OnlineManager.mePlayer);
-                OnlineManager.mePlayer = GetPlayerRouter(mePlayerid, false);
+                OnlineManager.mePlayer = GetPlayerRouter(mePlayerid);
                 if (OnlineManager.mePlayer is null)
                 {
                     OnlineManager.QuitWithError("Recieved connection packets out of order:" +
@@ -150,6 +149,7 @@ namespace RainMeadow
 
         public override void HandleLeavingLobby()
         {
+            serverPeer = null;
             ForgetEverything();
         }
 

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Net;
+using RainMeadow.Shared.Models;
 
 namespace RainMeadow
 {
@@ -8,23 +9,21 @@ namespace RainMeadow
     {
         public abstract NetworkDomain.NetworkDomainType domain { get; }
         public string name;
-        public string mode;
-        public int playerCount;
-        public bool hasPassword;
-        public int maxPlayerCount;
-        public string requiredMods;
-        public string bannedMods;        
-        public bool pinned;
 
-        public LobbyInfo(string name, string mode, int playerCount, bool hasPassword, int? maxPlayerCount, string highImpactMods = "", string bannedMods = "")
+        public int playerCount;
+        public LobbyParameters parameters;
+        public string mode => parameters.Mode;
+        public bool hasPassword => parameters.PasswordProtected;
+        public int maxPlayerCount => parameters.MaxPlayers;
+        public string requiredMods => parameters.Mods;
+        public string bannedMods => parameters.BannedMods;
+        public bool pinned => parameters.Pinned;
+
+        public LobbyInfo(string name, int playerCount, LobbyParameters parameters)
         {
             this.name = name;
-            this.mode = mode;
             this.playerCount = playerCount;
-            this.hasPassword = hasPassword;
-            this.maxPlayerCount = (int)maxPlayerCount;
-            this.requiredMods = highImpactMods;
-            this.bannedMods = bannedMods;
+            this.parameters = parameters;
         }
 
         public abstract string directJoinCode { get; }

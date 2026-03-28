@@ -1,26 +1,37 @@
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Net;
+using System.Net.Sockets;
 using System.Text;
 using Menu;
+using BepInEx;
 using RainMeadow.Shared;
+using RainMeadow.Shared.Models;
 using UnityEngine;  // for Vector2
 
 namespace RainMeadow
 {
 
-    public partial class RouterNetworkDomain
+    public partial class RouterNetworkDomain : SecuredPeerNetworkDomain
     {
         public class RouterPlayerId : MeadowPlayerId
         {
             public ushort routingID;
             public SecuredPeerId? endPoint;
-            public RouterPlayerId(ushort routingID) : base(
+            public PlayerInfo? info;
+            public RouterPlayerId(ushort routingID, PlayerInfo? info) : base(
                     UsernameGenerator.GenerateRandomUsername(routingID))
             {
+                this.info = info;
+                if (info is not null)
+                {
+                    this.name = info.username;
+                }
+
                 this.routingID = routingID;
                 endPoint = null;
             }
@@ -66,12 +77,12 @@ namespace RainMeadow
 
         public override MeadowPlayerId GetEmptyId()
         {
-            return new RouterPlayerId(0);
+            return new RouterPlayerId(0, null);
         }
 
         public override OnlinePlayer CreateMePlayer()
         {
-            return new OnlinePlayer(new RouterPlayerId(0)
+            return new OnlinePlayer(new RouterPlayerId(0, new PlayerInfo() { username = RainMeadow.rainMeadowOptions.LanUserName.Value })
                 { name = RainMeadow.rainMeadowOptions.LanUserName.Value })
                 { isMe = true };
             // note: we don't set our IP here, because it's not useful to anyone else (because NAT)
@@ -88,7 +99,7 @@ namespace RainMeadow
             return false;
         });
 
-        public OnlinePlayer? GetPlayerRouter(ushort routingID, bool create = false)
+        public OnlinePlayer? GetPlayerRouter(ushort routingID)
         {
             var player = OnlineManager.players.FirstOrDefault(p =>
             {
@@ -96,12 +107,6 @@ namespace RainMeadow
                     if (route.routingID != 0) return route.routingID == routingID;
                 return false;
             });
-
-            if (player is null && create)
-            {
-                RainMeadow.Debug($"Couldn't find player with routing ID {routingID}. Creating one...");
-                player = new OnlinePlayer(new RouterPlayerId(routingID));
-            }
 
             return player;
         }
@@ -117,31 +122,11 @@ namespace RainMeadow
                 case RouterModifyPlayerListPacket.Operation.Add:
                     for (int i = 0; i < packet.routerIds.Count; i++)
                     {
-                        RouterPlayerId playerID = new RouterPlayerId(packet.routerIds[i]);
-                        // // REVIEW: why was the following code removed?
-                        // if (!RainMeadow.rainMeadowOptions.RouterExposeIP.Value || packet.endPoints[i] == null)
-                        // {
-                        //     playerID.endPoint = null;
-                        // }
-                        // else
-                        // {
-                        //     playerID.endPoint = packet.endPoints[i];
-                        // }
-                        playerID.name = packet.userData[i].username;
-
-                        OnlinePlayer? addedPlayer = GetPlayerRouter(packet.routerIds[i], false);
+                        RouterPlayerId playerID = new RouterPlayerId(packet.routerIds[i], packet.userData[i]);
+                        OnlinePlayer? addedPlayer = GetPlayerRouter(packet.routerIds[i]);
                         if (addedPlayer is OnlinePlayer existingPlayer)
                         {
-                            if (packet.operation == RouterModifyPlayerListPacket.Operation.Update)
-                            {
-                                // FIXME: add checks once the PeerManager guarantees player identity
-                                existingPlayer.id = playerID;
-                                RainMeadow.Debug(String.Format("updating player: {0}, name {1}", playerID.routingID, playerID.name));
-                            }
-                            else
-                            {
-                                RainMeadow.Debug(String.Format("redundant add-player: {0}, 'name' {1}", playerID.routingID, playerID.name));
-                            }
+                            existingPlayer.id = playerID;
                             NATPierce(existingPlayer);  // just in case
                         }
                         else
@@ -158,7 +143,11 @@ namespace RainMeadow
                 case RouterModifyPlayerListPacket.Operation.Remove:
                     for (int i = 0; i < packet.routerIds.Count; i++)
                     {
-                        RemoveRouterPlayer(GetPlayerRouter(packet.routerIds[i], true));
+                        if (GetPlayerRouter(packet.routerIds[i]) is OnlinePlayer p)
+                        {
+                            RemoveRouterPlayer(p);
+                        }
+
                     }
                     break;
             }

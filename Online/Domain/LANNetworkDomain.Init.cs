@@ -5,6 +5,7 @@ using System.Linq;
 using System.Net;
 using Menu;
 using RainMeadow.Shared;
+using RainMeadow.Shared.Models;
 
 namespace RainMeadow
 {
@@ -13,7 +14,7 @@ namespace RainMeadow
         static partial void PlatformLanAvailable(ref bool val) { val = NetworkDomain.PlatformPeerManager is not null; }
     }
 
-    public partial class LANNetworkDomain
+    public partial class LANNetworkDomain : SecuredPeerNetworkDomain
     {
         void PacketFactory(Packet.Type type, ref Packet? packet)
         {
@@ -74,9 +75,19 @@ namespace RainMeadow
             public override string directJoinCode => endPoint.ToString();
 
             public SecuredPeerId endPoint;
-            public LANLobbyInfo(SecuredPeerId endPoint, string name, string mode, int playerCount, bool hasPassword, int maxPlayerCount, string highImpactMods = "", string bannedMods = "") :
-                base(name, mode, playerCount, hasPassword, maxPlayerCount, highImpactMods, bannedMods)
+            public LANLobbyInfo(SecuredPeerId endPoint, int playerCount, LobbyParameters parameters) :
+                base("LAN Lobby", playerCount, parameters)
             {
+                string dnsName = endPoint.endPoint.Address.ToString();
+                try
+                {
+                    dnsName = Dns.GetHostEntry(endPoint.endPoint.Address).HostName;
+                }
+                catch (Exception except)
+                {
+                    RainMeadow.Error(except);
+                }
+                name = dnsName + ":" + endPoint.endPoint.Port;
                 this.endPoint = endPoint;
             }
             public override bool Equals(LobbyInfo other)
@@ -84,6 +95,18 @@ namespace RainMeadow
                 if (other is LANLobbyInfo otherlan) return endPoint.Equals(otherlan.endPoint);
                 return false;
             }
+        }
+
+        public LobbyParameters GetLobbyParameters()
+        {
+            return new LobbyParameters()
+            {
+                MaxPlayers = maxplayercount,
+                PasswordProtected = OnlineManager.lobby.hasPassword,
+                Mode = OnlineManager.lobby.gameModeType.value,
+                Mods = RainMeadowModManager.ModArrayToString(RainMeadowModManager.GetRequiredMods()),
+                BannedMods = RainMeadowModManager.ModArrayToString(RainMeadowModManager.GetBannedMods())
+            };
         }
     }
 }

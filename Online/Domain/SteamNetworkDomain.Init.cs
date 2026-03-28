@@ -1,8 +1,12 @@
-﻿using RWCustom;
-using Steamworks;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Security.Cryptography;
+using System.Text;
+
+using Steamworks;
+using RWCustom;
+using RainMeadow.Shared.Models;
 
 namespace RainMeadow
 {
@@ -19,17 +23,31 @@ namespace RainMeadow
             public override string directJoinCode => iD.m_SteamID.ToString();
 
             public CSteamID iD;
-            public SteamLobbyInfo(CSteamID id, string name, string mode, int playerCount, bool hasPassword, int? maxPlayerCount, string highImpactMods = "", string bannedMods = "") :
-                base(name, mode, playerCount, hasPassword, maxPlayerCount, highImpactMods, bannedMods)
+            public SteamLobbyInfo(CSteamID id) : base("", 0, new LobbyParameters())
             {
                 iD = id;
-                // REVIEW: is the following block something that has been removed upstream, or something that was not re-added to the RouterDomain branch?
-                if (NetworkDomain.instances[NetworkDomain.NetworkDomainType.Steam].IsTrustedCommunity(new SteamPlayerId(SteamMatchmaking.GetLobbyOwner(iD))))
+                try
                 {
-                    if (bool.TryParse(SteamMatchmaking.GetLobbyData(iD, PINNED_KEY), out pinned))
+                    name = Utils.GetTranslatedLobbyName(SteamMatchmaking.GetLobbyData(id, NAME_KEY));
+                    playerCount = SteamMatchmaking.GetNumLobbyMembers(id);
+                    parameters.Mode = SteamMatchmaking.GetLobbyData(id, MODE_KEY);
+                    parameters.PasswordProtected = bool.TryParse(SteamMatchmaking.GetLobbyData(id, PASSWORD_KEY), out var hasPass) && hasPass;
+                    parameters.MaxPlayers = SteamMatchmaking.GetLobbyMemberLimit(id);
+                    parameters.Mods = SteamMatchmaking.GetLobbyData(id, MODS_KEY);
+                    parameters.BannedMods = SteamMatchmaking.GetLobbyData(id, BANNED_MODS_KEY);
+
+                    // REVIEW: is the following block something that has been removed upstream, or something that was not re-added to the RouterDomain branch?
+                    if (NetworkDomain.instances[NetworkDomain.NetworkDomainType.Steam].IsTrustedCommunity(new SteamPlayerId(SteamMatchmaking.GetLobbyOwner(iD))))
                     {
-                        RainMeadow.Debug("Successfully read pinned lobby data");
+                        if (bool.TryParse(SteamMatchmaking.GetLobbyData(iD, PINNED_KEY), out parameters.Pinned))
+                        {
+                            RainMeadow.Debug("Successfully read pinned lobby data");
+                        }
                     }
+                }
+                catch (Exception except)
+                {
+                    RainMeadow.Error(except);
                 }
             }
             public override bool Equals(LobbyInfo other)

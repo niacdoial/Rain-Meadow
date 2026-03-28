@@ -1,14 +1,18 @@
 using System;
-using System.Net;
-using System.Linq;
-using System.IO;
-using Menu;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Diagnostics;
+using System.IO;
+using System.Linq;
+using System.Net;
+using System.Net.Sockets;
+
+using HarmonyLib;
+using Menu;
 using UnityEngine;
 using RainMeadow.Shared;
 using RainMeadow.Shared.Models;
-using System.Net.Sockets;
+
 
 /// //////////////////////////////////////////////////
 /// NetworkDomain describes the common interface for the middle part of the network stack
@@ -32,6 +36,10 @@ using System.Net.Sockets;
 
 namespace RainMeadow
 {
+    public partial class NetworkDomain
+    {
+        static partial void PlatformRouterAvailable(ref bool val) { val = NetworkDomain.PlatformPeerManager is not null; }
+    }
 
     public partial class RouterNetworkDomain : SecuredPeerNetworkDomain
     {
@@ -74,33 +82,33 @@ namespace RainMeadow
         public class RouterLobbyInfo : LobbyInfo
         {
             public override NetworkDomainType domain => NetworkDomainType.Router;
-            public override string directJoinCode => endPoint.ToString();
+            public override string directJoinCode => endPoint.ToString(false);
 
             public SecuredPeerId endPoint;
-            public RouterLobbyInfo(SecuredPeerId endPoint, string name, string mode, int playerCount, bool hasPassword, int maxPlayerCount, string highImpactMods = "", string bannedMods = "") :
-                base(name, mode, playerCount, hasPassword, maxPlayerCount, highImpactMods, bannedMods)
+            public RouterLobbyInfo(SecuredPeerId endPoint, string name, int playerCount, LobbyParameters parameters) :
+                base(name, playerCount, parameters)
             {
                 this.endPoint = endPoint;
             }
 
-            public RouterLobbyInfo(SecuredPeerId endPoint, string name, LobbyParameters parameters) :
-                base(name, parameters.Mode, 1, parameters.PasswordProtected, parameters.MaxPlayers, parameters.Mods, parameters.BannedMods)
-            {
-                this.endPoint = endPoint;
-            }
+            //public RouterLobbyInfo(SecuredPeerId endPoint, string name, LobbyParameters parameters) :
+            //    base(name, parameters.Mode, 1, parameters.PasswordProtected, parameters.MaxPlayers, parameters.Mods, parameters.BannedMods)
+            //{
+            //    this.endPoint = endPoint;
+            //}
 
-            public LobbyParameters GetParameters()
-            {
-                return new LobbyParameters()
-                {
-                    Mode = mode,
-                    MaxPlayers = maxPlayerCount,
-                    PasswordProtected = hasPassword,
-                    Mods = requiredMods,
-                    BannedMods = bannedMods,
-                    Pinned = false,
-                };
-            }
+            //public LobbyParameters GetParameters()
+            //{
+            //    return new LobbyParameters()
+            //    {
+            //        Mode = mode,
+            //        MaxPlayers = maxPlayerCount,
+            //        PasswordProtected = hasPassword,
+            //        Mods = requiredMods,
+            //        BannedMods = bannedMods,
+            //        Pinned = false,
+            //    };
+            //}
 
             public override bool Equals(LobbyInfo other)
             {
@@ -140,7 +148,7 @@ namespace RainMeadow
         {
             if (NetworkDomain.currentDomain != NetworkDomain.NetworkDomainType.Router) return null;
 
-            if (GetPlayerRouter(fromRouterID, false) is OnlinePlayer player
+            if (GetPlayerRouter(fromRouterID) is OnlinePlayer player
                 && player.id is RouterPlayerId senderID
             ) {
                 if (packet.processingPeer == senderID.endPoint) {
@@ -157,5 +165,35 @@ namespace RainMeadow
             }
         }
 
+
+
+        public override void RecieveData()
+        {
+            if (PlatformPeerManager is null) return;
+            PlatformPeerManager.Update();
+
+            int packetlimit = 4; // TODO: Add to remix menu
+            for (int i = 0; (i < packetlimit) && PlatformPeerManager.IsPacketAvailable(); i++)
+            {
+                try
+                {
+                    byte[]? data = PlatformPeerManager.Receive(out SecuredPeerId? remoteEndpoint, out bool boxed);
+                    if (data == null) continue;
+                    if (remoteEndpoint is null) continue;
+
+                    using (MemoryStream netStream = new MemoryStream(data))
+                    using (BinaryReader netReader = new BinaryReader(netStream))
+                    {
+                        if (netReader.BaseStream.Position == ((MemoryStream)netReader.BaseStream).Length) continue; // nothing to read somehow?
+                        Packet.Decode(netReader, remoteEndpoint, PlatformPeerManager.Me, boxed);
+                    }
+                }
+                catch (Exception e)
+                {
+                    RainMeadow.Error(e);
+                    OnlineManager.serializer.EndRead();
+                }
+            }
+        }
     }
 }
