@@ -48,7 +48,7 @@ namespace RainMeadow
         {
             InitializePackets();
             if (PlatformPeerManager is null) throw new InvalidProgrammerException("no peer manager");
-            PlatformPeerManager.OnPeerForgotten += (SecuredPeerManager.RemotePeer peer) =>
+            PlatformPeerManager.OnPeerForgotten += (SecuredPeerManager.RemotePeer peer, string reason) =>
             {
                 // ignore player removal / recursive call if we are leaving the lobby
                 if (serverPeer == null) return;

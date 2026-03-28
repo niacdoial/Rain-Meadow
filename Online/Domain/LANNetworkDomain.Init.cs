@@ -44,7 +44,7 @@ namespace RainMeadow
         public LANNetworkDomain()
         {
             InitializePackets();
-            NetworkDomain.PlatformPeerManager.OnPeerForgotten += (SecuredPeerManager.RemotePeer endPoint) => {
+            NetworkDomain.PlatformPeerManager.OnPeerForgotten += (SecuredPeerManager.RemotePeer endPoint, string reason) => {
                 // first, check if this endpoint is managed by the current NetworkDomain
                 // then, check if the peer timed out or if we booted them already (done in the callee)
 

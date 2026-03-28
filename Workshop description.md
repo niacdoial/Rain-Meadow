@@ -3,7 +3,9 @@ A multiplayer engine, custom game mode, and online arena / story experience for 
 ---
 
 ## What is Rain Meadow?
-Rain Meadow is a true online multiplayer engine for Rain World! It includes both Story and Arena gamemodes, as well as a new "Meadow" gamemode based on the titular game "Meadow" by Might and Delight. Matchmaking is handled through Steam automatically. Connections through LAN are also possible for those that own Rain World on GOG.
+Rain Meadow is a true online multiplayer engine for Rain World! It includes both Story and Arena gamemodes, as well as a new "Meadow" gamemode based on the titular game "Meadow" by Might and Delight. Matchmaking is handled through Steam automatically. 
+For those that own Rain World on GOG, we have other possibilities.
+This includes (1) LAN connections, (2) our own worldwide matchmaking servers, and (3) a separate program for "port forwarding" situations, capable of hosting a single lobby.
 
 ---
 
