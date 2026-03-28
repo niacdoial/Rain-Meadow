@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using UnityEngine;
 
 namespace RainMeadow
 {
@@ -30,7 +31,9 @@ namespace RainMeadow
         public Dictionary<string, int> configurableInts;
 
         public string? password;
+        public string? meadowTimeline;
         public bool hasPassword => !string.IsNullOrWhiteSpace(password);
+        public bool eventGags = false;
 
         public Lobby(OnlineGameMode.OnlineGameModeType mode, OnlinePlayer owner, string? password) : base(null)
         {
@@ -58,7 +61,6 @@ namespace RainMeadow
             {
                 this.password = password;
                 (configurableBools, configurableFloats, configurableInts) = OnlineGameMode.GetHostRemixSettings(this.gameMode);
-
             }
             else
             {
@@ -201,6 +203,9 @@ namespace RainMeadow
         public class LobbyState : ResourceWithSubresourcesState
         {
             [OnlineField]
+            public string timeline; 
+
+            [OnlineField]
             public ushort nextId;
             [OnlineField]
             public string[] requiredmods;
@@ -218,6 +223,8 @@ namespace RainMeadow
             public Dictionary<string, float> onlineFloatRemixSettings;
             [OnlineField]
             public Dictionary<string, int> onlineIntRemixSettings;
+            [OnlineField]
+            public bool eventGags;
             public LobbyState() : base() { }
             public LobbyState(Lobby lobby, uint ts) : base(lobby, ts)
             {
@@ -230,12 +237,15 @@ namespace RainMeadow
                 onlineBoolRemixSettings = lobby.configurableBools;
                 onlineFloatRemixSettings = lobby.configurableFloats;
                 onlineIntRemixSettings = lobby.configurableInts;
+                timeline = lobby.meadowTimeline;
+                eventGags = lobby.eventGags;
             }
 
             public override void ReadTo(OnlineResource resource)
             {
                 var lobby = (Lobby)resource;
                 lobby.nextId = nextId;
+                lobby.meadowTimeline = timeline;
 
                 for (int i = 0; i < players.list.Count; i++)
                 {
@@ -289,7 +299,8 @@ namespace RainMeadow
 
                     lobby.modsChecked = true;
                 }
-
+                
+                lobby.eventGags = eventGags;
                 base.ReadTo(resource);
             }
         }

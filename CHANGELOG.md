@@ -5,7 +5,131 @@
 - Made both Router and LAN modes encrypted (there likely are still holes but it's a start)
 
 
+# Release 1.13.0
+## General
+- The Dev Tools debug UI now shows the local instance's client flags, and arena now shows its "[L]obbied" client flag.
+- The Dev Tools debug UI now groups creature/item symbols together, and should lag less.
+- Fixed meadow abyss respawns and arena/story abyss death messages failing if the player entered WallCling between -250y and -500y.
+- Fixed neuron glow not using players' selected body color.
+- Added customizable logging level to Remix in General tab
+- Infinite deafness, and _most_ causes of infinite tinnitus should be fixed.
+- Inv eggs no longer duplicate per player per Inv.
+- Fixed your spectated scug resetting every time you opened the spectate menu.
+- Updated Chinease Translation (Thanks HapiFive)
+- Fixed translation code for mod applier (Thanks HapiFive)
+## Arena
+- If MSC is enabled, closed dens will mirror challenge mode by eventually forcing players out, and completely blocking reentry attempts.
+- Added More Slugcat's "Challenges" to Arena! 
+- Synced round kills
+- Added configurable scoring
+- Added KillList & ScoreCounter HUDs from vanilla Arena
+- Altered client Arena overlay loading logic to wait for host to construct first to ensure accurate scoring
+- Granted Saint a kill credit if using ascension to ascend others
+- Fixed Spears Hit toggle not actually working during that current game session
+- Added "Loading x%" message in Arena Overlay to notify of remaining users waiting to leave active resource
+### Modders 
+- ⚠️ BREAKING: Updated  `GetPlayerTrophies ` to  `GetAllPlayerTrophies ` and  `GetRoundPlayerTrophies`
+- ⚠️ BREAKING: Moved all arena `arena.Killing` to reside inside of `arena.ExternalGameMode` and removed the `playerIndex` param
+- ⚠️ BREAKING: Updated `ExternalGameMode.AddIcon` to include OnlinePlayerDisplay to access all UI elements used in the in-game overhead UI
+## Story
+- Fixed the "Wait for others to rescue you" death prompt blocking pause inputs.
+### Watcher
+- Impossibly high ripple levels (6+) no longer crash the game when viewed.
+
+## Meadow
+- Slugcats can now enter the lower depths regardless of remix's "Vanilla Exploits".
+- MS_CORE and Saint's intro rooms should no longer break the rain timer and/or game.
+- The pounce tutorial and SU_PMPSTATION01 barriers no longer load in.
+- The guaranteed jetfish in SL, and the three guaranteed scav corpses in Artificer's GW no longer load in.
+- Many different room-specific tooltips across all campaigns are now disabled.
+
+# Release 1.12.0
+## Arena
+- Added `arena.session` to access the current ArenaGameSession
+- Moved ` ArenaGameSession_Update`  fully inside of ` ExternalGameMode.ArenaGameSession_Update` to enable overrides
+- Restored custom Team Names
+- Disabled Watcher glow from ripple level in online arena sessions
+- Blocked next level call until chatbar is closed
+- Blocked exiting to lobby if host already initiated next level loading to prevent crash
+- A new character approaches: The Overseer! Select to spectate games
+### Team Battle 
+- Added friendly fire toggle
+
+## Story
+- Fixed Moon dying if the room transferred owners 
+- Enabled Sync Save option for clients regardless of save state status
+### Watcher
+- Fixed end-game ability not working
+- Fixed mind control happening post-warp
+
+## Meadow
+- Disabled Outer Expanse, Spearmaster and Artificer endings in Meadow mode.
+  - These endings would cause a crash if done in Meadow mode.
+
+## General
+- Fixed Dev Tools trying to teleport remote players when holding V
+- Updated documentation in codebase.
+- Added OnlineGameMode.ResetOverworld() to release the overworld at the discretion of the gamemode
+- Added support for 4:3 resolution for Spectate overlay
+- Fixed proto-rot showing up in unexpected campaigns 
+- Fixed issues with port assignment resulting in meadow failing to start.
+## Engine
+Synced the following
+- Waterflux
+- Gourmand exhaustion and player lung exhaustion
+- Vulture demasking
+- Box Worms
+- Sand Grubs
+Improved sync for the following
+- Big Moths
+  - Moths will flap their wings correctly and creature interactions are synced..
+ - Vultures
+   - Vultures should be noticably less jittery and sync more accurately. King Vultures should also work a lot better.
+- Fixed Sand Grubs causing crashes and graphical glitches.
+- Added coroutine for world loading; blocked entity states during world transitions
+
+### Chat:
+- Auto-fill usernames when using "@" in chat. 
+- Fixed chat filters not applying to messages above player heads.
+
+# Release 1.11.1
+## Engine 
+- Fixed an issue where transitioning regions led to disappearing players
+
+# Release 1.11.0
+## Arena
+- Added flash to tab arrow to assist users in locating game mode tab settings
+- Publicized arena.blockList for developers
+- Fixed bees/bombs spawning client-side
+- Fixed pipe eating during the first few frames of the game if moving into den
+- Fixed Saints ascending teammates. Stop that.
+## General
+- Added Chinese translation (thanks @havenoideawhatismyname!)
+- Fixed custom background thumbnails not disappearing when scrolling background pages
+- Fixed large lobbies interrupting ping cycle key inputs 
+- Fixed spectating never abstracting previous rooms
+### Chat
+-  Chat Opacity (Makes chat semi transparent when a player is behind it)
+-  Chat Inactivity (Makes chat semi transparent after a short period of inactivity (no new messages and no typing))
+-  Enforce max message length for receiving messages.
+-  Copy/Paste support
+-  Recently Sent Messages (Up/Down arrows)
+-  Sound when mentioned by name in chat.
+-  Host icon in chat
+-  Deprecate ChatTextBox2 and use just ChatTextBox
+## Story
+- Fixes creature duplication occurring the next cycle  after a creature enters a den
+- Gracefully handle when the an online game mode menu is loaded but the online lobby hasn't 
+- Updated "Match Save" to "Sync Save" for clarity
+- Updated the Text Prompt on death to dismiss after 5 seconds instead of requiring input
+- Fixed forced den re-sheltering when a client has a valid den
+## Meadow
+- Added configurable timelines
+## Engine
+- Fixed a sizing issue with Custom Packets
+
 # Release 1.10.0 (Anniversary Edition)
+
 ## Arena:
 - Fixes Amoeba controls not listening to your pointed direction
 - Piggyback toggle now also controls your ability to piggyback dead / stunned slugcats

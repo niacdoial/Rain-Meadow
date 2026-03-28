@@ -344,7 +344,7 @@ namespace RainMeadow
                 }
                 else if (state is EntityFeedState entityFeedState)
                 {
-                    if (entityFeedState.inResource != null && entityFeedState.inResource.isAvailable)
+                    if (entityFeedState.inResource != null && entityFeedState.inResource.isAvailable && !entityFeedState.inResource.transitionInProgress)
                     {
                         var ent = entityFeedState.entityState.entityId.FindEntity();
                         if (ent != null)
@@ -404,6 +404,7 @@ namespace RainMeadow
         public static void AddFeed(OnlineResource resource, OnlineEntity oe)
         {
             feeds.Add(new EntityFeed(resource, oe));
+
         }
 
         public static void RemoveFeed(OnlineResource resource, OnlineEntity oe)

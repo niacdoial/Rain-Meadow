@@ -23,7 +23,9 @@ namespace RainMeadow
 
         public override void Deserialize(BinaryReader reader)
         {
-            data = new ArraySegment<byte>(reader.ReadBytes(size));
+            long orig = reader.BaseStream.Position;
+            base.Deserialize(reader);
+            data = new ArraySegment<byte>(reader.ReadBytes((int)(size-(reader.BaseStream.Position-orig))));
         }
 
         public override void Process()

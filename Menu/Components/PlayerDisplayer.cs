@@ -19,7 +19,8 @@ namespace RainMeadow.UI.Components
             inviteFriends.buttonBehav.greyedOut = NetworkDomain.currentInstance.canOpenInvitations;
             inviteFriends.OnClick += (_) =>
             {
-                    NetworkDomain.currentInstance.OpenInvitationOverlay();
+                SimpleDialogBoxNotify dialogBox = new(menu, owner, "The Steam invite feature is currently unstable, and may not work properly.\nConsider using a public lobby with a password instead.", buttonText: "OKAY");
+                NetworkDomain.currentInstance.OpenInvitationOverlay();
             };
             refreshDisplayButtons = PopulatePlayerDisplays;
             UpdatePlayerList(onlinePlayers);

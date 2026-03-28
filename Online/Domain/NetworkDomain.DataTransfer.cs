@@ -28,9 +28,18 @@ namespace RainMeadow
 
         public virtual bool canSendChatMessages => false;
         public virtual void FilterMessage(ref string message) { }
+        public virtual string FilterTeamName(string name)
+        {
+            return name;
+        }
         public virtual void SendChatMessage(string message) { }
         public virtual void RecieveChatMessage(OnlinePlayer player, string message)
         {
+            if (message.Length > ChatTextBox.textLimit)
+           {
+               RainMeadow.Error($"Error: {player} tried sending a chat message longer than what is allowed. Message will not be displayed. {message.Length}/{ChatTextBox.textLimit}");
+               return;
+           }
             ChatLogManager.LogMessage($"{player.id.GetPersonaName()}", $"{message}");
         }
     }

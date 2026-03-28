@@ -1,5 +1,4 @@
-﻿using HarmonyLib;
-using Menu;
+﻿using Menu;
 using RWCustom;
 using System;
 using System.Collections.Generic;
@@ -16,7 +15,7 @@ namespace RainMeadow
         private int suco4;
 
         private HorizontalSlider2 hubVolumeSlider;
-        
+
         public static Slider.SliderID HubVolume = new Slider.SliderID("Thingy", true);
         public MeadowPauseMenu(ProcessManager manager, RainWorldGame game, MeadowGameMode mgm) : base(manager, game)
         {
@@ -55,7 +54,7 @@ namespace RainMeadow
                     this.ContinueAndExitButtonsXPos - 250.2f - this.moveLeft - this.manager.rainWorld.options.SafeScreenOffset.x,
                     Mathf.Max(manager.rainWorld.options.SafeScreenOffset.y, 15f) + 540.2f
                 );
-                pos.y -= (buttonCount) * 40f; 
+                pos.y -= (buttonCount) * 40f;
                 SimplerButton button = new SimplerButton(this, this.pages[0], localizedText, pos, new Vector2(110f, 30f), localizedDescription);
                 button.OnClick += onClick;
                 button.nextSelectable[0] = button;
@@ -71,8 +70,8 @@ namespace RainMeadow
                 buttonCount += 1;
                 return button;
             }
-            this.pages[this.currentPage].lastSelectedObject = this.continueButton = 
-                AddButton(this.Translate("CONTINUE"), this.Translate("Close this menu"), this.Continue);
+            this.pages[this.currentPage].lastSelectedObject = this.continueButton =
+            AddButton(this.Translate("CONTINUE"), this.Translate("Close this menu"), this.Continue);
             AddButton(this.Translate("TO HUB"), this.Translate("Teleport to the closest hub"), this.ToHub, targetHub != -1, emotesprite: MeadowProgression.Emote.symbolTree.value.ToLowerInvariant());
             AddButton(this.Translate("TO OUTSKIRTS"), this.Translate("Teleport to outskirts"), this.ToOutskirts, suco4 != -1, emotesprite: MeadowProgression.Emote.symbolSurvivor.value.ToLowerInvariant());
             AddButton(this.Translate("PASSAGE"), this.Translate("Passage to another shelter"), this.Passage, isShelter, emotesprite: MeadowProgression.Emote.symbolShelter.value.ToLowerInvariant());
@@ -84,7 +83,7 @@ namespace RainMeadow
                     this.ContinueAndExitButtonsXPos - 250.2f - this.moveLeft - this.manager.rainWorld.options.SafeScreenOffset.x,
                     Mathf.Max(manager.rainWorld.options.SafeScreenOffset.y, 15f) + 540.2f
                 );
-            
+
             pos.y += 40f;
             var text = new MusicTitleDisplay(this, this.pages[0], "", pos, new Vector2(0f, 30f)); //110
             text.subObjects.Add(new Floater(this, text, new Vector2(750f, 0f), new Vector2(3f, 2.75f), new Vector2(3f, 1f)));
@@ -105,6 +104,34 @@ namespace RainMeadow
             colCb.subObjects.Add(new Floater(this, colCb, new Vector2(750f, 0f), new Vector2(3f, 2.75f), new Vector2(3f, 1f)));
             pages[0].subObjects.Add(colCb);
 
+            pos.y -= 40f;
+            var timelineSprite = new MenuSprite(this, pages[0], new FSprite(MeadowProgression.Emote.symbolTime.value.ToLowerInvariant()) { scale = 30f / 240f }, new Vector2(pos.x + 10f, pos.y + 10f));
+            pages[0].subObjects.Add(timelineSprite);
+
+            string timelineText = Translate($"Timeline: {OnlineManager.lobby.meadowTimeline}");
+            var timelineLabel = new MenuLabel(this, pages[0], timelineText, new Vector2(pos.x + 20f, pos.y), new Vector2(50f, 20f), bigText: false);
+            timelineLabel.label.alignment = FLabelAlignment.Left;
+            timelineLabel.label.color = Menu.Menu.MenuRGB(Menu.Menu.MenuColors.MediumGrey);
+            pages[0].subObjects.Add(timelineLabel);
+            if (SpecialEvents.IsSpecialEventInLobby)
+            {
+                pos.y -= 40f;
+                SpecialEvents.LoadElement("meadowcoin");
+                var meadowCoinSprite = new MenuSprite(this, pages[0], new FSprite("meadowcoin") { scale = 0.10f, color = Color.yellow }, new Vector2(pos.x + 10f, pos.y + 10f));
+                pages[0].subObjects.Add(meadowCoinSprite);
+
+                string meadowCoinValue = Translate($"¤{RainMeadow.rainMeadowOptions.MeadowCoins.Value}");
+                var meadowCoinlabel = new MenuLabel(this, pages[0], meadowCoinValue, new Vector2(pos.x + 20f, pos.y), new Vector2(50f, 20f), bigText: false);
+                meadowCoinlabel.label.alignment = FLabelAlignment.Left;
+                meadowCoinlabel.label.color = Menu.Menu.MenuRGB(Menu.Menu.MenuColors.MediumGrey);
+                pages[0].subObjects.Add(meadowCoinlabel);
+                pages[0].subObjects.Add(new Floater(this, meadowCoinSprite, new Vector2(750f, 0f), new Vector2(3f, 2.75f), new Vector2(3f, 1f)));
+                pages[0].subObjects.Add(new Floater(this, meadowCoinlabel, new Vector2(750f, 0f), new Vector2(3f, 2.75f), new Vector2(3f, 1f)));
+
+            }
+
+            pages[0].subObjects.Add(new Floater(this, timelineSprite, new Vector2(750f, 0f), new Vector2(3f, 2.75f), new Vector2(3f, 1f)));
+            pages[0].subObjects.Add(new Floater(this, timelineLabel, new Vector2(750f, 0f), new Vector2(3f, 2.75f), new Vector2(3f, 1f)));
 
             // Removes the tutorial sprites 
             this.controlMap.RemoveSprites();
@@ -123,16 +150,16 @@ namespace RainMeadow
         }
         public override float ValueOfSlider(Slider slider)
         {
-            return MeadowMusic.defaultPlopVolume/0.575f;
+            return MeadowMusic.defaultPlopVolume / 0.575f;
         }
-        
+
         private void Continue(SimplerButton button)
         {
             RainMeadow.DebugMe();
             this.wantToContinue = true;
             base.PlaySound(SoundID.HUD_Unpause_Game);
         }
-            
+
         private void ToMainMenu(SimplerButton button)
         {
             RainMeadow.DebugMe();

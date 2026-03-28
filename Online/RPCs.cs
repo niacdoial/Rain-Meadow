@@ -1,12 +1,13 @@
 ﻿using System;
 using System.Linq;
+using UnityEngine;
 
 namespace RainMeadow
 {
     public static class RPCs
     {
         [RPCMethod]
-        public static void DeathRain(RPCEvent rpc, GlobalRain.DeathRain.DeathRainMode deathRainMode, 
+        public static void DeathRain(RPCEvent rpc, GlobalRain.DeathRain.DeathRainMode deathRainMode,
             float timeInThisMode, float calmBeforeStornSunlight)
         {
             if (rpc.from != OnlineManager.lobby.owner) return; // Only allow DeathRain from the host.
@@ -75,7 +76,7 @@ namespace RainMeadow
         public static void UpdateUsernameTemporarily(RPCEvent rpc, string lastSentMessage)
         {
             string incomingUsername = rpc.from.id.name;
-            
+
             RainMeadow.Debug("Incoming: " + incomingUsername + ": " + lastSentMessage);
 
             if (OnlineManager.lobby.gameMode.mutedPlayers.Contains(incomingUsername)) return;
@@ -115,6 +116,12 @@ namespace RainMeadow
         {
             if (!(RWCustom.Custom.rainWorld.processManager.currentMainLoop is RainWorldGame game && game.manager.upcomingProcess is null)) return;
 
+            if (saint != null && (opo.apo as AbstractCreature)?.realizedObject != null && (saint.apo as AbstractCreature)?.realizedCreature != null)
+            {
+                // Don't kill our friends!
+                if ((saint.apo as AbstractCreature).realizedCreature.FriendlyFireSafetyCandidate((opo.apo as AbstractCreature).realizedCreature)) return;
+            }
+            (opo.apo.realizedObject as Creature).SetKillTag(saint.apo as AbstractCreature);
             (opo.apo as AbstractCreature)?.realizedCreature?.Die();
             if (saint != null)
             {
@@ -123,21 +130,31 @@ namespace RainMeadow
         }
 
         [RPCMethod]
-        public static void KillFeedEnvironment(OnlinePhysicalObject opo, int index)
+        public static void KillFeedEnvironment(OnlinePhysicalObject opo, int index, OnlinePhysicalObject? blame)
         {
             if (!(RWCustom.Custom.rainWorld.processManager.currentMainLoop is RainWorldGame game && game.manager.upcomingProcess is null)) return;
+            OnlinePhysicalObject myKiller = null;
+            OnlinePhysicalObject myTarget = null;
             foreach (var playerAvatar in OnlineManager.lobby.playerAvatars.Select(kv => kv.Value))
             {
                 if (playerAvatar.type == (byte)OnlineEntity.EntityId.IdType.none) continue; // not in game
                 if (playerAvatar.FindEntity(true) is OnlinePhysicalObject opo1 && opo1.apo is AbstractCreature ac)
                 {
+                    if (blame != null && opo1.id == blame.id)
+                    {
+                        myKiller = opo1;
+                    }
                     if (opo1.id == opo.id)
                     {
-                        DeathMessage.DeathType type = (DeathMessage.DeathType)index;
-                        DeathMessage.EnvironmentalDeathMessage(opo, type);
-                        break;
+                        myTarget = opo1;
+                        if (blame == null) break;
                     }
                 }
+            }
+            if (myTarget != null)
+            {
+                DeathMessage.DeathType type = (DeathMessage.DeathType)index;
+                DeathMessage.EnvironmentalDeathMessage(opo, type, blame);
             }
         }
 
@@ -168,13 +185,14 @@ namespace RainMeadow
                 {
                     myTarget = opo1;
                 }
+                DeathMessage.PvPContext pvpContext = Enum.IsDefined(typeof(DeathMessage.PvPContext), context) ? (DeathMessage.PvPContext)context : DeathMessage.PvPContext.Default;
                 if ((target.apo as AbstractCreature).creatureTemplate.type == CreatureTemplate.Type.Slugcat)
                 {
-                    DeathMessage.PlayerKillPlayer(myKiller, myTarget, context);
+                    DeathMessage.PlayerKillPlayer(myKiller, myTarget, pvpContext);
                 }
                 else
                 {
-                    DeathMessage.PlayerKillCreature(myKiller, myTarget, context);
+                    DeathMessage.PlayerKillCreature(myKiller, myTarget, pvpContext);
                 }
             }
         }

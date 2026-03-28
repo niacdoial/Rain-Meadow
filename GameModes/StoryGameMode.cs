@@ -25,6 +25,7 @@ namespace RainMeadow
         public string? defaultDenPos;
         public string? region = null;
         public SlugcatStats.Name currentCampaign;
+        public SlugcatStats.Name preferredSlug;
         public bool requireCampaignSlugcat;
         public string? saveStateString;
         public bool lastWarpIsEcho = false;
@@ -38,7 +39,6 @@ namespace RainMeadow
         public int avatarCount { get; set; } = 1;
 
         public StoryClientSettingsData storyClientData;
-
         public Watcher.WarpPoint.WarpPointData? myLastWarp = null; //yeah watcher gonna watch
         public string? myLastDenPos = null;
         public bool hasSheltered = false;
@@ -69,6 +69,8 @@ namespace RainMeadow
             pups = new();
             storyClientData?.Sanitize();
             rippleLevel = 0.0f;
+            this.ResetOverWorld();
+
         }
 
         public bool canJoinGame => isInGame && !changedRegions && readyForTransition == ReadyForTransition.Closed && !readyForWin;
@@ -93,14 +95,14 @@ namespace RainMeadow
         {
             //PlacedObject.Type.SporePlant,  // crashes the game, ask Turtle (UPDATE: probably doesn't anymore)
             PlacedObject.Type.HangingPearls,  // duplicates and needs to be synced, ask choc
-            DLCSharedEnums.PlacedObjectType.Stowaway, //cause severe visual glitches and shaking when overlapped
+            //DLCSharedEnums.PlacedObjectType.Stowaway, // No longer causes visual glitches but still needs some work, excluding for now
             Watcher.WatcherEnums.PlacedObjectType.CosmeticRipple, //visual glitches and does not really hurt to exclude
         };
 
         public override bool AllowedInMode(PlacedObject item)
         {
             if (disallowedPlacedObjects.Contains(item.type)) return false;
-            if (item.type == PlacedObject.Type.StuckDaddy)
+            if (item.type == PlacedObject.Type.StuckDaddy /*|| item.type == DLCSharedEnums.PlacedObjectType.Stowaway*/)
             {
                 return OnlineManager.lobby.isOwner;
             }

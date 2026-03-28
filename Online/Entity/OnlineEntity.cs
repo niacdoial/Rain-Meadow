@@ -396,12 +396,37 @@ namespace RainMeadow
 
         public virtual void ReadState(EntityState entityState, OnlineResource inResource)
         {
-            lastStates[inResource] = entityState;
-            StateProfiler.Instance?.Push(entityState.GetType());
-            entityState.ReadTo(this);
-            StateProfiler.Instance?.Pop(entityState.GetType());
+                lastStates[inResource] = entityState;
+                StateProfiler.Instance?.Push(entityState.GetType());
+                entityState.ReadTo(this);
+                StateProfiler.Instance?.Pop(entityState.GetType());
+
         }
 
+        public virtual bool CanReadTo(EntityState entityState, OnlineResource inResource, uint tick) 
+        {
+            var entity = entityState.entityId.FindEntity();
+            if (entity == null)
+            {
+                RainMeadow.Error($"CanReadTo: Entity state cannot readto. Reason: entity.FindEntity() is null: {entityState.from}, {entityState.entityId}");
+                return false;
+            } 
+
+            var localState = entity.GetState(tick, inResource);
+            if (localState == null)
+            {
+                RainMeadow.Error($"CanReadTo: Entity state cannot readto. Reason: localState.GetState() is null");
+                return false;
+            } 
+
+
+            if (!entityState.GetType().IsAssignableFrom(localState.GetType()))
+            {
+            RainMeadow.Error($"CanReadTo: Is not assignable EntityState: {entityState.GetType()}, localState: {localState.GetType()}:  {entityState.GetType().IsAssignableFrom(localState.GetType())}");
+            }
+
+            return entityState.GetType().IsAssignableFrom(localState.GetType());
+        }
         public Dictionary<OnlineResource, Queue<EntityState>> incomingState = new();
         public virtual void ReadState(EntityFeedState entityFeedState)
         {
@@ -419,7 +444,7 @@ namespace RainMeadow
             }
             RainMeadow.Trace($"processing received state {newState} in resource {inResource}");
             var stateQueue = incomingState[inResource];
-            if (newState.isDelta)
+            if (newState.IsDelta)
             {
                 RainMeadow.Trace($"received delta state for tick {newState.tick} referencing baseline {newState.baseline}");
                 while (stateQueue.Count > 0 && EventMath.IsNewer(newState.baseline, stateQueue.Peek().tick))

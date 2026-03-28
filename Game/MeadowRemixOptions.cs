@@ -1,6 +1,7 @@
 using HarmonyLib;
 using Menu;
 using Menu.Remix.MixedUI;
+using Menu.Remix.MixedUI.ValueTypes;
 using RWCustom;
 using System;
 using System.Collections.Generic;
@@ -23,7 +24,7 @@ public class RainMeadowOptions : OptionInterface
     public readonly Configurable<KeyCode> PointingKey;
     public readonly Configurable<KeyCode> ChatLogKey;
     public readonly Configurable<KeyCode> ChatButtonKey;
-    public readonly Configurable<bool> ChatLogOnOff;
+    public readonly Configurable<bool> ChatLogOnOff, ChatPing;
     public readonly Configurable<int> ArenaCountDownTimer;
     public readonly Configurable<int> ArenaSaintAscendanceTimer;
     public readonly Configurable<int> ArenaWatcherCamoTimer;
@@ -39,6 +40,7 @@ public class RainMeadowOptions : OptionInterface
 
     public readonly Configurable<int> AmoebaDuration;
     public readonly Configurable<bool> AmoebaControl;
+    public readonly Configurable<bool> FriendlyFire;
 
 
     public readonly Configurable<bool> BlockMaul;
@@ -52,6 +54,7 @@ public class RainMeadowOptions : OptionInterface
     public readonly Configurable<bool> EnableBombs;
     public readonly Configurable<bool> EnableCorpseGrab;
     public readonly Configurable<bool> EnableBees;
+    public readonly Configurable<bool> EnableOverseer;
 
     public readonly Configurable<bool> EnablePiggyBack;
     public readonly Configurable<StreamMode> StreamerMode;
@@ -64,9 +67,9 @@ public class RainMeadowOptions : OptionInterface
     public readonly Configurable<string> ChieftainTeamName;
     public readonly Configurable<float> TeamColorLerp;
 
-    public readonly Configurable<float> ScrollSpeed, ChatBgOpacity;
+    public readonly Configurable<float> ScrollSpeed, ChatBgOpacity, ChatInactivityOpacity;
     public readonly Configurable<bool> ShowPing;
-    public readonly Configurable<int> ShowPingLocation;
+    public readonly Configurable<int> ShowPingLocation, ChatInactivityTimer;
 
     public readonly Configurable<string> LanUserName;
     public readonly Configurable<bool> RouterExposeIP;
@@ -76,12 +79,26 @@ public class RainMeadowOptions : OptionInterface
     public readonly Configurable<bool> StopMovementWhileSpectateOverlayActive;
 
     public readonly Configurable<bool> DevNightskySkin;
-
     public readonly Configurable<bool> EnableAchievementsOnline;
 
     public readonly Configurable<IntroRoll> PickedIntroRoll;
     private readonly Configurable<string> LobbyMusic;
-    public readonly Configurable<bool> AnniversaryCape;
+    public readonly Configurable<int> MeadowCoins;
+
+    public readonly Configurable<bool> boughtSilverCape;
+    public readonly Configurable<bool> boughtGoldenCape;
+
+    public readonly Configurable<bool> boughtRainbowCape;
+    public readonly Configurable<bool> wantsDefaultCapeColor;
+    public readonly Configurable<Color> currentlyActiveCapeColor;
+    public readonly Configurable<int> ChallengeID;
+
+    public readonly Configurable<int> ArenaSpearScore;
+    public readonly Configurable<int> ArenaAliveScore;
+    public readonly Configurable<int> ArenaDenScore;
+    public readonly Configurable<ArenaSetup.GameTypeSetup.DenEntryRule> ArenaDenType;
+    public Configurable<RainMeadow.LogLevel> CurrentLogLevel;
+    public readonly Configurable<bool> ArenaUnhandledOptimizations;
 
     public enum IntroRoll
     {
@@ -90,6 +107,7 @@ public class RainMeadowOptions : OptionInterface
         Downpour,
         Watcher
     }
+
 
     public enum StreamMode
     {
@@ -123,12 +141,13 @@ public class RainMeadowOptions : OptionInterface
         ChatLogKey = config.Bind("ChatLogKey", KeyCode.Comma);
         ChatButtonKey = config.Bind("ChatButtonKey", KeyCode.Return);
         ChatLogOnOff = config.Bind("ChatLogOnOff", true);
+        ChatPing = config.Bind("ChatPing", true);
         ArenaCountDownTimer = config.Bind("ArenaCountDownTimer", 5);
 
         ArenaSaintAscendanceTimer = config.Bind("ArenaSaintAscendanceTimer", 3);
         ArenaWatcherCamoTimer = config.Bind("ArenaWatcherCamoTimer", 12);
 
-        ProfanityFilter = config.Bind("ProfanityFilter", false);
+        ProfanityFilter = config.Bind("ProfanityFilter", true);
 
         ArenaSAINOT = config.Bind("ArenaSAINOT", false);
         ArenaAllowMidJoin = config.Bind("ArenaAllowMidJoin", true);
@@ -142,6 +161,8 @@ public class RainMeadowOptions : OptionInterface
         VoidMaster = config.Bind("VoidMaster", false);
         AmoebaDuration = config.Bind("AmoebaDuration", 7);
         AmoebaControl = config.Bind("AmoebaControl", false);
+        FriendlyFire = config.Bind("FriendlyFire", false);
+
         ArenaWatcherRippleLevel = config.Bind("ArenaWatcherRippleLevel", 1);
 
 
@@ -163,6 +184,7 @@ public class RainMeadowOptions : OptionInterface
         EnableBees = config.Bind("EnableBees", true);
         EnableBombs = config.Bind("EnableBombs", true);
         EnableCorpseGrab = config.Bind("EnableCorpseGrab", true);
+        EnableOverseer = config.Bind("EnableOverseer", false);
 
         ShowPing = config.Bind("ShowPing", false);
         ShowPingLocation = config.Bind("ShowPingLocation", 0);
@@ -186,14 +208,35 @@ public class RainMeadowOptions : OptionInterface
         StopMovementWhileSpectateOverlayActive = config.Bind("StopMovementWhileSpectateOverlayActive", false);
 
         ChatBgOpacity = config.Bind("ChatBgOpacity", 0.2f);
+        ChatInactivityOpacity = config.Bind("ChatInactivityOpacity", 0.35f);
+        ChatInactivityTimer = config.Bind("ChatInactivityTimer", 30);
         StreamerMode = config.Bind("StreamerMode", StreamMode.None);
 
         DevNightskySkin = config.Bind("DevNightskySkin", false);
-
         EnableAchievementsOnline = config.Bind("EnableAchievementsOnline", false);
-        AnniversaryCape = config.Bind("AnniversaryCape", true);
+        MeadowCoins = config.Bind("MeadowCoins", 0);
+
+        boughtSilverCape = config.Bind("BoughtSilverCape", false);
+        boughtGoldenCape = config.Bind("BoughtGoldenCape", false);
+        boughtRainbowCape = config.Bind("BoughtRainbowCape", false);
+        currentlyActiveCapeColor = config.Bind("CurrentlyActiveCapeColor", Color.red);
+        ArenaSpearScore = config.Bind("ArenaSpearScore", 0);
+        ArenaAliveScore = config.Bind("ArenaAliveScore", 0);
+        ArenaDenScore = config.Bind("ArenaDenScore", 0);
+
+        ArenaDenType = config.Bind("ArenaDenType", ArenaSetup.GameTypeSetup.DenEntryRule.Standard);
+        ChallengeID = config.Bind("ChallengeID", 1);
+        wantsDefaultCapeColor = config.Bind("WantsDefaultCapeColor", true);
+        CurrentLogLevel = config.Bind("logLevelSetting", RainMeadow.LogLevel.Info);
+        ArenaUnhandledOptimizations = config.Bind("ArenaUnhandledOptimizations", false);
 
     }
+    List<ListItem> capeList = new List<ListItem>
+{
+    new ListItem(Menu.MenuColorEffect.ColorToHex(Color.red), "Default"),
+    new ListItem(Menu.MenuColorEffect.ColorToHex(new Color(0.863f, 0.918f, 0.941f)), "Silver"),
+    new ListItem(Menu.MenuColorEffect.ColorToHex(RainWorld.SaturatedGold), "Gold")
+};
 
     public override void Initialize()
     {
@@ -218,6 +261,8 @@ public class RainMeadowOptions : OptionInterface
             OpSimpleButton cheatReset;
             float cheaty = 130f;
             OpTextBox chatBgOpacity;
+            OpTextBox chatInactivityOpacity;
+            OpTextBox chatInactivityTimer;
             OnlineGameplay = new UIelement[]
           {
             new OpLabel(10f, 550f, Translate("Gameplay"), bigText: true),
@@ -264,9 +309,17 @@ public class RainMeadowOptions : OptionInterface
             new OpLabel(210, 120f, Translate("Show Ping")),
             new OpCheckBox(ShowPing, new Vector2(210, 90f)),
 
+            new OpLabel(10, 60f, Translate("Sound on Mention")),
+            new OpCheckBox(ChatPing, new Vector2(10, 30f)),
 
-            new OpLabel(410, 120f, Translate("Chat Log On/Off")),
-            new OpCheckBox(ChatLogOnOff, new Vector2(410f, 90f)),
+            new OpLabel(410, 120f, Translate("Chat Inactivity Opacity")),
+            chatInactivityOpacity = new OpTextBox(ChatInactivityOpacity, new Vector2(410f, 93f), 90),
+
+            new OpLabel(410, 60f, Translate("Chat Inactivity Timer")),
+            chatInactivityTimer = new OpTextBox(ChatInactivityTimer, new Vector2(410f, 33f), 90),
+
+            new OpLabel(210, 60f, Translate("Chat Log On/Off")),
+            new OpCheckBox(ChatLogOnOff, new Vector2(210f, 30f)),
 
 
           };
@@ -301,6 +354,8 @@ public class RainMeadowOptions : OptionInterface
             meadowTab.AddItems(OnlineMeadowSettings);
 
             OpComboBox2 introroll;
+            OpComboBox2 capeColor;
+
             OpComboBox2 music;
             OpLabel downpourWarning;
             OpLabel watcherWarning;
@@ -318,7 +373,6 @@ public class RainMeadowOptions : OptionInterface
                 new OpLabel(440f, 535f, Translate("Nightsky Skin")),
 
 
-
                 new OpLabel(10f, 490f, RWCustom.Custom.ReplaceLineDelimeters(Translate("Control which mods are permitted on clients by editing the files below.<LINE>Instructions included within."))),
                 editSyncRequiredModsButton = new OpSimpleButton(new Vector2(10f, 450f), new Vector2(150f, 30f), Translate("Edit High-Impact Mods")),
                 editBannedModsButton = new OpSimpleButton(new Vector2(185f, 450f), new Vector2(150f, 30f), Translate("Edit Banned Mods")),
@@ -327,22 +381,57 @@ public class RainMeadowOptions : OptionInterface
                 new OpLabel(10, 420, Translate("Playtesting Gift")),
                 new OpCheckBox(WearingCape, new Vector2(10, 390f)),
 
-                new OpLabel(120, 420, Translate("Anniversary Gift")),
-                new OpCheckBox(AnniversaryCape, new Vector2(120, 390f)),
-                
                 new OpLabel(10, 370, Translate("Introroll")),
                 introroll = new OpComboBox2(PickedIntroRoll, new Vector2(10, 340f), 160f, OpResourceSelector.GetEnumNames(null, typeof(IntroRoll)).Select(li => { li.displayName = Translate(li.displayName); return li; }).ToList()) { colorEdge = Menu.MenuColorEffect.rgbWhite },
-                downpourWarning = new OpLabel(introroll.pos.x + 170, 70, Translate("Downpour DLC is not activated, vanilla intro will be used instead")),
-                watcherWarning = new OpLabel(introroll.pos.x + 170, 70, Translate("Watcher DLC is not activated, vanilla intro will be used instead")),
+                downpourWarning = new OpLabel(introroll.pos.x + 170, 340, Translate("Downpour DLC is not activated, vanilla intro will be used instead")),
+                watcherWarning = new OpLabel(introroll.pos.x + 170, 340, Translate("Watcher DLC is not activated, vanilla intro will be used instead")),
 
-                new OpLabel(10, 310, Translate("Lobby Music")),
-                music = new OpComboBox2(LobbyMusic, new Vector2(10, 280f), 160f, SongsItemList()) { colorEdge = Menu.MenuColorEffect.rgbWhite },
-            };
+                new OpLabel(10, 250, Translate("Lobby Music")),
+                music = new OpComboBox2(LobbyMusic, new Vector2(10, 220f), 160f, SongsItemList()) { colorEdge = Menu.MenuColorEffect.rgbWhite },
+
+                // --- New Cape Options Section ---
+                new OpLabel(10f, 180f, Translate("Cape Colors")),
+
+            capeColor = new OpComboBox2(
+                currentlyActiveCapeColor,
+                new Vector2(10f, 150f),
+                160f,
+                capeList.Where(i =>
+                    (i.displayName == Translate("Default")) ||
+                    (i.displayName == Translate("Silver") && boughtSilverCape.Value) ||
+                    (i.displayName == Translate("Gold") && boughtGoldenCape.Value)
+                ).ToList()
+            )
+            {
+                colorEdge = Menu.MenuColorEffect.rgbWhite
+            },
+            new OpLabel(10f, 100f, Translate("Log Level")),
+
+        new OpComboBox2(
+        CurrentLogLevel,
+        new Vector2(10f, 70f),
+        160f,
+        OpResourceSelector.GetEnumNames(null, typeof(RainMeadow.LogLevel)).Select(li => { li.displayName = Translate(li.displayName); return li; }).ToList()
+    )
+    {
+        colorEdge = Menu.MenuColorEffect.rgbWhite
+    }
+
+        };
             if (!NetworkDomain.instances.Values.OfType<NetworkDomain>().Any(x => x.IsDev(OnlineManager.mePlayer.id)))
             {
                 GeneralUIArrPlayerOptions.Skip(GeneralUIArrPlayerOptions.IndexOf(devOptions)).Take(3).Do(e => e.Hidden = true);
             }
+            capeColor.OnValueChanged += (UIconfig config, string value, string oldValue) =>
+            {
+                var selectedItem = capeList.FirstOrDefault(i => i.name == value);
 
+                if (selectedItem != null)
+                {
+                    currentlyActiveCapeColor.Value = Menu.MenuColorEffect.HexToColor(value);
+                    wantsDefaultCapeColor.Value = selectedItem.displayName == "Default";
+                }
+            };
             introroll.OnValueChanged += (UIconfig config, string value, string oldValue) =>
             {
                 if (value == "Downpour" && !ModManager.MSC)
@@ -469,8 +558,8 @@ public class RainMeadowOptions : OptionInterface
             };
 
             OpSimpleButton loginButton = new OpSimpleButton(new Vector2(10f, 195), new Vector2(30f, 110f), Translate("Login"));
-            loginButton.OnClick += (UIfocusable button) => 
-            { 
+            loginButton.OnClick += (UIfocusable button) =>
+            {
                 if (ModdingMenu.instance.manager.dialog != null) return;
                 DialogAsyncWaitCancellable dialog = new DialogAsyncWaitCancellable(ModdingMenu.instance.manager, "Launching Browser", new Vector2(480f, 320f));
                 ModdingMenu.instance.manager.ShowDialog(dialog);
@@ -511,7 +600,7 @@ public class RainMeadowOptions : OptionInterface
                     accept = OpTextBox.Accept.Int
                 },
                 loginButton
-                
+
             };
             networkTab.AddItems(OnlineNetworkSettings);
         }

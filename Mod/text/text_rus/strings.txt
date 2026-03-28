@@ -60,7 +60,8 @@ Lobby Password|Пароль лобби.
 Player max:|Игроки:
 Maximum number of players that can be in the lobby (up to 32)|Максимальное количество игроков, которые могут находиться в лобби (до 32).
 Creating lobby...|Создание лобби...
-Anniversary Gags:|Юбилейн. приколы:
+Timeline:|Хронология:
+Spear|Мастер Копья
 
 ///Создатели
 Rain Meadow is a unique multiplayer engine for a unique game. Nothing else would fit. - Henpemaz|Rain Meadow — это уникальный многопользовательский движок для уникальной игры. Ничто другое не подошло бы. — Henpemaz
@@ -139,7 +140,10 @@ Streamer Mode|Режим стримера
 Me|Я
 Everyone|Все
 Profanity Filter|Фильтр нецензурной лексики
-Chat Background Opacity|Прозрачность фона чата:
+Sound on Mention|Звук при упоминании
+Chat Background Opacity|Прозрачность фона чата
+Chat Inactivity Opacity|Прозрачность неактивного чата
+Chat Inactivity Timer|Таймер неактивности чата
 Custom Story Slugcat:|Кастомные кампании:
 If selected, hosts can choose slugcat campaigns that are unstable.|Даёт доступ к кампаниям, которые не поддерживаются модом, в режиме истории.
 Steal items from other players in Story mode|Разрешить красть предметы у других игроков в режиме Истории
@@ -190,7 +194,7 @@ Slugpup|Слизнекотёнок
 Invite Friends|Пригласить друзей
 Friendly Fire|Друж. огонь
 Require Campaign Slugcat|Отключить выбор Кота
-Match save|Скоп. сохр.
+Sync Save|Скоп. сохр.
 PLAYERS|ИГРОКИ
 Press again to ban player!|Нажми ещё раз, чтобы забанить игрока!
 Wait for others to shelter or rescue you, press |Жди, пока другие не переживут цикл или спасут тебя, нажми «
@@ -345,12 +349,31 @@ View Post-Game Stats|Посмотреть послематчевую стати�
 View Current Mode Info|Посмотреть информацию о текущем режиме
 Customize your colors|Настроить свои цвета
 Go to Slugcat Selection Page|Перейти к выбору Слизнекота
-
+This user is the lobby host|Этот пользователь является владельцем лобби
+Overseer:|Наблюдатель:
+Overseer Spectator spawn|Появление наблюдателей как зрителей
+No overseers|Без наблюдателей
+Challenge|Испытание
+Pit yourself against a series of challenges|Испытайте себя пройдя ряд испытаний
+Arena Settings|Настройки арены
+Challenge Settings|Настройки испытаний
+Challenge ID|ID Испытания
+Kill Score:|Счёт убийств:
+Points a kill is worth|Баллов за убийство
+Survival Score|Счёт выживаний:
+Points for surviving inside the shelter|Баллов за выживание
+Den Score:|Счёт для спячки:
+Points required to open dens|Баллов для открытия убежища
+Den Entry:|Вход в убежище:
+Den entry behavior|Поведение входа в убежище
+Score|По счёту
+Standard|Стандартное
+Always|Всегда
 
 ///Выбор персонажа в Арене
 Back To Lobby|Назад в лобби
 Go back to main lobby|Вернуться назад в лобби
-CHOOSE YOUR SLUGCAT|ВЫБЕРИ СВОЕГО СЛИЗНЕКОТА
+CHOOSE YOUR CHARACTER|ВЫБЕРИ СВОЕГО ПЕРСОНАЖА
 Press grab to toggle active slugcats|Нажми «Взять», чтобы переключить активных Слизнекотов
 You have been unreadied. Switch back to re-ready yourself automatically|Вы перестали быть готовыми. Переключитесь обратно, чтобы сразу стать готовым снова.
 The match is starting in <COUNTDOWN>! Ready up!!|Матч начнётся через <COUNTDOWN>! Приготовься!!
@@ -360,6 +383,8 @@ You could have saved them.|Ты могла спасти их.
 THE SLUGPUP|СЛИЗНЕКОТЁНОК
 THE UNKNOWN|НЕИЗВЕСТНЫЙ
 Unknown|Неизвестный
+THE OVERSEER|НАБЛЮДАТЕЛЬ
+Observe without peril|Наблюдайте без риска
 Your enemies close in around you, but it won't be like your first time.<LINE>Snatch your spear and rock.|Твои враги окружают тебя, но это не будет как в первый раз.<LINE>Хватай свои копье и камень.
 Remember: they struck first, so you'll need to hit back harder.|Помни: они напали первыми. Ответь им ещё сильнее.
 Afflicted from the beginning, and a fighter to the end.<LINE>Show them the meaning of suffering.|Страдающий с самого начала и боец до конца.<LINE>Покажи им, что такое страдание.
@@ -431,6 +456,7 @@ You got a <SLUGCATNAME>!|Тебе выпал <SLUGCATNAME>!
 ///Выбор персонажа в Meadow
 Locked|Недоступно
 ENTER|ВОЙТИ
+Eye color|Цвет глаз
 Tint color|Цвет оттенка
 Tint amount|Сила оттенка
 SKINS|СКИНЫ
@@ -656,3 +682,37 @@ Steam is not currently available. Some features of Rain Meadow have been disable
 Meadow failed to start|Meadow не смог запуститься.
 Rain Meadow: Please use an external mod to access Inv's campaign.|Rain Meadow: просьба использовать отдельный мод для доступа к кампании Inv.
 
+//События
+Rain Meadow Anniversary|Годовщина Rain Meadow
+April Fool's!|Первое апреля!
+COINS:|МОНЕТ:
+YOU ARE POOR|ТЫ НИЩИЙ
+You need more Meadow Coins to play this game|Вам нужно больше Meadow Монет чтобы сыграть в эту игру
+Game Over! Try again?|Игра окончена! Попробовать ещё раз?
+What's the secret password?|Какой секретный пароль?
+I heard they were removing capes|Я слышал они удаляют плащи
+That crash was probably your fault|Тот вылет скорее всего был из-за тебя
+Rain Meadow definitely failed to start|Rain Meadow определённо не смог запуститься
+Rain Meadow servers will go offline soon for maintenance|Сервера Rain Meadow скоро отключатся для технического обслуживания
+Would you like to erase all save progress?|Хотите ли вы удалить весь прогресс сохранений?
+Take ¤10 Meadow Coins|Получите ¤10 Meadow Монет
+Coins remaining:|Монет осталось:
+wawa|wawa
+Good.|Хорошо.
+It was.|Он был.
+Please work|Пожалуйста работай
+Ok|Ок
+Yep|Угу
+Special event:|Особое событие: 
+number:|номер:
+Event days remaining:|Дней осталось до конца:
+Spear|Копьё
+Explosive Spear|Взрывное Копьё
+Scavenger Bomb|Бомба Мусорщиков
+Joke Rifle|Винтовка Шуток
+Meadow Coin|Meadow Монета
+Silver Cape|Серебряный Плащ
+Golden Cape|Золотой Плащ
+Rainbow Cape|Радужный плащ
+Cape Colors|Цвета Плащей
+Event Gags:|Приколы по событию:

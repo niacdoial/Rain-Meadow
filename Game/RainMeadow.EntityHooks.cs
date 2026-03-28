@@ -307,9 +307,32 @@ namespace RainMeadow
         // maybe leaving room, maybe entering world
         private void AbstractRoom_MoveEntityToDen(On.AbstractRoom.orig_MoveEntityToDen orig, AbstractRoom self, AbstractWorldEntity ent)
         {
+            if (OnlineManager.lobby == null)
+            {
+                orig(self, ent);
+                return;
+            }
+
             var apo = ent as AbstractPhysicalObject;
             if (OnlineManager.lobby != null && apo is not null && !apo.CanMove()) return;
-            orig(self, ent);
+
+            ent.IsEnteringDen(ent.pos);
+            self.entities.Remove(ent);
+            if (ent is AbstractCreature)
+            {
+                self.creatures.Remove((AbstractCreature)ent);
+            }
+
+            bool isOwner = OnlineManager.lobby.isOwner;
+            if (RoomSession.map.TryGetValue(self, out var rs) && rs.owner != null)
+            {
+                isOwner = rs.isOwner;
+            }
+            if (self.entitiesInDens.IndexOf(ent) == -1 && isOwner) // Stop duplicates
+            {
+                self.entitiesInDens.Add(ent);
+            }
+
             if (OnlineManager.lobby != null && apo is not null)
             {
                 self.world.GetResource().ApoEnteringWorld(apo);
@@ -474,7 +497,7 @@ namespace RainMeadow
                 { // once again, force camera
                     newRoom.game.cameras[l].WarpMoveCameraActual(newRoom, -1);
                 }
-                var isEchoWarp = sourceRoomName == null ||newRoom.game.GetStorySession.spinningTopWarpsLeadingToRippleScreen.Contains(self.MyIdentifyingString()); //null room = loaded from first world as a host
+                var isEchoWarp = sourceRoomName == null || newRoom.game.GetStorySession.spinningTopWarpsLeadingToRippleScreen.Contains(self.MyIdentifyingString()); //null room = loaded from first world as a host
                 if (OnlineManager.lobby.isOwner && !isEchoWarp)
                 {
                     foreach (var player in OnlineManager.players)
@@ -504,7 +527,7 @@ namespace RainMeadow
                 {
                     if (OnlineManager.lobby != null)
                         //prevent readyForWarp to call WorldLoaded when warpWorldLoader is queued and Regions has not fully loaded, this is quick fix for now
-                        return origBool && !overWorld.warpingPreload; 
+                        return origBool && !overWorld.warpingPreload;
                     return origBool;
                 });
             }
@@ -513,17 +536,53 @@ namespace RainMeadow
                 Error(ex);
             }
         }
-        // world transition at gates
+
+        private System.Collections.IEnumerator Overworld_Loaded_WaitLoop(On.OverWorld.orig_WorldLoaded orig, OverWorld self, bool warpUsed, WorldSession oldWorldSession, WorldSession newWorldSession, World world)
+        {
+            System.Func<bool> waitCondition = null;
+
+            if ((OnlineManager.lobby.gameMode is not MeadowGameMode && !OnlineManager.lobby.isOwner))
+            {
+                waitCondition = () => !newWorldSession.isAvailable;
+            }
+
+            return WorldSession.WaitAndExecuteSession(
+                oldWorldSession,
+                waitCondition,
+                () => self.WorldLoaded(warpUsed)
+            );
+        }
+
+        private void DeactivateAndWait(On.OverWorld.orig_WorldLoaded orig, OverWorld self, bool warpUsed, bool isSameWorld, WorldSession oldWorldSession, WorldSession newWorldSession, World newWorld)
+        {
+            RainMeadow.Debug(this);
+            if (!isSameWorld && oldWorldSession.isActive)
+            { // there exists "warps" to the same world, twice, for some bloody reason
+                //this in fact probably is required for now because rain world devs DESPISE US
+                RainMeadow.Debug("Unsubscribing from old world");
+                oldWorldSession.Deactivate();
+                oldWorldSession.NotNeeded(); // done? let go
+            }
+
+            self.game.manager.rainWorld.StartCoroutine(Overworld_Loaded_WaitLoop(orig, self, warpUsed, oldWorldSession, newWorldSession, newWorld));
+            oldWorldSession.transitionInProgress = true;
+            return;
+        }
+        // world transition at gatesactiveEntities
         private void OverWorld_WorldLoaded(On.OverWorld.orig_WorldLoaded orig, OverWorld self, bool warpUsed)
         {
             if (OnlineManager.lobby != null)
             {
-                Debug($"warpWorldLoader is null: {self.warpWorldLoader == null}, worldLoader is null: {self.worldLoader == null}");
-                World newWorld = (self.worldLoader == null) ? self.activeWorld : self.worldLoader.ReturnWorld();
-                WorldSession oldWorldSession = self.activeWorld.GetResource() ?? throw new KeyNotFoundException();
-                WorldSession newWorldSession = newWorld.GetResource() ?? throw new KeyNotFoundException();
-                bool isSameWorld = (self.activeWorld.name == newWorld.name);
-                bool isEchoWarp = (self.game.GetStorySession.saveState.warpPointTargetAfterWarpPointSave != null);
+                Debug($"Warp Status -> worldLoader: {self.worldLoader?.ReturnWorld().name ?? "NULL"}, activeWorld: {self.activeWorld.name}");
+
+                World newWorld = self.worldLoader?.ReturnWorld() ?? self.activeWorld;
+                WorldSession newWorldSession = newWorld.GetResource() ?? throw new KeyNotFoundException("New world session not found.");
+                WorldSession oldWorldSession = self.activeWorld.GetResource() ?? newWorldSession; // Do not throw for the old world to prevent error during coroutine
+
+                if (oldWorldSession.transitionInProgress) return;
+
+                bool isSameWorld = self.activeWorld.name == newWorld.name;
+                bool isEchoWarp = self.game.GetStorySession.saveState.warpPointTargetAfterWarpPointSave != null;
                 bool isFirstWarpWorld = false;
 
                 if (self.reportBackToGate != null && RoomSession.map.TryGetValue(self.reportBackToGate.room.abstractRoom, out var roomSession))
@@ -553,8 +612,9 @@ namespace RainMeadow
                         }
                     }
 
-                    orig(self, warpUsed); // this replace the list of entities in new world with that from old world
 
+
+                    orig(self, warpUsed); // this replace the list of entities in new world with that from old world
                     // post: we add our entities to the new world
                     if (room != null && RoomSession.map.TryGetValue(room.abstractRoom, out var roomSession2))
                     {
@@ -562,6 +622,9 @@ namespace RainMeadow
                         room.abstractRoom.creatures.AddRange(creaturesFromNewRoom);
                         roomSession2.Activate();
                     }
+
+                    DeactivateAndWait(orig, self, warpUsed, isSameWorld, oldWorldSession, newWorldSession, newWorld);
+
                 }
                 else if (warpUsed)
                 {
@@ -574,41 +637,6 @@ namespace RainMeadow
                     Room room = warpPoint.room; //may be null in the case a client activates an echo warp
                     isFirstWarpWorld = room == null; //do not update gate status afterwards :)
 
-                    if (isEchoWarp || isFirstWarpWorld || warpData.rippleWarp)
-                    { //echo activation is special edge case
-                        if (room == null) RainMeadow.Error("warp point with a null room");
-                        RainMeadow.Debug("this an echo warp");
-                        /*if (isStoryMode(out var storyGameMode))
-                        {
-                            self.warpData = storyGameMode.myLastWarp; //OVERRIDE WARP DATA VERY IMPORTANT!
-                        }*/
-                    }
-                    // We delete every single entitity in the old world, every single one, even our
-                    // slugcats are deleted, nothing is spared, this is because if we dont do this
-                    // someone will keep requesting for the creatures on the old world
-                    else if (RoomSession.map.TryGetValue(room.abstractRoom, out var roomSession3))
-                    {
-                        RainMeadow.Debug($"warp continous region switching -- clear session");
-                        var entities = room.abstractRoom.entities;
-                        for (int i = entities.Count - 1; i >= 0; i--)
-                        {
-                            if (entities[i] is AbstractPhysicalObject apo && OnlinePhysicalObject.map.TryGetValue(apo, out var oe))
-                            {
-                                oe.apo.LoseAllStuckObjects();
-                                if (!oe.isMine)
-                                {
-                                    // not-online-aware removal
-                                    oe.RemoveEntityFromGame(false);
-                                }
-                                else // mine leave the old online world elegantly
-                                {
-                                    RainMeadow.Debug("removing my entity from online " + oe);
-                                    oe.ExitResource(roomSession3);
-                                    oe.ExitResource(roomSession3.worldSession);
-                                }
-                            }
-                        }
-                    }
                     Debug($"destination region: {warpData.destRegion}, worldLoader is null? {self.worldLoader == null}, worldLoader's World is null? {self.worldLoader == null || self.worldLoader.world == null}, activeWorld is null? {self.activeWorld == null}");
                     Debug($"Watcher warp switchery APOs preparations from {self.activeWorld.name} to {(self.worldLoader == null ? newWorld.name : ($"{self.worldLoader.worldName}/{newWorld.name}"))}");
                     foreach (var playerAvatar in OnlineManager.lobby.playerAvatars.Select(kv => kv.Value))
@@ -629,11 +657,14 @@ namespace RainMeadow
                         }
                     }
                     RainMeadow.Debug($"Watcher warp switchery post");
+
+                    DeactivateAndWait(orig, self, warpUsed, isSameWorld, oldWorldSession, newWorldSession, newWorld);
                 }
                 else
                 {
                     // special warp, don't bother with room items
                     orig(self, warpUsed);
+                    DeactivateAndWait(orig, self, warpUsed, isSameWorld, oldWorldSession, newWorldSession, newWorld);
                 }
 
                 if (warpUsed)
@@ -674,14 +705,6 @@ namespace RainMeadow
                     }
                 }
 
-                if (!isSameWorld)
-                { // there exists "warps" to the same world, twice, for some bloody reason
-                    //this in fact probably is required for now because rain world devs DESPISE US
-                    RainMeadow.Debug("Unsubscribing from old world");
-                    oldWorldSession.Deactivate();
-                    oldWorldSession.NotNeeded(); // done? let go
-                }
-
                 if (OnlineManager.lobby.gameMode is StoryGameMode storyGameMode)
                 {
                     if (OnlineManager.lobby.isOwner && !isFirstWarpWorld)
@@ -697,7 +720,7 @@ namespace RainMeadow
                     }
                 }
 
-                
+
 
                 if (OnlineManager.lobby.gameMode is MeadowGameMode)
                 {

@@ -4,6 +4,7 @@ using System.Globalization;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using UnityEngine;
+using Watcher;
 
 namespace RainMeadow
 {
@@ -437,7 +438,8 @@ namespace RainMeadow
 
             if (apo.realizedObject is PhysicalObject po)
             {
-                foreach (Creature.Grasp grabbedBy in po.grabbedBy)
+                // Release removes the grasp from grabbedBy list, so we can't directly enumerate the list
+                foreach (Creature.Grasp grabbedBy in po.grabbedBy.ToList())
                 {
                     grabbedBy.Release();
                 }
@@ -694,6 +696,20 @@ namespace RainMeadow
             hazer.spraying = spraying;
             if (spraying) hazer.hasSprayed = true;
             hazer.inkLeft = Mathf.Clamp01(inkLeft);
+        }
+
+        [RPCMethod (security = RPCSecurity.Owner)]
+        public void RecieveHelp()
+        {
+            if (apo.realizedObject is null || apo.realizedObject is not ICallForHelp realized) return;
+            realized.RecieveHelp();
+        }
+
+        [RPCMethod (security = RPCSecurity.InResource)]
+        public void Demask(Vector2 violenceDir)
+        {
+            if (apo.realizedObject is null || apo.realizedObject is not Vulture vulture || vulture.IsMiros) return;
+            vulture.DropMask(violenceDir);
         }
     }
 }

@@ -47,7 +47,7 @@ namespace RainMeadow
                 return;
             }
             RainMeadow.Trace($"processing received state {newState} in resource {this}");
-            if (newState.isDelta)
+            if (newState.IsDelta)
             {
                 RainMeadow.Trace($"received delta state from {newState.from} for tick {newState.tick} referencing baseline {newState.baseline}");
                 while (incomingState.Count > 0 && EventMath.IsNewer(newState.baseline, incomingState.Peek().tick))
@@ -213,6 +213,12 @@ namespace RainMeadow
                             {
                                 if (entity.currentlyJoinedResource == resource) // this resource is the most "detailed" provider
                                 {
+
+                                    // bandaid for mismatched entity IDs
+                                    if (!entity.CanReadTo(entityState, resource, tick))
+                                    {
+                                        continue;
+                                    }
                                     try
                                     {
                                         entity.ReadState(entityState, resource);

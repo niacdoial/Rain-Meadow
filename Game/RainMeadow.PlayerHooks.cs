@@ -1,13 +1,14 @@
 using Mono.Cecil.Cil;
 using MonoMod.Cil;
-using System;
-using System.Linq;
 using MonoMod.RuntimeDetour;
-using System.Runtime.CompilerServices;
+using RainMeadow.Arena.ArenaOnlineGameModes.ArenaChallengeModeNS;
 using RWCustom;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Runtime.CompilerServices;
 using UnityEngine;
 using UnityEngine.PlayerLoop;
-using System.Collections.Generic;
 
 namespace RainMeadow;
 
@@ -19,6 +20,7 @@ public partial class RainMeadow
         On.RainWorldGame.SpawnPlayers_bool_bool_bool_bool_WorldCoordinate += RainWorldGame_SpawnPlayers_bool_bool_bool_bool_WorldCoordinate; // Personas are set as non-transferable
 
         On.Player.ctor += Player_ctor;
+        IL.Player.ctor += Player_ctor3;
         On.Player.GetInitialSlugcatClass += Player_GetInitialSlugcatClass;
         new Hook(typeof(Player).GetProperty("slugcatStats").GetGetMethod(), this.Player_slugcatStats);
         new Hook(typeof(Player).GetProperty("slugcatStats").GetGetMethod(), this.Player_slugcatStatsGourmandBack);
@@ -93,7 +95,7 @@ public partial class RainMeadow
             WatcherOverrideRippleLevel = false;
         };
         IL.Player.WatcherUpdate += Player_WatcherUpdate;
-        On.Player.CamoUpdate += Player_CamoUpdate;
+        IL.Player.CamoUpdate += Player_CamoUpdate;
         On.Player.ToggleCamo += Player_ToggleCamo;
         IL.Player.TransitionRippleUpdate += Player_TransitionRippleUpdate;
         IL.Player.RippleSpawnInteractions += Player_RippleSpawnInteractions;
@@ -201,6 +203,7 @@ public partial class RainMeadow
         {
             return true;
         }
+        
 
         return orig(self);
     }
@@ -233,153 +236,35 @@ public partial class RainMeadow
             Error(ex);
         }
     }
-    private void Player_CamoUpdate(On.Player.orig_CamoUpdate orig, Player self)
-    {
-        if (self.isCamo && (!self.Consious || self.warpExhausionTime > 0))
-        {
-            self.ToggleCamo();
-        }
 
-        if (self.camoProgress < 1f && self.transitionRipple != null && self.room.fsRipple != null)
+        private void Player_CamoUpdate(ILContext il)
         {
-            self.room.fsRipple.Destroy();
-            self.room.fsRipple = null;
-        }
-
-        if (self.isCamo)
-        {
-            self.camoCharge = Mathf.Min(self.camoCharge + 1f, self.usableCamoLimit);
-            self.inCamoTime++;
-            self.outOfCamoTime = 0;
-            if (self.room.game.IsStorySession && self.room.game.GetStorySession.saveState.miscWorldSaveData.usedCamoAbility == 0)
+            try
             {
-                self.room.game.GetStorySession.saveState.miscWorldSaveData.usedCamoAbility = 1;
-            }
+                ILCursor c = new(il);
+                ILLabel label = null;
 
-            if (self.camoCharge >= self.usableCamoLimit)
-            {
-                self.camoRechargePenalty = 400;
-                self.Stun(80);
-            }
-        }
-        else
-        {
-            self.inCamoTime = 0;
-            self.outOfCamoTime++;
-            if (self.camoRechargePenalty <= 0)
-            {
-                self.camoCharge = Mathf.Max(self.camoCharge - 1f, 0f);
-            }
-        }
-
-        if (self.consumedRippleFood > 0)
-        {
-            self.consumedRippleFood--;
-            self.camoCharge = Mathf.Max(self.camoCharge - 2f, 0f);
-        }
-
-        if (self.camoRechargePenalty > 0)
-        {
-            self.camoRechargePenalty--;
-        }
-
-        Watcher.WarpSpawningRipple obj = self.warpSpawningRipple;
-        if (obj != null && obj.slatedForDeletetion)
-        {
-            self.warpSpawningRipple = null;
-        }
-
-        if (self.activateCamoTimer == 0 && self.watcherDynamicWarpInput && self.dynamicWarpCooldown <= 0)
-        {
-            self.activateDynamicWarpTimer++;
-            Watcher.WarpSpawningRipple obj2 = self.warpSpawningRipple;
-            if (obj2 == null || obj2.isFinished)
-            {
-                self.room.AddObject(self.warpSpawningRipple = new Watcher.WarpSpawningRipple(self.room, self.mainBodyChunk.pos, self.camoProgress, !self.KarmaIsReinforced));
-            }
-
-            if (self.activateDynamicWarpTimer >= self.activateDynamicWarpDuration)
-            {
-                self.SpawnDynamicWarpPoint();
-                self.dynamicWarpCooldown = 200;
-                self.activateDynamicWarpTimer = 0;
-            }
-        }
-        else if (self.activateDynamicWarpTimer > 0)
-        {
-            self.activateDynamicWarpTimer = 0;
-        }
-
-        if (self.dynamicWarpCooldown > 0)
-        {
-            self.dynamicWarpCooldown--;
-        }
-
-        if (self.isCamo && self.camoProgress < 1f)
-        {
-            self.camoProgress += 0.01f;
-        }
-        else if (!self.isCamo && self.camoProgress > 0f)
-        {
-            self.camoProgress -= 0.01f;
-        }
-
-        if (self.rippleLevel >= 5f && self.rippleData != null)
-        {
-            self.rippleData.gameplayRippleAnimation = self.camoProgress;
-        }
-
-        self.TrySpawnTrailRipple();
-
-        if (self.rippleLevel >= 5f && ((self.abstractCreature.rippleLayer == 0 && self.isCamo) || (self.abstractCreature.rippleLayer == 1 && !self.isCamo)))
-        {
-            self.ChangeRippleLayer(self.isCamo ? 1 : 0);
-            if (self.rippleData != null && self.IsLocal())
-            {
-                self.rippleData.gameplayRippleActive = self.isCamo;
-            }
-
-            if (self.isCamo)
-            {
-                for (int i = 0; i < 5 * self.room.cameraPositions.Length; i++)
+                // We look for: self.rippleData (check if null/false)
+                while (c.TryGotoNext(MoveType.After,
+                    x => x.MatchLdarg(0),                           // Load 'self'
+                    x => x.MatchLdfld<Player>("rippleData"),        // Load field 'rippleData'
+                    x => x.MatchBrfalse(out label)                  // Branch if null (capture the jump target)
+                ))
                 {
-                    self.room.MaterializeRippleSpawn(self.room.RandomPos(), Room.RippleSpawnSource.Dimension);
+                    c.Emit(OpCodes.Ldarg_0); // Load self again for the IsLocal check
+                    c.EmitDelegate<Func<Player, bool>>((self) => 
+                    {
+                        return self.IsLocal(); 
+                    });
+                    c.Emit(OpCodes.Brfalse, label); 
                 }
             }
-        }
-
-        if (self.rippleData != null && self.IsLocal())
-        {
-            if (self.rippleLevel < 3f || !self.isCamo)
+            catch (Exception ex)
             {
-                self.rippleData.TrailAmount = Mathf.Lerp(self.rippleData.TrailAmount, (self.rippleLevel < 2f) ? 0f : 0.01f, 0.01f);
-            }
-            else
-            {
-                self.rippleData.TrailAmount = Mathf.Lerp(self.rippleData.TrailAmount, (self.rippleLevel < 5f) ? 0.35f : 1f, 0.01f);
-            }
-
-            if (self.isCamo)
-            {
-                self.rippleData.trailPaletteAmount = Mathf.Lerp(self.rippleData.trailPaletteAmount, 0f, 0.09f);
-            }
-            else
-            {
-                self.rippleData.trailPaletteAmount = Mathf.Lerp(self.rippleData.trailPaletteAmount, 1f, 0.003f);
+                Error(ex);
             }
         }
-
-        if (self.isCamo && self.rippleLevel >= 3f && self.rippleLevel < 5f)
-        {
-            int num = Mathf.Min(80, self.lastPositions.Length - 1);
-            int maxExclusive = Mathf.Min(40, self.lastPositions.Length - 1);
-            if (Vector2.Distance(self.mainBodyChunk.pos, self.lastPositions[num]) > 50f && UnityEngine.Random.value < 0.002f)
-            {
-                int num2 = UnityEngine.Random.Range(0, maxExclusive);
-                self.room.MaterializeRippleSpawn(self.lastPositions[num2], Room.RippleSpawnSource.PlayerTrail);
-            }
-        }
-    }
+    
     private void Player_WatcherUpdate(ILContext il)
     {
         try
@@ -393,6 +278,13 @@ public partial class RainMeadow
             });
             c.Emit(OpCodes.Brtrue, label); //skip sharing ripple layer with Players[0] which is host in arena
 
+            c.GotoNext(MoveType.After, x => x.MatchLdarg(0), x => x.MatchCall<Player>("get_rippleLevel"), x => x.MatchLdcR4(0), x => x.MatchBleUn(out label));
+            c.Emit(OpCodes.Ldarg_0);
+            c.EmitDelegate(delegate (Player player)
+            {
+                return isArenaMode(out _);
+            });
+            c.Emit(OpCodes.Brtrue, label); // Don't glow in arena mode
 
             c.GotoNext(MoveType.After, x => x.MatchLdarg(0), x => x.MatchCall<Player>("get_rippleLevel"), x => x.MatchLdcR4(5), x => x.MatchBltUn(out label));
             c.Emit(OpCodes.Ldarg_0);
@@ -931,10 +823,10 @@ public partial class RainMeadow
     // Hide the Meadow mode slugcat so it doesn't appear in menus (e.g. arena)
     private bool SlugcatStatsOnHiddenOrUnplayableSlugcat(On.SlugcatStats.orig_HiddenOrUnplayableSlugcat orig, SlugcatStats.Name i)
     {
-        if (i == Ext_SlugcatStatsName.OnlineSessionPlayer)
-        {
+        if (Ext_SlugcatStatsName.AllMeadowExtSlugcats.Contains(i))
+          {
             return true;
-        }
+          }
 
         return orig(i);
     }
@@ -1172,6 +1064,32 @@ public partial class RainMeadow
             c.Index += 6;
             c.MarkLabel(skip);
 
+            // don't try teleporting remote players when using dev tools
+            c.Index = 0;
+            ILLabel skipDevTools = il.DefineLabel();
+            c.GotoNext(MoveType.After,
+                i => i.MatchLdstr("v"),
+                i => i.MatchCallOrCallvirt<UnityEngine.Input>(nameof(UnityEngine.Input.GetKey)),
+                i => i.MatchLdloc(33),
+                i => i.MatchAnd(),
+                i => i.MatchBrfalse(out skipDevTools));
+            c.Emit(OpCodes.Ldarg_0);
+            c.EmitDelegate((Player self) => self.abstractPhysicalObject.IsLocal());
+            c.Emit(OpCodes.Brfalse, skipDevTools);
+
+            // don't try to pull remote players using dev tools
+            c.Index = 0;
+            ILLabel skipDevTools2 = il.DefineLabel();
+            c.GotoNext(MoveType.After,
+                i => i.MatchLdstr("w"),
+                i => i.MatchCallOrCallvirt<UnityEngine.Input>(nameof(UnityEngine.Input.GetKey)),
+                i => i.MatchLdloc(33),
+                i => i.MatchAnd(),
+                i => i.MatchBrfalse(out skipDevTools2));
+            c.Emit(OpCodes.Ldarg_0);
+            c.EmitDelegate((Player self) => self.abstractPhysicalObject.IsLocal());
+            c.Emit(OpCodes.Brfalse, skipDevTools2);
+
             // don't handle shelter for meadow and remote scugs
             c.Index = 0;
             ILLabel skipShelter = null;
@@ -1252,7 +1170,9 @@ public partial class RainMeadow
 
         if (isArenaMode(out var arena) && !self.inShortcut)
         {
-            if (arena.countdownInitiatedHoldFire)
+            int[] disabledCollisionChallenges = [60, 68]; //27, 44, 45, 55, and 58 all also have problems with player spawns bumping each other into death pits, but they also include creatures, which we still want to collide with.
+                                                          //60 also has danglefruit that we don't collide with but that matters less. Ideally we'd set up a "just don't collide with players" collision layer, but this works for now.
+            if (arena.countdownInitiatedHoldFire || (ArenaChallengeMode.isChallengeMode(arena, out var chMode) && disabledCollisionChallenges.Contains(chMode.challengeID)))
             {
                 if (self.collisionLayer != 0)
                 {
@@ -1363,12 +1283,12 @@ public partial class RainMeadow
             (self.KarmaCap >= 9 || (self.room.game.session is ArenaGameSession && 
                 self.room.game.GetArenaGameSession.arenaSitting.gameTypeSetup.gameType == DLCSharedEnums.GameTypeID.Challenge && 
                 self.room.game.GetArenaGameSession.arenaSitting.gameTypeSetup.challengeMeta.ascended))) && 
-                OnlineManager.lobby.configurableBools.TryGetValue("MEADOW_ANNIVERSARY", out var anniversary) && anniversary)
+                OnlineManager.lobby.eventGags && SpecialEvents.GetActiveEvent() is SpecialEvents.Anniversary)
         {
 
             if (self.IsLocal())
             {
-                if (CapeManager.HasCape(OnlineManager.mePlayer.id).HasValue && !self.isNPC)
+                if (CapeManager.HasCape(OnlineManager.mePlayer.id) is not null && !self.isNPC)
                 {
                     var extras = playerExtras.GetOrCreateValue(self);
                     if (!self.Consious)
@@ -1853,6 +1773,31 @@ public partial class RainMeadow
             }
         }
     }
+    private void Player_ctor3(ILContext il)
+    {
+        //Don't dupe Inv eggs/singularity bombs per player.
+        //Old: if (ModManager.MSC && SlugCatClass == MoreSlugcatsEnums.SlugcatStatsName.Sofanthiel && abstractCreature.Room.world.game.IsStorySession)
+        //New: if (ModManager.MSC && SlugCatClass == MoreSlugcatsEnums.SlugcatStatsName.Sofanthiel && abstractCreature.Room.world.game.IsStorySession && isLocal())
+        try
+        {
+            ILCursor cursor = new(il);
+            ILLabel breakTo = cursor.DefineLabel();
+
+            cursor.GotoNext(MoveType.After,
+                x => x.MatchLdsfld(typeof(MoreSlugcats.MoreSlugcatsEnums.SlugcatStatsName), nameof(MoreSlugcats.MoreSlugcatsEnums.SlugcatStatsName.Sofanthiel)));
+            cursor.GotoNext(MoveType.After,
+                x => x.MatchCallvirt(typeof(RainWorldGame), "get_IsStorySession"),
+                x => x.MatchBrfalse(out breakTo));
+
+            cursor.Emit(OpCodes.Ldarg_0);
+            cursor.EmitDelegate(delegate(Player self)
+            {
+                return self.IsLocal(out _);
+            });
+            cursor.Emit(OpCodes.Brfalse, breakTo);
+        }
+        catch (Exception ex) { RainMeadow.Error(ex); }
+    }
 
     private void Player_GetInitialSlugcatClass(On.Player.orig_GetInitialSlugcatClass orig, Player self)
     {
@@ -1989,6 +1934,8 @@ public partial class RainMeadow
         {
             self.slugOnBack.DropSlug();
         }
+
+        self.deaf = 0; //Doctors HATE this one simple trick!
 
         OnlinePhysicalObject.map.TryGetValue(self.abstractPhysicalObject, out var oe);
         RainMeadow.Debug($"%%% DESTROY {oe}");

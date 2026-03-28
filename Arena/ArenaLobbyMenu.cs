@@ -61,6 +61,7 @@ namespace RainMeadow
             OverrideMultiplayerMenu();
             BindSettings();
             BuildLayout();
+            this.arena.ResetOverWorld();
 
             NetworkDomain.OnPlayerListReceived += OnlineManager_OnPlayerListReceived;
             if (arena.currentGameMode == "" || arena.currentGameMode is null)
@@ -491,7 +492,7 @@ namespace RainMeadow
                 RainMeadow.Error("Could not find gamemode in list! Setting to FFA as a fallback");
                 arena.externalArenaGameMode = arena.registeredGameModes.FirstOrDefault(kvp => kvp.Key == FFA.FFAMode.value).Value;
             }
-            arena.externalArenaGameMode.InitAsCustomGameType(this.GetGameTypeSetup);
+            arena.externalArenaGameMode.InitAsCustomGameType(this.arena, this.GetGameTypeSetup);
 
         }
         public void StartGame()

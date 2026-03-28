@@ -223,5 +223,20 @@ namespace RainMeadow
             }
         }
 
+        /// <summary>
+        /// Filters a team name using Steam if ProfanityFilter is enabled in Remix options.
+        /// </summary>
+        /// <param name="name"></param>
+        /// <returns></returns>
+        public override string FilterTeamName(string name)
+        {
+            if (!filteringAvailable || !RainMeadow.rainMeadowOptions.ProfanityFilter.Value || OnlineManager.lobby == null) return name;
+            if (SteamUtils.FilterText(ETextFilteringContext.k_ETextFilteringContextName, CSteamID.Nil, name, out string pchOutFilteredText, (uint)(name.Length * 2 + 1)) > 0)
+            {
+                return pchOutFilteredText;
+            }
+            return name;
+        }
+
     }
 }

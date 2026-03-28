@@ -22,7 +22,7 @@ namespace RainMeadow
         {
             base.Serialize(writer);
             writer.Write(this.key);
-            writer.Write(this.data.Array, this.data.Offset, this.size);
+            writer.Write(this.data.Array, this.data.Offset, this.data.Count);
         }
 
         public override void Deserialize(BinaryReader reader)
