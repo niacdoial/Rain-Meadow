@@ -30,18 +30,18 @@ namespace RainMeadow
                     progress.Report($"Continue in the browser.");
                     webAuth.Wait(ct.Token);
                 }
-                else while (!webAuth.IsCompleted) 
+                else while (!webAuth.IsCompleted)
                 {
                     progress.Report($"Continue in the browser.{Environment.NewLine}Time left: {timeout - DateTime.Now}");
                     if (timeout < DateTime.Now)
-                    { 
+                    {
                         ct.Cancel();
                         throw new TimeoutException("Timed out");
                     }
 
                     await Task.Yield();
                 }
-                
+
                 (code, from_redirect_uri) = await webAuth;
             }
 
@@ -54,7 +54,7 @@ namespace RainMeadow
             progress.Report($"Verifying Token in");
             return await LoginWithAccess(response, cancellationtoken);
         }
-        
+
 
             // catch (Exception except)
             // {
@@ -81,10 +81,11 @@ namespace RainMeadow
         public static async Task<Authentication> LoginWithSavedToken()
         {
             RainMeadow.DebugMe();
+            if (! File.Exists(AuthSaveLocation) ) return null;
             byte[] encrypted_data = File.ReadAllBytes(AuthSaveLocation);
             string data = Encoding.ASCII.GetString(ProtectedData.Unprotect(encrypted_data, ADDITIONAL_ENTROPY, DataProtectionScope.LocalMachine));
             OAuthAccess? access = JsonConvert.DeserializeObject<OAuthAccess>(data);
-            if (access is null) 
+            if (access is null)
             {
                 RainMeadow.Error(data);
                 throw new Exception("Failed to deserialize OAuthAccess");
@@ -112,7 +113,7 @@ namespace RainMeadow
                 access = await WebAuthentication.RetrieveToken(
                     authTokenEndpoint, clientId, WebAuthentication.GrantType.RefreshToken, scope, access.refreshToken!, null, cancellationToken);
             }
-            
+
             HttpWebRequest request = (HttpWebRequest)WebRequest.Create(userInfoEndpoint);
             request.Headers.Add("Authorization", "Bearer " + access.accessToken);
             request.Method = "GET";
@@ -125,8 +126,8 @@ namespace RainMeadow
                     {
                         var serializer = JsonSerializer.CreateDefault();
                         if (response.StatusCode == HttpStatusCode.OK)
-                        {        
-                            
+                        {
+
                             var info_response = serializer.Deserialize<OAuthUserInfoResponse>(jsonreader);
                             RainMeadow.Debug($"Logged in as {info_response.username}:{info_response.sub}");
                             currentAuthentication = new Authentication(access, new PlayerInfo { sub = info_response.sub, username = info_response.username });
@@ -137,7 +138,7 @@ namespace RainMeadow
                         {
                             var errror_response = serializer.Deserialize<OAuthErrorResponse>(jsonreader);
                             RainMeadow.Error(errror_response);
-                            throw new Exception($"Authentication Error{Environment.NewLine}{errror_response.error_description}");    
+                            throw new Exception($"Authentication Error{Environment.NewLine}{errror_response.error_description}");
                         }
                     }
                 }
@@ -171,7 +172,7 @@ namespace RainMeadow
             _access = access;
             _playerInfo = info;
         }
-        
+
         public static Authentication? currentAuthentication { get; private set; } = null;
         public static PlayerInfo? Info => currentAuthentication?._playerInfo;
         public static OAuthAccess? currentAccess => currentAuthentication?._access;

@@ -558,6 +558,9 @@ public class RainMeadowOptions : OptionInterface
             };
 
             OpSimpleButton loginButton = new OpSimpleButton(new Vector2(10f, 195), new Vector2(30f, 110f), Translate("Login"));
+            if (Authentication.currentAuthentication is not null) {
+                loginButton.text = Translate("Change Account");
+            }
             loginButton.OnClick += (UIfocusable button) =>
             {
                 if (ModdingMenu.instance.manager.dialog != null) return;
