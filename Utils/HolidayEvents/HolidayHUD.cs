@@ -20,6 +20,8 @@ namespace RainMeadow
         public const string SilverCape = "Silver Cape";
         public const string GoldenCape = "Golden Cape";
         public const string RainbowCape = "Rainbow Cape";
+
+        public const string GoldenSkin = "Golden Skin";
         public Vector2 pos;
 
         public class ItemButton : SimplerButton
@@ -32,7 +34,7 @@ namespace RainMeadow
             public string name;
             public bool RequiresWatcher => ModManager.Watcher;
             public bool RequiresMSC => ModManager.MSC;
-
+            public Color chosenColor;
             public ItemButton(
                 HolidayStoreOverlay menu,
                 MenuObject menuObject,
@@ -118,10 +120,12 @@ namespace RainMeadow
                             );
                             break;
                         case SilverCape:
-                            desiredCape = new SolidCapeColor(new Color(0.863f, 0.918f, 0.941f)); ;
+                            chosenColor = new Color(0.863f, 0.918f, 0.941f);
+                            desiredCape = new SolidCapeColor(chosenColor);
                             break;
                         case GoldenCape:
-                            desiredCape = new SolidCapeColor(RainWorld.SaturatedGold);
+                            chosenColor = RainWorld.SaturatedGold;
+                            desiredCape = new SolidCapeColor(chosenColor);
                             break;
                         case RainbowCape: desiredCape = new RainbowCapeColor(); break;
                     }
@@ -130,6 +134,15 @@ namespace RainMeadow
 
                     if (me != null && (SpecialEvents.CanSpendMeadowCoin(cost) || purchased))
                     {
+                        if (name == GoldenSkin)
+                        {
+                            if (me.GetOnlineCreature() is OnlineCreature critter && critter.TryGetData<SlugcatCustomization>(out var data))
+                            {
+                                data.overlaySkin = new CoinSkin();
+                                CapeManager.RefreshGraphicalModule(critter.realizedCreature);
+                            }
+                        }
+
                         if (desiredObject != null)
                         {
                             (game.cameras[0].room.abstractRoom).AddEntity(desiredObject);
@@ -143,7 +156,7 @@ namespace RainMeadow
                             }
 
                             if (!purchased) SpecialEvents.SpendMeadowCoin(cost);
-                            if (permanentPurchase is not null) permanentPurchase.Value = true;
+
                         }
                         else if (desiredCape != null)
                         {
@@ -154,8 +167,10 @@ namespace RainMeadow
                             }
 
                             if (!purchased) SpecialEvents.SpendMeadowCoin(cost);
-                            if (permanentPurchase is not null) permanentPurchase.Value = true;
+                            RainMeadow.rainMeadowOptions.currentlyActiveCapeColor.Value = chosenColor;
                         }
+
+                        if (permanentPurchase is not null) permanentPurchase.Value = true;
                         RainMeadow.rainMeadowOptions.config.Save();
                     }
                     UpdateText();
@@ -211,14 +226,15 @@ namespace RainMeadow
 
             var storeItems = new List<(string, int, Configurable<bool>?)>
             {
-                (Translate(SilverCape), 75, RainMeadow.rainMeadowOptions.boughtSilverCape),
-                (Translate(GoldenCape), 100, RainMeadow.rainMeadowOptions.boughtGoldenCape),
-                (Translate(RainbowCape), 150, RainMeadow.rainMeadowOptions.boughtRainbowCape),
-                (Translate(Rock), 1, null),
-                (Translate(Spear), 5, null),
-                (Translate(ExplosiveSpear), 10, null),
-                (Translate(ScavengerBomb), 15, null),
-                (Translate(MeadowCoin), 1, null),
+                (SilverCape, 75, RainMeadow.rainMeadowOptions.boughtSilverCape),
+                (GoldenCape, 100, RainMeadow.rainMeadowOptions.boughtGoldenCape),
+                (RainbowCape, 150, RainMeadow.rainMeadowOptions.boughtRainbowCape),
+                (GoldenSkin, 150, RainMeadow.rainMeadowOptions.boughtGoldenSkin),
+                (Rock, 1, null),
+                (Spear, 5, null),
+                (ExplosiveSpear, 10, null),
+                (ScavengerBomb, 15, null),
+                (MeadowCoin, 1, null),
             };
 
             if (ModManager.MSC) storeItems.Add((JokerRifle, 50, null));
@@ -260,7 +276,7 @@ namespace RainMeadow
             {
                 storeItemList[i].buttonBehav.greyedOut =
                     me != null
-                        ? RainMeadow.rainMeadowOptions.MeadowCoins.Value < storeItemList[i].cost
+                        ? storeItemList[i].permanentPurchase?.Value == true ? false : RainMeadow.rainMeadowOptions.MeadowCoins.Value < storeItemList[i].cost
                         : me == null;
             }
         }

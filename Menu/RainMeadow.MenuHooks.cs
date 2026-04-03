@@ -17,12 +17,17 @@ namespace RainMeadow
 {
     public partial class RainMeadow
     {
+        private void EssentialMenuHooks()
+        {
+            On.Menu.MainMenu.ctor += MainMenu_ctor;
+        }
+
         private void MenuHooks()
         {
             IntroRollReplacement.OnEnable();
             IL.Menu.Menu.Update += IL_Menu_Update;
             On.Menu.Menu.SelectNewObject += On_Menu_SelectNewObject;
-            On.Menu.MainMenu.ctor += MainMenu_ctor;
+            
             //On.Menu.InputOptionsMenu.ctor += InputOptionsMenu_ctor;
 
             On.ProcessManager.RequestMainProcessSwitch_ProcessID += ProcessManager_RequestMainProcessSwitch_ProcessID;
@@ -317,9 +322,33 @@ namespace RainMeadow
 
             if (self.sceneID == RainMeadow.Ext_SceneID.Meadow_Coin)
             {
-                self.flatMode = true;
                 self.sceneFolder = "Scenes" + Path.DirectorySeparatorChar.ToString() + "meadow - coin";
-                self.AddIllustration(new MenuIllustration(self.menu, self, self.sceneFolder, "coin_flat", new(683f, 384f), false, true));
+                if (self.flatMode)
+                {
+                    self.AddIllustration(new MenuIllustration(self.menu, self, self.sceneFolder, "meadowcoin - flat",
+                        new(683f, 384f), false, true));
+                }
+                else
+                {
+                    self.blurMin = -5f;
+                    self.blurMax = 0.2f;
+                    self.AddIllustration(new MenuDepthIllustration(self.menu, self, self.sceneFolder, "meadowcoin - background",
+                        new(-60f, -25f), 10f, MenuDepthIllustration.MenuShader.Normal));
+                    self.AddIllustration(new MenuDepthIllustration(self.menu, self, self.sceneFolder, "meadowcoin - coins top",
+                        new(-58.3f, -25f), 4f, MenuDepthIllustration.MenuShader.LightEdges));
+                    self.AddIllustration(new MenuDepthIllustration(self.menu, self, self.sceneFolder, "meadowcoin - shadows",
+                        new(-61f, -59f), 4.5f, MenuDepthIllustration.MenuShader.Multiply));
+                    self.AddIllustration(new MenuDepthIllustration(self.menu, self, self.sceneFolder, "meadowcoin - rotund specimen",
+                        new(-65f, -60f), 4.5f, MenuDepthIllustration.MenuShader.LightEdges));
+                    self.AddIllustration(new MenuDepthIllustration(self.menu, self, self.sceneFolder, "meadowcoin - pole",
+                        new(-35f, -25f), 7.9f, MenuDepthIllustration.MenuShader.LightEdges));
+                    self.AddIllustration(new MenuDepthIllustration(self.menu, self, self.sceneFolder, "meadowcoin - fabric shadows",
+                        new(-35f, -28.3f), 3.2f, MenuDepthIllustration.MenuShader.Multiply));
+                    self.AddIllustration(new MenuDepthIllustration(self.menu, self, self.sceneFolder, "meadowcoin - fabric",
+                        new(-35f, -28.3f), 2.9f, MenuDepthIllustration.MenuShader.LightEdges));
+                    self.AddIllustration(new MenuDepthIllustration(self.menu, self, self.sceneFolder, "meadowcoin - light beams",
+                        new(-49f, -16f), 4.5f, MenuDepthIllustration.MenuShader.Lighten));
+                }
             }
             if (self.sceneID == RainMeadow.Ext_SceneID.Slugcat_MeadowSquidcicada)
             {
@@ -674,10 +703,8 @@ namespace RainMeadow
                 self.manager.ShowDialog(new DialogNotify(self.Translate("Rain Meadow failed to start"), self.manager, null));
                 return;
             }
-            if (SpecialEvents.IsSpecialEvent)
-            {
-                SpecialEvents.GetActiveEvent().UpdateLoginMessage(self);
-            }
+            
+            SpecialEvents.GetActiveEvent()?.UpdateLoginMessage(self);
 
             // we might get here from quitting out of game
             OnlineManager.LeaveLobby();

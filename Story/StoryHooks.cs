@@ -1267,7 +1267,7 @@ namespace RainMeadow
             {
                 var c = new ILCursor(il);
                 c.GotoNext(moveType: MoveType.After,
-                        i => i.MatchLdfld<SaveState>("redExtraCycles"),
+                        i => i.MatchCallOrCallvirt<SaveState>("get_RedExtraCycles"),
                         i => i.MatchCall<RedsIllness>("RedsCycles"),
                         i => i.MatchBlt(out _),
                         i => i.MatchLdsfld<ModManager>("CoopAvailable")
@@ -1799,13 +1799,16 @@ namespace RainMeadow
                 }
             }
 
-            if (OnlineManager.lobby.isOwner || storyGameMode.myLastWarp is null || self.currentSaveState.warpPointTargetAfterWarpPointSave != storyGameMode.myLastWarp)
+            if (OnlineManager.lobby.isOwner)
             {
                 storyGameMode.myLastWarp = self.currentSaveState.warpPointTargetAfterWarpPointSave;
             }
             else
             {
-                self.currentSaveState.warpPointTargetAfterWarpPointSave = storyGameMode.myLastWarp;
+                if (storyGameMode.myLastWarp is null || self.currentSaveState.warpPointTargetAfterWarpPointSave != storyGameMode.myLastWarp)
+                {
+                    self.currentSaveState.warpPointTargetAfterWarpPointSave = storyGameMode.myLastWarp;
+                }
             }
 
             RainMeadow.Debug($"FINAL DENPOS save:{self.currentSaveState.denPosition}");

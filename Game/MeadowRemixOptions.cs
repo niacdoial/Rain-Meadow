@@ -2,6 +2,7 @@ using HarmonyLib;
 using Menu;
 using Menu.Remix.MixedUI;
 using Menu.Remix.MixedUI.ValueTypes;
+using Newtonsoft.Json.Linq;
 using RWCustom;
 using System;
 using System.Collections.Generic;
@@ -87,7 +88,7 @@ public class RainMeadowOptions : OptionInterface
 
     public readonly Configurable<bool> boughtSilverCape;
     public readonly Configurable<bool> boughtGoldenCape;
-
+    public readonly Configurable<bool> boughtGoldenSkin;
     public readonly Configurable<bool> boughtRainbowCape;
     public readonly Configurable<bool> wantsDefaultCapeColor;
     public readonly Configurable<Color> currentlyActiveCapeColor;
@@ -216,6 +217,7 @@ public class RainMeadowOptions : OptionInterface
         EnableAchievementsOnline = config.Bind("EnableAchievementsOnline", false);
         MeadowCoins = config.Bind("MeadowCoins", 0);
 
+        boughtGoldenSkin = config.Bind("BoughtGoldenSkin", false);
         boughtSilverCape = config.Bind("BoughtSilverCape", false);
         boughtGoldenCape = config.Bind("BoughtGoldenCape", false);
         boughtRainbowCape = config.Bind("BoughtRainbowCape", false);
@@ -235,7 +237,7 @@ public class RainMeadowOptions : OptionInterface
 {
     new ListItem(Menu.MenuColorEffect.ColorToHex(Color.red), "Default"),
     new ListItem(Menu.MenuColorEffect.ColorToHex(new Color(0.863f, 0.918f, 0.941f)), "Silver"),
-    new ListItem(Menu.MenuColorEffect.ColorToHex(RainWorld.SaturatedGold), "Gold")
+    new ListItem(Menu.MenuColorEffect.ColorToHex(RainWorld.SaturatedGold.SafeColorRange()), "Gold")
 };
 
     public override void Initialize()
@@ -397,9 +399,9 @@ public class RainMeadowOptions : OptionInterface
                 new Vector2(10f, 150f),
                 160f,
                 capeList.Where(i =>
-                    (i.displayName == Translate("Default")) ||
-                    (i.displayName == Translate("Silver") && boughtSilverCape.Value) ||
-                    (i.displayName == Translate("Gold") && boughtGoldenCape.Value)
+                    (i.displayName == "Default") ||
+                    (i.displayName == "Silver" && boughtSilverCape.Value) ||
+                    (i.displayName == "Gold" && boughtGoldenCape.Value)
                 ).ToList()
             )
             {
@@ -445,25 +447,15 @@ public class RainMeadowOptions : OptionInterface
                 }
                 else watcherWarning.Hide();
             };
+            downpourWarning.Hidden = true;
+            watcherWarning.Hidden = true;
             if (!ModManager.MSC && introroll.value == "Downpour")
             {
                 downpourWarning.Hidden = false;
-                watcherWarning.Hidden = true;
             }
-            else
-            {
-                downpourWarning.Hidden = ModManager.MSC;
-            }
-
-
-            if (!ModManager.Watcher && introroll.value == "Watcher")
+            else if (!ModManager.Watcher && introroll.value == "Watcher")
             {
                 watcherWarning.Hidden = false;
-                downpourWarning.Hidden = true;
-            }
-            else
-            {
-                watcherWarning.Hidden = ModManager.Watcher;
             }
 
             editSyncRequiredModsButton.OnClick += _ =>

@@ -48,7 +48,7 @@ namespace RainMeadow
             RainMeadow.Debug("Collected locally:" + online);
             collectedLocally = true;
             MeadowProgression.ItemCollected(this);
-            if (SpecialEvents.IsSpecialEventInLobby)
+            if (SpecialEvents.EventActiveInLobby<SpecialEvents.AprilFools>())
             {
                 int coinsEarned = 1;
 
@@ -64,7 +64,10 @@ namespace RainMeadow
                 {
                     coinsEarned = 5;
                 }
-
+                else if (this.type == RainMeadow.Ext_PhysicalObjectType.MeadowGhost)
+                {
+                    coinsEarned = 10;
+                }
                 SpecialEvents.GainedMeadowCoin(coinsEarned);
 
             }

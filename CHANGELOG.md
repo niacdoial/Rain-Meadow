@@ -5,6 +5,17 @@
 - Made both Router and LAN modes encrypted (there likely are still holes but it's a start)
 
 
+# Release 1.13.1
+## General
+- Fixed Hunter_Illness IL Hook
+- Updated target game version
+- Fixed empty Remix menu when playing with non-English translation settings
+- Fixed persistent purchases from being greyed out unless you met the store's value
+## Arena
+- Fixed a bug where you might spawn multiple times during special events
+## Meadow
+- Granted more event progress when meeting a Meadow Echo
+  
 # Release 1.13.0
 ## General
 - The Dev Tools debug UI now shows the local instance's client flags, and arena now shows its "[L]obbied" client flag.
@@ -35,14 +46,13 @@
 - Fixed the "Wait for others to rescue you" death prompt blocking pause inputs.
 ### Watcher
 - Impossibly high ripple levels (6+) no longer crash the game when viewed.
-
+- Fixed a crash where clients would load into the wrong regions
 ## Meadow
 - Slugcats can now enter the lower depths regardless of remix's "Vanilla Exploits".
 - MS_CORE and Saint's intro rooms should no longer break the rain timer and/or game.
-- The pounce tutorial and SU_PMPSTATION01 barriers no longer load in.
-- The guaranteed jetfish in SL, and the three guaranteed scav corpses in Artificer's GW no longer load in.
+- The pounce tutorial barrier, the guaranteed jetfish in SL, and the three guaranteed scav corpses in Artificer's GW no longer load in.
 - Many different room-specific tooltips across all campaigns are now disabled.
-
+- Added configurable eye color
 # Release 1.12.0
 ## Arena
 - Added `arena.session` to access the current ArenaGameSession
