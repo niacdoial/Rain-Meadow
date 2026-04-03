@@ -11,6 +11,7 @@ using System.Threading.Tasks;
 using Newtonsoft.Json;
 using RWCustom;
 using Steamworks;
+using Sodium;
 
 namespace RainMeadow
 {
@@ -48,9 +49,7 @@ namespace RainMeadow
         {
             var bytes = new byte[len];
             using (var rng = System.Security.Cryptography.RandomNumberGenerator.Create()) rng.GetBytes(bytes);
-            StringBuilder builder = new StringBuilder(len);
-            foreach(byte b in bytes) builder.Append(nonce_chars[b % nonce_chars.Length]);
-            return builder.ToString();
+            return LibSodium.BinToB64(bytes);
         }
 
         public static void OpenWebPage(string URI)
@@ -87,7 +86,7 @@ namespace RainMeadow
                 }
 
                 if (!listener.IsListening) throw lastexcept;
-                var URI = authURI + $"?response_type={responseType}&redirect_uri={Uri.EscapeUriString(listener.Prefixes.First())}&scope={Uri.EscapeDataString(scope)}&state={nonce}&client_id={clientID}&prompt=login";
+                var URI = authURI + $"?response_type={responseType}&redirect_uri={Uri.EscapeDataString(listener.Prefixes.First())}&scope={Uri.EscapeDataString(scope)}&state={nonce}&client_id={clientID}&prompt=login";
                 RainMeadow.Debug(URI);
                 OpenWebPage(URI);
 
@@ -148,7 +147,7 @@ namespace RainMeadow
             using (HttpWebResponse response = await GetResponseNoException(request, cancellationToken))
             {
                 cancellationToken.ThrowIfCancellationRequested();
-                if (response.StatusCode != HttpStatusCode.OK && response.StatusCode != HttpStatusCode.BadRequest) throw new Exception($"Authetication Error: {(int)response.StatusCode} {response.StatusCode} {response.StatusDescription}");
+                if (response.StatusCode != HttpStatusCode.OK && response.StatusCode != HttpStatusCode.BadRequest) throw new Exception($"Authentication Error: {(int)response.StatusCode} {response.StatusCode} {response.StatusDescription}");
                 using (StreamReader reader = new(response.GetResponseStream()))
                 using (JsonTextReader jsonreader = new(reader))
                 {
@@ -166,7 +165,7 @@ namespace RainMeadow
                     else
                     {
                         var error_response = serializer.Deserialize<OAuthErrorResponse>(jsonreader);
-                        throw new Exception($"Authetication Error: {error_response.error} {error_response.error_description}") { HelpLink = error_response.error_uri }; 
+                        throw new Exception($"Authentication Error: {error_response.error} {error_response.error_description}") { HelpLink = error_response.error_uri }; 
                     }
                 }
             }

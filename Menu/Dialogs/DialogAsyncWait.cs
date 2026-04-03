@@ -46,26 +46,26 @@ namespace RainMeadow
         public DialogAsyncWaitCancellable(ProcessManager manager, string description, Vector2 size)
             : base(manager, description, size)
         {                                       
-            okButton = new SimpleButton(this, pages[0], Translate("Cancel"), "CANCEL", new Vector2(pos.x + (size.x - 110f) * 0.5f, pos.y + Mathf.Max(size.y * 0.04f, 7f)), new Vector2(110f, 30f));
-            pages[0].subObjects.Add(okButton);
+            actionButton = new SimpleButton(this, pages[0], Translate("Cancel"), "CANCEL", new Vector2(pos.x + (size.x - 110f) * 0.5f, pos.y + Mathf.Max(size.y * 0.04f, 7f)), new Vector2(110f, 30f));
+            pages[0].subObjects.Add(actionButton);
         }
 
-        public SimpleButton okButton;
+        public SimpleButton actionButton;
         public float timeOut;
         public override void Update()
         {
             base.Update();
-            if (okButton != null)
+            if (actionButton != null)
             {
                 timeOut -= 0.025f;
                 if (timeOut < 0f)
                 {
                     timeOut = 0f;
-                    okButton.buttonBehav.greyedOut = false;
+                    actionButton.buttonBehav.greyedOut = false;
                 }
                 else
                 {
-                    okButton.buttonBehav.greyedOut = true;
+                    actionButton.buttonBehav.greyedOut = true;
                 }
             }
         }
@@ -74,14 +74,14 @@ namespace RainMeadow
         public void Error(string error)
         {
             SetText(error);
-            okButton.menuLabel.text = Translate("OK");
+            actionButton.menuLabel.text = Translate("OK");
             // TODO: set sprite to dead slugcat
         }
 
         public void Success(string message)
         {
             SetText(message);
-            okButton.menuLabel.text = Translate("OK");
+            actionButton.menuLabel.text = Translate("OK");
             // TODO: set sprite to alive slugcat
         }
 

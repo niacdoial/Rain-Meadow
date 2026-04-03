@@ -146,7 +146,7 @@ namespace RainMeadow
         }
 
         static readonly byte[] ADDITIONAL_ENTROPY = { 0x52, 0x41, 0x49, 0x4e, 0x4d, 0x45, 0x41, 0x44, 0x4f, 0x57 };
-        static string AuthSaveLocation => Path.Combine(Path.GetFullPath(Kittehface.Framework20.UserData.GetPersistentDataPath()), "inconspicuousfile.dat");
+        static string AuthSaveLocation => Path.Combine(Path.GetFullPath(Kittehface.Framework20.UserData.GetPersistentDataPath()), "PASSWORD-LIKE_MATERIAL_DO_NOT_SHARE\\MeadowServers-currentlogin.dat");
 
         public static void SaveAuthentication(OAuthAccess access)
         {
