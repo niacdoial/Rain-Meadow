@@ -57,7 +57,14 @@ namespace RainMeadow
                 {
                     try
                     {
-                        OnlineManager.QuitWithError("Connection Lost...", true);
+                        if (reason.Length > 0)
+                        {
+                            OnlineManager.QuitWithError("Connection failure. The server sent this error message:\n" + reason, true);
+                        }
+                        else
+                        {
+                            OnlineManager.QuitWithError("Connection Lost...", true);
+                        }
                     }
                     catch (Exception except) // who decided that QuitWithError was responsible for throwing a error?
                         {}
@@ -73,6 +80,10 @@ namespace RainMeadow
                     if (!OnlineManager.players.Contains(player)) { return; }
                     RouterPlayerId peerId = (RouterPlayerId)player.id;
                     RainMeadow.Error("Peer " + peerId.routingID.ToString() + " lost direct connection, falling back to proxied connection");
+                    if (reason.Length > 0)
+                    {
+                        RainMeadow.Error("It send the following error: " + reason);
+                    }
                     RainMeadow.Error("Note: some Reliable packets may have been lost. Enjoy the jank!");
                     peerId.endPoint = null;
                 }
