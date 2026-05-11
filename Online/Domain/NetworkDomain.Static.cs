@@ -117,7 +117,6 @@ namespace RainMeadow
                 supportedDomains.Add(NetworkDomainType.Router);
                 instances.Add(NetworkDomainType.Router, new RouterNetworkDomain());
                 currentDomain = NetworkDomainType.Router;
-                new Task(async () => await Authentication.LoginWithSavedToken()).RunSynchronously();
             }
 
             if (isSteamAvailable)

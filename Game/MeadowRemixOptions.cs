@@ -549,30 +549,6 @@ public class RainMeadowOptions : OptionInterface
                 for (int i = 0; i < arenaPotentialSpoilerSettings.Length; i++) arenaPotentialSpoilerSettings[i].Show();
             };
 
-            OpSimpleButton loginButton = new OpSimpleButton(new Vector2(10f, 195), new Vector2(30f, 110f), Translate("Login"));
-            if (Authentication.currentAuthentication is not null) {
-                loginButton.text = Translate("Change Account");
-            }
-            loginButton.OnClick += (UIfocusable button) =>
-            {
-                if (ModdingMenu.instance.manager.dialog != null) return;
-                DialogAsyncWaitCancellable dialog = new DialogAsyncWaitCancellable(ModdingMenu.instance.manager, "Launching Browser", new Vector2(480f, 320f));
-                ModdingMenu.instance.manager.ShowDialog(dialog);
-                Authentication.LoginFromWebView(TimeSpan.FromMinutes(2), new Progress<string>(message => {
-                    dialog.SetText(message);
-                }), dialog.cancellationTokenSource.Token)
-                .ContinueWith(async task => {
-                    if (task.IsCanceled) return;
-                    if (task.IsFaulted)
-                    {
-                        dialog.Error($"{task.Exception.Message}{Environment.NewLine}Please try again.");
-                        return;
-                    }
-                    dialog.Success($"You've sucessfully logged in as {task.Result._playerInfo.username}");
-                    loginButton.text = Translate("Change Account");
-                });
-            };
-
             OnlineNetworkSettings = new UIelement[]
             {
                 new OpLabel(10f, 550f, Translate("Network"), bigText: true),
@@ -594,7 +570,6 @@ public class RainMeadowOptions : OptionInterface
                 {
                     accept = OpTextBox.Accept.Int
                 },
-                loginButton
 
             };
             networkTab.AddItems(OnlineNetworkSettings);
