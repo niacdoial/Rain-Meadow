@@ -132,11 +132,19 @@ namespace RainMeadow
         {
             Packet.packetFactory += Packet.RouterFactory;
             JoinRouterLobby.ProcessAction += HandleJoinRouterLobby;
-            // LobbyIsEmpty.ProcessAction += OnLobbyServerEmpty;
             RouteSessionData.ProcessAction += HandleRouteSessionData;
             RouterModifyPlayerListPacket.ProcessAction += HandleModifyPlayerList;
             RouterChatMessage.ProcessAction += HandleChatMessage;
             RouterCustomPacket.ProcessAction += HandleCustomData;
+            PublishRouterLobby.ProcessAction += NotAServer;
+            BeginRouterSession.ProcessAction += NotAServer;
+        }
+
+        void NotAServer(Packet packet) {
+            var peer = PlatformPeerManager.GetRemotePeer(packet.processingPeer);
+            if (peer != null) {
+                PlatformPeerManager.TerminatePeer(peer, "Please connect to a server instead");
+            }
         }
 
         bool ValidateIsFromServer(Packet packet) {
