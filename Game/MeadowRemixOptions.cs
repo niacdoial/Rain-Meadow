@@ -76,6 +76,7 @@ public class RainMeadowOptions : OptionInterface
     public readonly Configurable<bool> RouterExposeIP;
     public readonly Configurable<int> UdpTimeout;
     public readonly Configurable<int> UdpHeartbeat;
+    public readonly Configurable<int> UdpMaxPacketsPerUpdate;
     public readonly Configurable<bool> DisableMeadowPauseAnimation;
     public readonly Configurable<bool> StopMovementWhileSpectateOverlayActive;
 
@@ -204,6 +205,7 @@ public class RainMeadowOptions : OptionInterface
         RouterExposeIP = config.Bind("RouterExposeIP", false);
         UdpTimeout = config.Bind("UdpTimeout", 3000);
         UdpHeartbeat = config.Bind("UdpHeartbeat", 50);
+        UdpMaxPacketsPerUpdate = config.Bind("UdpMaxPacketsPerUpdate", 4);
 
         DisableMeadowPauseAnimation = config.Bind("DisableMeadowPauseAnimation", false);
         StopMovementWhileSpectateOverlayActive = config.Bind("StopMovementWhileSpectateOverlayActive", false);
@@ -567,6 +569,11 @@ public class RainMeadowOptions : OptionInterface
                 },
                 new OpLabel(10f, 370, Translate("UDP heartbeat (ms)"), bigText: false),
                 new OpTextBox(UdpHeartbeat, new Vector2(10f, 345), 160f)
+                {
+                    accept = OpTextBox.Accept.Int
+                },
+                new OpLabel(10f, 320, Translate("Max packets per update loop"), bigText: false),
+                new OpTextBox(UdpMaxPacketsPerUpdate, new Vector2(10f, 295), 160f)
                 {
                     accept = OpTextBox.Accept.Int
                 },

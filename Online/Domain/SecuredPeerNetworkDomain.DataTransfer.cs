@@ -84,7 +84,7 @@ namespace RainMeadow
             if (PlatformPeerManager is null) return;
             PlatformPeerManager.Update();
 
-            int packetlimit = 4; // TODO: Add to remix menu
+            int packetlimit = RainMeadow.rainMeadowOptions.UdpMaxPacketsPerUpdate.Value;
             for (int i = 0; (i < packetlimit) && PlatformPeerManager.IsPacketAvailable(); i++)
             {
                 try
