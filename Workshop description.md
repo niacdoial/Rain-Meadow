@@ -16,7 +16,7 @@ This includes (1) LAN connections, (2) our own worldwide matchmaking servers, an
 * Remix, More Slugcats, and Watcher are considered content mods, though their load order in particular doesn't matter.
 * Jolly-Coop is supported, but everyone in the lobby will need it active. It lets you connect multiple scugs to a Meadow lobby from a single instance of Rain World
 * Dev Tools is client-side
-* Expedition doesn't conflict with Meadow, but is *not* supported at this time. All other mods may or may not work depending on how they are implemented; for a baseline you can check [this community-maintained compatibility spreadsheet.](https://docs.google.com/spreadsheets/d/1QG1xYPLECkVSMc2vopO-Rw2rSdnn7_fsdlMajhAUOW0/edit?gid=0#gid=0)
+* Expedition is not available at this time. 
 
 ---
 
@@ -56,26 +56,22 @@ This includes (1) LAN connections, (2) our own worldwide matchmaking servers, an
 ---
 
 ## Modding
-Meadow supports other mods adding custom gamemodes, as well as custom variations for arena mode. Here are some examples of both:
-* [Example of a custom "Tag" gamemode.](https://github.com/henpemaz/RemixMods/tree/master/Tag)
-* [Arena External Gamemode API.](https://github.com/6fears7/Arena-Online/tree/main)
+Meadow features an extensive API which can be used by other mods to add network support, new features and even entire new gamemodes. Our API supports both game changing mods and mods that you might wanna sync but not necessarily require everyone to have. Plus you do not need to make Rain Meadow a required mod to use the API.
+
+### If you're a mod developer looking to add support Rain Meadow in your mod check out our [wiki](https://github.com/henpemaz/Rain-Meadow/wiki/0-%E2%80%90-Home).
 
 ---
 
 ## Credits
 ```
-Henpemaz.......Lead Developer   Persondotexe.......Modsync
-Wolfycatt......Lead Artist      invalidunits.......UI, LAN
-Intikus........Audio Designer   forthfora..........Modsync
-Noircatto......Engine           WillowWisp.........Story
-HelloThere.....Sound            @None..............Gameplay
-A1iex..........UI Design        DustyLemmy.........Arena, Story
-FranklyGD......Engine           Elizabeth..........Story, UI
-MC41Games......Menus            niacdoial..........LAN
-Silvyger.......Arena            Capt. Redstone.....Meadow, Story
-Vigaro.........Menus            BitiLope...........Story
-Pudgy Turtle...Story            ddemile............Modsync
-UO.............Story, Arena     Saddest............UI, Chat
-notchoc........Story            phanie_............Illustration
-Timbits........UI, Menus        Zedreus............UI, Story
+Henpemaz.......Lead Developer   Persondotexe.......Modsync        Wolfycatt......Lead Artist
+invalidunits.......UI, LAN      Intikus........Audio Designer     forthfora..........Modsync
+Noircatto......Engine           WillowWisp.........Story          HelloThere.....Sound
+@None..............Gameplay     A1iex..........UI Design          DustyLemmy.........Arena, Story
+FranklyGD......Engine           Elizabeth..........Story, UI      MC41Games......Menus
+niacdoial..........LAN          Silvyger.......Arena              Capt. Redstone.....Meadow, Story
+Vigaro.........Menus            BitiLope...........Story          Pudgy Turtle...Story
+ddemile............Modsync      UO.............Story, Arena       Saddest............UI, Chat
+notchoc........Story            phanie_............Illustration   Timbits........UI, Menus
+Zedreus............UI, Story    EdEnStonne.........Arena
 ```

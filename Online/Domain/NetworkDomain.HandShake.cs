@@ -46,6 +46,10 @@ namespace RainMeadow
                 OnLobbyJoinedEvent(false, Utils.Translate(error));
             }
         }
+
+        /// <remarks>
+        /// When overriding this method, Ensure <see cref="OnLobbyLeavingEvent"/> is called.
+        /// </remarks>
         public abstract void HandleLeavingLobby();
 
         public abstract bool canOpenInvitations { get; }

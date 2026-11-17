@@ -105,7 +105,7 @@ namespace RainMeadow
                     SteamMatchmaking.SetLobbyData(lobbyID, MODS_KEY, RainMeadowModManager.ModArrayToString(RainMeadowModManager.GetRequiredMods()));
                     SteamMatchmaking.SetLobbyData(lobbyID, BANNED_MODS_KEY, RainMeadowModManager.ModArrayToString(RainMeadowModManager.GetBannedMods()));
                     SteamMatchmaking.SetLobbyData(lobbyID, PASSWORD_KEY, lobbyPassword != null ? "true" : "false");
-                    SteamMatchmaking.SetLobbyData(lobbyID, PINNED_KEY, creatingPinned? "true" : "false");
+                    // SteamMatchmaking.SetLobbyData(lobbyID, PINNED_KEY, creatingPinned? "true" : "false");
                     SteamMatchmaking.SetLobbyMemberLimit(lobbyID, MAX_LOBBY);
                     OnlineManager.lobby = new Lobby(new OnlineGameMode.OnlineGameModeType(creatingWithMode), OnlineManager.mePlayer, lobbyPassword);
                     SteamFriends.SetRichPresence("connect", lobbyID.ToString());
@@ -233,9 +233,11 @@ namespace RainMeadow
             }
         }
 
+        /// <inheritdoc/>
         public override void HandleLeavingLobby()
         {
             RainMeadow.DebugMe();
+            OnLobbyLeavingEvent();
             if (lobbyID != default)
             {
                 SteamMatchmaking.LeaveLobby(lobbyID);

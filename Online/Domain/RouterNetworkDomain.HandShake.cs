@@ -147,8 +147,10 @@ namespace RainMeadow
             }
         }
 
+        /// <inheritdoc/>
         public override void HandleLeavingLobby()
         {
+            OnLobbyLeavingEvent();
             serverPeer = null;
             ForgetEverything();
         }

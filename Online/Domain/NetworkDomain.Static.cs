@@ -47,7 +47,9 @@ namespace RainMeadow
         public static event LobbyListReceived_t OnLobbyListReceived = delegate { };
         public static event PlayerListReceived_t OnPlayerListReceived = delegate { };
         public static event LobbyJoined_t OnLobbyJoined = delegate { };
+        public static event LobbyLeaving_t OnLobbyLeaving = delegate { };
 
+        protected static void OnLobbyLeavingEvent() => OnLobbyLeaving?.Invoke();
         protected static void OnLobbyJoinedEvent(bool ok, string error = "") => OnLobbyJoined?.Invoke(ok, error);
         protected static void OnPlayerListReceivedEvent(MeadowPlayerId[] players) => OnPlayerListReceived?.Invoke(players);
         protected static void OnLobbyListReceivedEvent(bool ok, LobbyInfo[] lobbies) => OnLobbyListReceived?.Invoke(ok, lobbies);
@@ -57,7 +59,8 @@ namespace RainMeadow
 
         private static NetworkDomainType _Domain = NetworkDomainType.LAN;
 
-        public static NetworkDomainType currentDomain
+        public abstract NetworkDomainType domain { get; }  // the domain of *this* NetworkDomain object
+        public static NetworkDomainType currentDomain  // the domain of *the active* NetworkDomain (equals currentInstance.domain)
         {
             get { return _Domain; }
             set
@@ -75,10 +78,12 @@ namespace RainMeadow
         public static string CLIENT_VAL = "Meadow_" + RainMeadow.MeadowVersionStr + "routerincompat1";
         public static string NAME_KEY = "name";
         public static string MODE_KEY = "mode";
+        public static string CAMPAIGN_KEY = "campaign";
         public static string MODS_KEY = "mods";
         public static string BANNED_MODS_KEY = "banned_mods";
         public static string PASSWORD_KEY = "password";
-        public static string PINNED_KEY = "pinned";
+        //-public static string PINNED_KEY = "pinned";
+        public static string WHITELIST_MODE_KEY = "whitelist";
         public static int MAX_LOBBY = 4;
 
         static public readonly List<NetworkDomainType> supportedDomains = new();
@@ -147,6 +152,82 @@ namespace RainMeadow
         public delegate void LobbyListReceived_t(bool ok, LobbyInfo[] lobbies);
         public delegate void PlayerListReceived_t(MeadowPlayerId[] players);
         public delegate void LobbyJoined_t(bool ok, string error = "");
+        public delegate void LobbyLeaving_t();
 
+        public string JoinCodePrefix => JoinCodePrefixFor(domain);
+
+        public static string EncodeJoinPassword(string password)
+        {
+            return Uri.EscapeDataString(password);
+        }
+
+        public static string DecodeJoinPassword(string encoded)
+        {
+            return Uri.UnescapeDataString(encoded);
+        }
+
+
+
+        public static string JoinCodePrefixFor(NetworkDomainType domain)
+        {
+            if (domain.value == nameof(NetworkDomainType.Steam))
+            {
+                return "+connect_lobby";
+            }
+            else
+            {
+                return $"+connect_{domain.value.ToLowerInvariant()}_lobby";
+            }
+        }
+
+        public string FormatJoinCode(string? password, string connectionCode)
+        {
+            string code = $"{JoinCodePrefix} {connectionCode}";
+            if (!string.IsNullOrEmpty(password))
+                code += $" +lobby_password {EncodeJoinPassword(password!)}";
+            return code;
+        }
+
+        public abstract string GetCurrentLobbyJoinCode(string? password);
+
+
+
+        public static bool lastJoinFailWasWrongPassword;
+
+        public static string? pendingJoinCode;
+
+        public static bool ConsumePendingJoinCode(out string code)
+        {
+            code = pendingJoinCode ?? "";
+            pendingJoinCode = null;
+            return !string.IsNullOrEmpty(code);
+        }
+
+        public static bool TryParseJoinCode(string code, out NetworkDomainType domain, out LobbyInfo? lobby, out string? password)
+        {
+            domain = NetworkDomainType.LAN;
+            lobby = null;
+            password = null;
+
+            string[] parts = code.Split(' ');
+
+            int password_idx = Array.IndexOf(parts, "+lobby_password");
+
+            //find password, if it exists
+            if (password_idx >= 0 && parts.Length > password_idx + 1)
+                password = DecodeJoinPassword(parts[password_idx + 1]);
+
+            foreach (var inst in instances.Values)
+            {
+                int idx = Array.IndexOf(parts, inst.JoinCodePrefix);
+                if (idx >= 0 && idx+1 < parts.Length)
+                {
+                    domain = inst.domain;
+                    lobby = inst.GenerateDCLobbyInfo(parts[idx+1]);
+                    return lobby != null;
+                }
+            }
+            return false;
+        }        
     }
 }

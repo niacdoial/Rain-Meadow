@@ -43,12 +43,13 @@ namespace RainMeadow
 
     public partial class RouterNetworkDomain : SecuredPeerNetworkDomain
     {
+        public override NetworkDomainType domain => NetworkDomainType.Router;
 
         public RouterNetworkDomain()
         {
             InitializePackets();
-            if (PlatformPeerManager is null) throw new InvalidProgrammerException("no peer manager");
-            PlatformPeerManager.OnPeerForgotten += (SecuredPeerManager.RemotePeer peer, string reason) =>
+            if (NetworkDomain.PlatformPeerManager is null) throw new InvalidProgrammerException("no peer manager");
+            NetworkDomain.PlatformPeerManager.OnPeerForgotten += (SecuredPeerManager.RemotePeer peer, string reason) =>
             {
                 // ignore player removal / recursive call if we are leaving the lobby
                 if (serverPeer == null) return;
@@ -102,6 +103,7 @@ namespace RainMeadow
                 this.endPoint = endPoint;
             }
 
+            //FIXME: can we prune this commented-out code?
             //public RouterLobbyInfo(SecuredPeerId endPoint, string name, LobbyParameters parameters) :
             //    base(name, parameters.Mode, 1, parameters.PasswordProtected, parameters.MaxPlayers, parameters.Mods, parameters.BannedMods)
             //{
@@ -121,12 +123,23 @@ namespace RainMeadow
             //    };
             //}
 
-            public override bool Equals(LobbyInfo other)
-            {
-                if (other is RouterLobbyInfo otherrouter) return (endPoint == otherrouter.endPoint);
-                return false;
-            }
+            // public override bool Equals(LobbyInfo other)
+            // {
+            //     if (other is RouterLobbyInfo otherrouter) return (endPoint == otherrouter.endPoint);
+            //     return false;
+            // }
         }
+
+        public override string GetCurrentLobbyJoinCode(string? password)
+        {
+            if (serverPeer?.id is not SecuredPeerId endPoint)
+            {
+                RainMeadow.Error("asked for a join code with no lan lobby owner");
+                return "";
+            }
+            return FormatJoinCode(password, endPoint.ToString());
+        }
+
 
         public void InitializePackets()
         {

@@ -17,6 +17,8 @@ namespace RainMeadow
 
     public partial class SteamNetworkDomain : NetworkDomain
     {
+        public override NetworkDomainType domain => NetworkDomainType.Steam;
+
         public class SteamLobbyInfo : LobbyInfo
         {
             public override NetworkDomainType domain => NetworkDomainType.Steam;
@@ -28,33 +30,37 @@ namespace RainMeadow
                 iD = id;
                 try
                 {
+                    // FIXME: sync with dict-based params construction
                     name = Utils.GetTranslatedLobbyName(SteamMatchmaking.GetLobbyData(id, NAME_KEY));
                     playerCount = SteamMatchmaking.GetNumLobbyMembers(id);
                     parameters.Mode = SteamMatchmaking.GetLobbyData(id, MODE_KEY);
                     parameters.PasswordProtected = bool.TryParse(SteamMatchmaking.GetLobbyData(id, PASSWORD_KEY), out var hasPass) && hasPass;
                     parameters.MaxPlayers = SteamMatchmaking.GetLobbyMemberLimit(id);
+                    parameters.ActiveTimeline = SteamMatchmaking.GetLobbyData(id, CAMPAIGN_KEY);
                     parameters.Mods = SteamMatchmaking.GetLobbyData(id, MODS_KEY);
                     parameters.BannedMods = SteamMatchmaking.GetLobbyData(id, BANNED_MODS_KEY);
+                    parameters.WhitelistMode = bool.TryParse(SteamMatchmaking.GetLobbyData(id, WHITELIST_MODE_KEY), out var wlKey) && wlKey;
 
-                    // REVIEW: is the following block something that has been removed upstream, or something that was not re-added to the RouterDomain branch?
-                    if (NetworkDomain.instances[NetworkDomain.NetworkDomainType.Steam].IsTrustedCommunity(new SteamPlayerId(SteamMatchmaking.GetLobbyOwner(iD))))
-                    {
-                        if (bool.TryParse(SteamMatchmaking.GetLobbyData(iD, PINNED_KEY), out parameters.Pinned))
-                        {
-                            RainMeadow.Debug("Successfully read pinned lobby data");
-                        }
-                    }
+                    // FIXME: REVIEW: is the following block something that has been removed upstream, or something that was not re-added to the RouterDomain branch?
+                    // if (NetworkDomain.instances[NetworkDomain.NetworkDomainType.Steam].IsTrustedCommunity(new SteamPlayerId(SteamMatchmaking.GetLobbyOwner(iD))))
+                    // {
+                    //     if (bool.TryParse(SteamMatchmaking.GetLobbyData(iD, PINNED_KEY), out parameters.Pinned))
+                    //     {
+                    //         RainMeadow.Debug("Successfully read pinned lobby data");
+                    //     }
+                    // }
                 }
                 catch (Exception except)
                 {
                     RainMeadow.Error(except);
                 }
             }
-            public override bool Equals(LobbyInfo other)
-            {
-                if (other is SteamLobbyInfo othersteam) return iD == othersteam.iD;
-                return false;
-            }
+            // FIXME: can prune?
+            // public override bool Equals(LobbyInfo other)
+            // {
+            //     if (other is SteamLobbyInfo othersteam) return iD == othersteam.iD;
+            //     return false;
+            // }
         }
 
 #pragma warning disable IDE0052 // Remove unread private members
@@ -70,6 +76,16 @@ namespace RainMeadow
 
         private CSteamID me;
         public CSteamID lobbyID { get; private set; }
+
+        public override string GetCurrentLobbyJoinCode(string? password)
+        {
+            if (lobbyID == default)
+            {
+                RainMeadow.Error("asked for a join code with no steam lobby");
+                return "";
+            }
+            return FormatJoinCode(password, lobbyID.ToString());
+        }
 
         public SteamNetworkDomain()
         {

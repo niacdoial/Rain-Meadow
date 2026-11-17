@@ -1,33 +1,33 @@
 ﻿using System;
-using System.Net;
+// using System.Net;
 using RainMeadow.Shared.Models;
+namespace RainMeadow;
 
-namespace RainMeadow
+// abstracted for displaying lobby data
+public abstract class LobbyInfo (
+    string name,
+    int playerCount,
+    LobbyParameters parameters
+)// : IEquatable<LobbyInfo>
 {
-    // trimmed down version for listing lobbies in menus
-    public abstract class LobbyInfo : IEquatable<LobbyInfo>
-    {
-        public abstract NetworkDomain.NetworkDomainType domain { get; }
-        public string name;
+    public string name = name;
 
-        public int playerCount;
-        public LobbyParameters parameters;
-        public string mode => parameters.Mode;
-        public bool hasPassword => parameters.PasswordProtected;
-        public int maxPlayerCount => parameters.MaxPlayers;
-        public string requiredMods => parameters.Mods;
-        public string bannedMods => parameters.BannedMods;
-        public bool pinned => parameters.Pinned;
+    public int playerCount = playerCount;
+    public LobbyParameters parameters = parameters;
+    public string mode => parameters.Mode;
+    public bool hasPassword => parameters.PasswordProtected;
+    public int maxPlayerCount => parameters.MaxPlayers;
+    public string requiredMods => parameters.Mods;
+    public string bannedMods => parameters.BannedMods;
+    // public bool pinned => parameters.Pinned;
+    public bool pinned = false;  // FIXME does ANYTHING write to this?
+    public string activeTimeline => parameters.ActiveTimeline;
+    public bool whitelistMode => parameters.WhitelistMode;
 
-        public LobbyInfo(string name, int playerCount, LobbyParameters parameters)
-        {
-            this.name = name;
-            this.playerCount = playerCount;
-            this.parameters = parameters;
-        }
+    
+    public abstract NetworkDomain.NetworkDomainType domain { get; }
+    public abstract string directJoinCode { get; }
 
-        public abstract string directJoinCode { get; }
-        public override bool Equals(object obj) => obj is LobbyInfo other ? this.Equals(other) : false;
-        public abstract bool Equals(LobbyInfo other);
-    }
+    public string GetLobbyJoinCode(string? password = null)
+        => NetworkDomain.instances[domain].FormatJoinCode(password, directJoinCode);
 }

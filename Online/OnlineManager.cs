@@ -35,6 +35,14 @@ namespace RainMeadow
         public static LobbyInfo currentlyJoiningLobby;
         public int milisecondsPerFrame;
 
+        /// <summary>
+        /// Returns true if cheats are enabled in the lobby, if you're the lobby host or if you're offline.
+        /// </summary>
+        /// <remarks>
+        /// If your mod is considered a cheat use this to comply with the cheat setting set by the host.
+        /// </remarks>
+        public static bool CheatsAllowed => lobby == null || lobby.cheats || lobby.isOwner;
+
         public OnlineManager(ProcessManager manager) : base(manager, RainMeadow.Ext_ProcessID.OnlineManager)
         {
             instance = this;
@@ -71,13 +79,20 @@ namespace RainMeadow
         public static void AddPlayer(OnlinePlayer player)
         {
             players.Add(player);
+            // FIXME: hey, was kicking disabled at some point??? Also see dupes in Online/Resource/Lobby.cs
             // if (lobby != null && mePlayer == lobby.owner && lobby.bannedUsers.list.Contains(player.id))
             // {
             //     BanHammer.BanUser(player);
-            //     ChatLogManager.LogSystemMessage((player.id.GetPersonaName()) + " " + Utils.Translate("tried to join the game but was kicked."));
+            //     ChatLogManager.LogSystemMessage(
+            //         (player.id.GetPersonaName()) + " " + Utils.Translate("tried to join the game but was kicked."),
+            //         ChatLogManager.SystemMessageType.PlayerJoinFail
+            //     );
             //     return;
             // }
-            // ChatLogManager.LogSystemMessage((player.id.GetPersonaName()) + " " + Utils.Translate("joined the game."));
+            // ChatLogManager.LogSystemMessage(
+            //     (player.id.GetPersonaName()) + " " + Utils.Translate("joined the game."),
+            //     ChatLogManager.SystemMessageType.PlayerJoin
+            // );
         }
 
         public static void RemovePlayer(OnlinePlayer player)
@@ -94,7 +109,10 @@ namespace RainMeadow
             RainMeadow.Debug($"Actually removing player:{player}");
             players.Remove(player);
             NetworkDomain.currentInstance.ForgetPlayer(player);
-            ChatLogManager.LogSystemMessage((player.id.GetPersonaName()) + " " + Utils.Translate("left the game."));
+            ChatLogManager.LogSystemMessage(
+               (player.id.GetPersonaName()) + " " + Utils.Translate("left the game."),
+               ChatLogManager.SystemMessageType.PlayerJoin  // FIXME: is ther a better enum value?
+            );
         }
 
 

@@ -19,7 +19,7 @@ namespace RainMeadow
     [BepInPlugin("henpemaz.rainmeadow", "RainMeadow", MeadowVersionStr)]
     public partial class RainMeadow : BaseUnityPlugin
     {
-        public const string MeadowVersionStr = "0.1.13.1";
+        public const string MeadowVersionStr = "0.1.16.2";
         public const string ReleaseUrl = "https://api.github.com/repos/henpemaz/Rain-Meadow/releases/latest";
         public static string NewVersionAvailable = "";
         public static RainMeadow instance;
@@ -35,6 +35,8 @@ namespace RainMeadow
             {
                 instance = this;
                 rainMeadowOptions = new RainMeadowOptions(this);
+
+                Utils.WaitForPreviousInstance();
 
                 On.RainWorld.OnModsInit += RainWorld_OnModsInit;
                 On.ModManager.RefreshModsLists += ModManagerOnRefreshModsLists;
@@ -53,7 +55,7 @@ namespace RainMeadow
 
                 fullyEnabled = true;
             }
-            catch(Exception e)
+            catch (Exception e)
             {
                 fullyEnabled = false;
                 Logger.LogError(e);
@@ -62,7 +64,7 @@ namespace RainMeadow
 
         private bool AdvancedProfilingEnabled()
         {
-            foreach(var arg in Environment.GetCommandLineArgs())
+            foreach (var arg in Environment.GetCommandLineArgs())
             {
                 if (arg == "-meadowprofiler") return true;
             }
@@ -177,6 +179,8 @@ namespace RainMeadow
             {
                 EssentialMenuHooks(); //  sets the error message fallback
 
+                InitializeExtEnums();
+
                 MachineConnector.SetRegisteredOI("henpemaz_rainmeadow", rainMeadowOptions);
                 rainMeadowOptions._LoadConfigFile(); // We need the logging settings
 
@@ -231,8 +235,15 @@ namespace RainMeadow
                     {
                         RainMeadow.Debug("registered as new shader");
                         self.Shaders[shader.name] = FShader.CreateShader(shader.name, shader);
+                        if (shader.name == "RippleGlowColored"
+                            || shader.name == "RippleSpawnBodyColored")
+                        {
+                            RainMeadow.Debug("also registering ripple side variant");
+                            self.Shaders[shader.name + "RippleSide"] = FShader.CreateShader(shader.name + "RippleSide", shader, ["ripple_other_side"]);
+                        }
                     }
                 }
+                self.Shaders.Add("FlatWaterLightRippleSide", FShader.CreateShader("FlatWaterLight", Shader.Find("Futile/FlatWaterLight"), ["ripple_other_side"]));
 
                 MenuHooks();
                 GameHooks();
@@ -254,7 +265,8 @@ namespace RainMeadow
                 SharedCodeLogger.DebugMeInner += RainMeadow.DebugMe;
                 SharedCodeLogger.ErrorInner += RainMeadow.Error;
 
-                CapeManager.FetchCapes();
+                CosmeticManager.FetchCosmetics();
+                CosmeticManager.ParseAvailableCosmetics();
 
                 MeadowMusic.EnableMusic();
                 this.PlopMachine = new PlopMachine();
@@ -289,7 +301,7 @@ namespace RainMeadow
                 if (request.result == UnityWebRequest.Result.Success)
                 {
                     json = JObject.Parse(request.downloadHandler.text);
-                } 
+                }
                 else
                 {
                     Logger.LogError($"A web request error occured whilst checking for updates: {request.result}");
@@ -321,7 +333,7 @@ namespace RainMeadow
                         yield break;
                     }
                     NewVersionAvailable = latestVersion;
-                    
+
                 }
             }
         }

@@ -16,6 +16,7 @@ namespace RainMeadow
 
     public partial class LANNetworkDomain : SecuredPeerNetworkDomain
     {
+        public override NetworkDomainType domain => NetworkDomainType.LAN;
         void PacketFactory(Packet.Type type, ref Packet? packet)
         {
             if (packet is null)
@@ -90,12 +91,25 @@ namespace RainMeadow
                 name = dnsName + ":" + endPoint.endPoint.Port;
                 this.endPoint = endPoint;
             }
-            public override bool Equals(LobbyInfo other)
-            {
-                if (other is LANLobbyInfo otherlan) return endPoint.Equals(otherlan.endPoint);
-                return false;
-            }
+            // FIXME: can prune?
+            // public override bool Equals(LobbyInfo other)
+            // {
+            //     if (other is LANLobbyInfo otherlan) return endPoint.Equals(otherlan.endPoint);
+            //     return false;
+            // }
         }
+
+        public override string GetCurrentLobbyJoinCode(string? password)
+        {
+            if ((OnlineManager.lobby?.owner?.id as LANPlayerId)?.endPoint
+                 is not SecuredPeerId endPoint)
+            {
+                RainMeadow.Error("asked for a join code with no lan lobby owner");
+                return "";
+            }
+            return FormatJoinCode(password, endPoint.ToString());
+        }
+
 
         public LobbyParameters GetLobbyParameters()
         {
