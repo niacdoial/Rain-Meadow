@@ -4,6 +4,7 @@ using Menu;
 using Menu.Remix;
 using Menu.Remix.MixedUI;
 using Menu.Remix.MixedUI.ValueTypes;
+using RainMeadow.Shared;
 using Steamworks;
 using System;
 using System.Collections.Generic;
@@ -14,8 +15,9 @@ using static RainMeadow.RainMeadowModManager;
 
 namespace RainMeadow
 {
-    public class LobbySelectMenu : SmartMenu
+    public class LobbySelectMenu : SmartMenu, OnlineManager.INetworkUpdator
     {
+        bool OnlineManager.INetworkUpdator.updateALLDomains => true;
         public static bool firstOpen;
 
         private SimplerButton createButton;
@@ -42,7 +44,8 @@ namespace RainMeadow
             this.backTarget = ProcessManager.ProcessID.MainMenu;
 
             lobbyList = new LobbyCardsList(this, mainPage, new Vector2(518, 100f), new Vector2(330f, 490f));
-            lobbyList.RefreshButton.OnClick += RefreshLobbyList;
+            lobbyList.ClickedLobbyCard += (x) => Play(x.lobbyInfo);
+            lobbyList.RefreshButton.OnClick += (x) => RefreshLobbyList();
             mainPage.subObjects.Add(lobbyList);
 
             // title at the top
@@ -159,10 +162,10 @@ namespace RainMeadow
 
             directConnectButton = new SimplerButton(this, mainPage, Translate("Direct Connect"), new Vector2(where.x, where.y), new Vector2(160f, 30f));
             directConnectButton.OnClick += (_) =>
-            {   
-                if (MatchmakingManager.currentDomain != MatchmakingManager.MatchMakingDomain.LAN)
+            {
+                if (!NetworkDomain.currentInstance.canDirectConnect)
                 {
-                    ShowErrorDialog("Direct Connection is only available in the Local Matchmaker");
+                    ShowErrorDialog("Direct Connection is only available in the Local / Router Network Domains");
                     return;
                 }
                 ShowDirectConnectionDialogue();
@@ -175,15 +178,12 @@ namespace RainMeadow
 
 
             mainPage.subObjects.Add(directConnectButton);
-            
-            domainDropDown = new OpComboBox2(new Configurable<MatchmakingManager.MatchMakingDomain>(
-                MatchmakingManager.currentDomain), where, 160f - 35f, 
-                MatchmakingManager.supported_matchmakers.Select(x => new ListItem(x.value, Utils.Translate(x.value))).ToList()) { colorEdge = MenuColorEffect.rgbWhite };
+
+            domainDropDown = new OpComboBox2(new Configurable<string>(
+                "Any"), where, 160f - 35f,
+                NetworkDomain.supportedDomains.Select(x => new ListItem(x.value, Utils.Translate(x.value))).Reverse().Prepend(new ListItem("Any", Utils.Translate("Any"))).ToList()) { colorEdge = MenuColorEffect.rgbWhite };
             domainDropDown.OnChange += () => {
-                MatchmakingManager.currentDomain = new MatchmakingManager.MatchMakingDomain(domainDropDown.value, false);
-                lobbyList.ClearLobbies();
-                lobbyList.CreateCards();
-                RefreshLobbyList(null);
+                UpdateLobbyFilter();
             };
 
 
@@ -199,13 +199,17 @@ namespace RainMeadow
             // }
 
             // // Lobby machine go!
-            MatchmakingManager.OnLobbyListReceived += OnlineManager_OnLobbyListReceived;
-            MatchmakingManager.OnLobbyJoined += OnlineManager_OnLobbyJoined;
-            if (MatchmakingManager.supported_matchmakers.Contains(MatchmakingManager.MatchMakingDomain.Steam)) {
-                SteamNetworkingUtils.InitRelayNetworkAccess();
-            }   
-            
-            MatchmakingManager.currentInstance.RequestLobbyList();
+            NetworkDomain.OnLobbyListReceived += OnLobbyListReceived;
+            NetworkDomain.OnLobbyJoined += OnlineManager_OnLobbyJoined;
+            RefreshLobbyList();
+
+            if (RainMeadow.argumentsAutoConnect is not null)
+            {
+                ShowLoadingDialog("Joining lobby...");
+                RequestLobbyJoin(RainMeadow.argumentsAutoConnect, RainMeadow.autoConnectPassword);
+                RainMeadow.argumentsAutoConnect = null;
+            }
+
             if (manager.musicPlayer != null)
             {
                 if (RainMeadow.rainMeadowOptions.GetLobbyMusic(out var song) && !string.IsNullOrEmpty(song))
@@ -288,17 +292,21 @@ namespace RainMeadow
 
         public override void GrafUpdate(float timeStacker)
         {
-
             base.GrafUpdate(timeStacker);
         }
 
         private void UpdateLobbyFilter()
         {
+            if (domainDropDown.value == "Any") lobbyList.filter.domainType = null;
+            else lobbyList.filter.domainType = (NetworkDomain.NetworkDomainType)ExtEnumBase.Parse(typeof(NetworkDomain.NetworkDomainType), domainDropDown.value, true);
+
+
             lobbyList.filter.gameMode = filterModeDropDown.value;
             lobbyList.filter.requiredMods = filterModsDropDown.value;
             lobbyList.filter.publicLobby = filterPublicLobbiesOnly.GetValueBool();
 
             lobbyList.FilterLobbies();
+            lobbyList.CreateCards();
         }
 
         public bool VerifyPlay(LobbyInfo lobbyInfo, bool care_about_lobby_size = true) {
@@ -307,7 +315,7 @@ namespace RainMeadow
 
 
             if (care_about_lobby_size) {
-                MatchmakingManager.MAX_LOBBY = lobbyInfo.maxPlayerCount;
+                NetworkDomain.MAX_LOBBY = lobbyInfo.maxPlayerCount;
                 if (lobbyInfo.playerCount >= lobbyInfo.maxPlayerCount)
                 {
                     ShowErrorDialog("Failed to join lobby.<LINE> Lobby is full");
@@ -326,7 +334,7 @@ namespace RainMeadow
 
             lastClickedLobby = lobbyInfo;
 
-            if (lobbyInfo is LANMatchmakingManager.LANLobbyInfo) {
+            if (lobbyInfo is LANNetworkDomain.LANLobbyInfo) {
                 RainMeadow.DebugMe();
                 RainMeadow.Debug($"{lobbyInfo.name}, {lobbyInfo.maxPlayerCount}, {lobbyInfo.mode}, {lobbyInfo.playerCount}, {lobbyInfo.hasPassword}");
             }
@@ -345,9 +353,13 @@ namespace RainMeadow
             }
         }
 
-        private void RefreshLobbyList(SymbolButton obj)
+        private void RefreshLobbyList()
         {
-            MatchmakingManager.currentInstance.RequestLobbyList();
+            lobbyList.ClearLobbies();
+            foreach (NetworkDomain.NetworkDomainType supportedDomain in NetworkDomain.supportedDomains)
+            {
+                NetworkDomain.instances[supportedDomain].RequestLobbyList();
+            }
         }
 
         public void StartJoiningLobby(LobbyInfo lobby, string? password = null, bool checkMods = true)
@@ -359,7 +371,7 @@ namespace RainMeadow
                     {
                         ShowLoadingDialog("Joining lobby...");
                         RequestLobbyJoin(lobby, password);
-                    }, false, lobby.GetLobbyJoinCode(password));
+                    }, false, $"+connect_lobby {lobby.directJoinCode} +connect_domain {lobby.domain}" + (string.IsNullOrWhiteSpace(password)? "" : $" +connect_password {password}" ));
             }
             else
             {
@@ -367,19 +379,19 @@ namespace RainMeadow
                 RequestLobbyJoin(lobby, password);
             }
         }
-        
+
         public void RequestLobbyJoin(LobbyInfo lobby, string? password = null)
         {
             RainMeadow.DebugMe();
-            MatchmakingManager.currentInstance.RequestJoinLobby(lobby, password);
+            NetworkDomain.instances[lobby.domain].RequestJoinLobby(lobby, password);
         }
 
-        private void OnlineManager_OnLobbyListReceived(bool ok, LobbyInfo[] lobbies)
+        private void OnLobbyListReceived(bool ok, LobbyInfo[] lobbies)
         {
             RainMeadow.Debug(ok);
             if (ok)
             {
-                lobbyList.allLobbies = lobbies.ToList();
+                lobbyList.AddLobbies(lobbies);
                 lobbyList.FilterLobbies();
                 UpdateStats(lobbyList);
             }
@@ -406,8 +418,8 @@ namespace RainMeadow
 
         public override void ShutDownProcess()
         {
-            MatchmakingManager.OnLobbyListReceived -= OnlineManager_OnLobbyListReceived;
-            MatchmakingManager.OnLobbyJoined -= OnlineManager_OnLobbyJoined;
+            NetworkDomain.OnLobbyListReceived -= OnLobbyListReceived;
+            NetworkDomain.OnLobbyJoined -= OnlineManager_OnLobbyJoined;
             base.ShutDownProcess();
         }
 
@@ -433,7 +445,7 @@ namespace RainMeadow
             if (popupDialog != null) HideDialog();
 
             popupDialog = new DirectConnectionDialogue(this, mainPage,
-                new Vector2(manager.rainWorld.options.ScreenSize.x / 2f - 240f + (1366f - manager.rainWorld.options.ScreenSize.x) / 2f, 224f), 
+                new Vector2(manager.rainWorld.options.ScreenSize.x / 2f - 240f + (1366f - manager.rainWorld.options.ScreenSize.x) / 2f, 224f),
                 new Vector2(480f, 320f));
             mainPage.subObjects.Add(popupDialog);
 
@@ -455,9 +467,9 @@ namespace RainMeadow
             if (popupDialog != null) HideDialog();
 
             text = Translate(text);
-            
+
             popupDialog = new NotLocalWarningDialog(this, mainPage,
-                new Vector2(manager.rainWorld.options.ScreenSize.x / 2f - 240f + (1366f - manager.rainWorld.options.ScreenSize.x) / 2f, 224f), 
+                new Vector2(manager.rainWorld.options.ScreenSize.x / 2f - 240f + (1366f - manager.rainWorld.options.ScreenSize.x) / 2f, 224f),
                 new Vector2(480f, 320f), text, false, ok, () => HideDialog());
             mainPage.subObjects.Add(popupDialog);
             GreyOutLobbyCards(true);
@@ -507,32 +519,42 @@ namespace RainMeadow
                     var password = (popupDialog as CustomInputDialogueBox).textBox.value;
                     StartJoiningLobby(lastClickedLobby, password);
                     break;
-                case "DIRECT_JOIN": 
-                    var dialogue = popupDialog as DirectConnectionDialogue;
-                    var endpoint = UDPPeerManager.GetEndPointByName(dialogue?.IPBox?.value ?? "");
-                    if (endpoint != null) {
-                        var fakelobbyinfo = new LANMatchmakingManager.LANLobbyInfo(endpoint, "Direct Connection", "Meadow", 0, true, 2);
-                        Action join = () => {
-                            GreyOutLobbyCards(true);
-                            StartJoiningLobby(fakelobbyinfo,
-                                    dialogue.passwordCheckBox.Checked? dialogue.passwordBox.value : null,
-                                    false);
-                        };
-                        
-                        if (VerifyPlay(fakelobbyinfo))
-                        if (!UDPPeerManager.isEndpointLocal(endpoint)) {
+                case "DIRECT_JOIN":
+                    GreyOutLobbyCards(true);
+                    var dialogue = (DirectConnectionDialogue)popupDialog;
+                    LobbyInfo lobbyinfo = null!;
+                    try
+                    {
+                        var domain = (NetworkDomain.NetworkDomainType)ExtEnumBase.Parse(typeof(NetworkDomain.NetworkDomainType), dialogue.domainDropDown.value, true);
+                        lobbyinfo = NetworkDomain.instances[domain].GenerateDCLobbyInfo(dialogue?.IPBox?.value ?? "");
+                    }
+                    catch (FormatException except)
+                    {
+                        ShowErrorDialog($"Invalid Format, {except.Message}");
+                        return;
+                    }
+
+                    Action join = () =>
+                    {
+                        StartJoiningLobby(lobbyinfo,
+                                dialogue.passwordCheckBox.Checked ? dialogue.passwordBox.value : null,
+                                false);
+                    };
+
+                    if (VerifyPlay(lobbyinfo))
+                    {
+                        if (lobbyinfo is LANNetworkDomain.LANLobbyInfo laninfo && !laninfo.endPoint.IsNetworkLocal())
+                        {
                             ShowNotLocalDialogue(
-                                                Translate("This address is possibly not local to your current network.") + Environment.NewLine +
-                                                Translate("If so, This is very unstable and will most likely NOT work") + Environment.NewLine +
-                                                Translate("Are you SURE you know what you're doing?"),
+                                Translate("This address is possibly not local to your current network.") + Environment.NewLine +
+                                Translate("If so, This is very unstable and will most likely NOT work") + Environment.NewLine +
+                                Translate("Are you SURE you know what you're doing?"),
                                 join);
                             mainPage.subObjects.Add(popupDialog);
-                        } else join.Invoke();
-
-
-                    } else {
-                        ShowErrorDialog("Invalid Address, IP Address format should be xxx.xxx.xxx.xxx:port");
+                        }
+                        else join.Invoke();
                     }
+
                     break;
             }
         }

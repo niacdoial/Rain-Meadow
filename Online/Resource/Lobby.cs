@@ -90,18 +90,30 @@ namespace RainMeadow
                 if (this.password != key)
                 {
                     request.from.QueueEvent(new GenericResult.Fail(request));
+                    NetworkDomain.currentInstance.AcceptOrRejectPlayer(request.from, false);
                     return;
                 }
             }
+
+            if (bannedUsers.list.Contains(request.from.id))
+            {
+                request.from.QueueEvent(new GenericResult.LackPerm(request));
+                NetworkDomain.currentInstance.AcceptOrRejectPlayer(request.from, false);
+                return;
+            }
+
             try
             {
                 lobbyRequestable = true;
+                NetworkDomain.currentInstance.AcceptOrRejectPlayer(request.from, true);
                 Requested(request);
             }
-            finally
+            catch
             {
                 lobbyRequestable = false;
+                throw;
             }
+            lobbyRequestable = false;
         }
 
         public void ResolveLobbyRequest(GenericResult requestResult)
@@ -110,7 +122,7 @@ namespace RainMeadow
             isRequesting = false;
             if (requestResult is GenericResult.Ok)
             {
-                MatchmakingManager.currentInstance.JoinLobby(true);
+                NetworkDomain.currentInstance.JoinLobby(true);
                 if (!isAvailable) // this was transfered to me because the previous owner left
                 {
                     WaitingForState();
@@ -123,7 +135,12 @@ namespace RainMeadow
             else if (requestResult is GenericResult.Fail) // I didn't have the right key for this resource
             {
                 RainMeadow.Error("locked request for " + this);
-                MatchmakingManager.currentInstance.JoinLobby(false);
+                NetworkDomain.currentInstance.JoinLobby(false, "Incorrect Password!");
+            }
+            else if (requestResult is GenericResult.LackPerm)
+            {
+                RainMeadow.Error("request failed for " + this);
+                NetworkDomain.currentInstance.JoinLobby(false, "You have been banned from this Lobby!");
             }
             else if (requestResult is GenericResult.Error) // I should retry
             {
@@ -233,7 +250,7 @@ namespace RainMeadow
                 for (int i = 0; i < players.list.Count; i++)
                 {
 
-                    if (MatchmakingManager.currentInstance.GetPlayer(players.list[i]) is OnlinePlayer p)
+                    if (NetworkDomain.currentInstance.GetPlayer(players.list[i]) is OnlinePlayer p)
                     {
                         if (p.inLobbyId != inLobbyIds.list[i]) RainMeadow.Debug($"Setting player {p} to lobbyId {inLobbyIds.list[i]}");
                         p.inLobbyId = inLobbyIds.list[i];
@@ -245,8 +262,8 @@ namespace RainMeadow
 
 
                 }
-                lobby.UpdateParticipants(players.list.Select(MatchmakingManager.currentInstance.GetPlayer).Where(p => p is not null).ToList());
-                if (lobby.bannedUsersChecked == false)
+                lobby.UpdateParticipants(players.list.Select(NetworkDomain.currentInstance.GetPlayer).Where(p => p is not null).ToList());
+                if (!lobby.bannedUsersChecked)
                 {
                     // Need to get the participants before we check
                     if (this.bannedUsers != null && this.bannedUsers.list.Contains(OnlineManager.mePlayer.id))
@@ -259,7 +276,6 @@ namespace RainMeadow
                         }
                         lobby.bannedUsersChecked = true;
                         return;
-
                     }
 
                     lobby.bannedUsersChecked = true;
@@ -314,6 +330,8 @@ namespace RainMeadow
                 nextId++;
                 // todo overflows and repeats (unrealistic but it's a ushort)
             }
+
+            ChatLogManager.LogSystemMessage((player.id.GetPersonaName()) + " " + Utils.Translate("joined the game."));
             base.NewParticipantImpl(player);
             gameMode.NewPlayerInLobby(player);
         }

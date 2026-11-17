@@ -2,13 +2,13 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using RainMeadow.Shared;
 
 namespace RainMeadow
 {
     public class CustomManager
     {
-        public const int maxLength = 12;
-        
+        public const int maxKeyLength = 12;
         private static Dictionary<string, IUseCustomPackets> subscribers = new();
         public static void HandlePacket(OnlinePlayer player, CustomPacket packet)
         {
@@ -16,7 +16,7 @@ namespace RainMeadow
                 s.ProcessPacket(player, packet);
         }
         public static void Subscribe(string k, IUseCustomPackets e)
-        { 
+        {
             subscribers.Add(k, e);
             RefreshSettings();
         }
@@ -26,9 +26,9 @@ namespace RainMeadow
             RefreshSettings();
         }
 
-        public static void SendCustomData(OnlinePlayer toPlayer, string key, byte[] data, ushort size, NetIO.SendType sendType)
+        public static void SendCustomData(OnlinePlayer toPlayer, string key, byte[] data, ushort size, NetworkDomain.PacketReliability sendType)
         {
-            OnlineManager.SendCustomData(toPlayer, new CustomPacket(key, data, size), sendType);
+            OnlineManager.SendCustomData(toPlayer, key, data, sendType);
         }
 
         public static void ReadCustom(OnlinePlayer fromPlayer, byte[] data)
@@ -39,7 +39,7 @@ namespace RainMeadow
                 string key = reader.ReadString();
                 ushort size = reader.ReadUInt16();
                 byte[] customData = reader.ReadBytes(size);
-                HandlePacket(fromPlayer, new CustomPacket(key, customData, size));
+                HandlePacket(fromPlayer, new CustomPacket(key, new ArraySegment<byte>(customData, 0, size)));
             }
         }
 
@@ -99,7 +99,7 @@ namespace RainMeadow
                     RainMeadow.Debug($"Tried syncing {keys.Count} custom packet keys. Capping at 32.");
                     keys.RemoveRange(32, keys.Count - 32);
                 }
-                customClientSettings.keys = keys.Select(s => s.Substring(0, Math.Min(CustomManager.maxLength, s.Length))).ToList(); // Enforce a max string length of 12
+                customClientSettings.keys = keys.Select(s => s.Substring(0, Math.Min(CustomManager.maxKeyLength, s.Length))).ToList(); // Enforce a max string length of 12
             }
 
             public override Type GetDataType() => typeof(CustomClientSettings);

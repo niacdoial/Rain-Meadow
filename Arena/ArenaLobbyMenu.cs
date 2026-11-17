@@ -63,7 +63,7 @@ namespace RainMeadow
             BuildLayout();
             this.arena.ResetOverWorld();
 
-            MatchmakingManager.OnPlayerListReceived += OnlineManager_OnPlayerListReceived;
+            NetworkDomain.OnPlayerListReceived += OnlineManager_OnPlayerListReceived;
             if (arena.currentGameMode == "" || arena.currentGameMode is null)
             {
                 arena.currentGameMode = FFA.FFAMode.value;
@@ -363,7 +363,7 @@ namespace RainMeadow
 
             }
         }
-        private void OnlineManager_OnPlayerListReceived(PlayerInfo[] players)
+        private void OnlineManager_OnPlayerListReceived(MeadowPlayerId[] players)
         {
             if (RainMeadow.isArenaMode(out var arena)) //apparently null lobby can happen, so need!
             {

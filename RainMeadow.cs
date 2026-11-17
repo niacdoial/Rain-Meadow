@@ -1,6 +1,7 @@
 ﻿using BepInEx;
 using Newtonsoft.Json.Linq;
 using RainMeadow.Game;
+using RainMeadow.Shared;
 using System;
 using System.Collections;
 using System.Diagnostics;
@@ -248,6 +249,10 @@ namespace RainMeadow
                 ItemHooks();
                 ObjectHooks();
                 JollyHooks();
+
+                SharedCodeLogger.DebugInner += RainMeadow.Debug;
+                SharedCodeLogger.DebugMeInner += RainMeadow.DebugMe;
+                SharedCodeLogger.ErrorInner += RainMeadow.Error;
 
                 CapeManager.FetchCapes();
 

@@ -245,7 +245,7 @@ namespace RainMeadow
         {
             self.AddPart(new HUD.TextPrompt(self));
 
-            if (MatchmakingManager.currentInstance.canSendChatMessages)
+            if (NetworkDomain.currentInstance.canSendChatMessages)
                 self.AddPart(new ChatHud(self, session.game.cameras[0]));
 
             self.AddPart(new SpectatorHud(self, session.game.cameras[0]));

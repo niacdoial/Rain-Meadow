@@ -189,7 +189,7 @@ namespace RainMeadow
         static public ICapeColor? HasCape(MeadowPlayerId player)
         {
             if (cape_cache.TryGetValue(player, out var entry) && entry is not null) return entry;
-            if (player is SteamMatchmakingManager.SteamPlayerId steamid)
+            if (player is SteamNetworkDomain.SteamPlayerId steamid)
             {
                 ulong steamID = steamid.oid.GetSteamID64();
                 SHA256 Sha = SHA256.Create();
@@ -202,7 +202,7 @@ namespace RainMeadow
                 }
             }
 
-            if (player is LANMatchmakingManager.LANPlayerId lanPlayer)
+            if (player is LANNetworkDomain.LANPlayerId lanPlayer)
             {
                 if (lanPlayer.name == "goldcape") return new SolidCapeColor(RainWorld.SaturatedGold);
                 if (lanPlayer.name == "redcape") return new SolidCapeColor(Color.red);
@@ -364,7 +364,7 @@ namespace RainMeadow
             {
                 normalized.x = (float)playerGFX.player.flipDirection * 0.05f;
 
-                // simplification of sin(acos(x)) 
+                // simplification of sin(acos(x))
                 normalized.y = Mathf.Sqrt(1 - (normalized.x * normalized.x)) * Math.Sign(normalized.y);
             }
 

@@ -114,7 +114,7 @@ namespace RainMeadow
         /// <param name="ignoreReorder">Whether the lobby should accept users with the same mods but in a different order</param>
         /// <param name="restartCode">The code that the restarter will use to attempt to rejoin the lobby after a restart.</param>
         /// <returns>True if the mods were successfully applied (or didn't need to be applied) AND the game does not require a restart.</returns>
-        internal static void CheckMods(string[] requiredMods, string[] bannedMods, Action? onFinish, bool ignoreReorder = false, string restartCode = "")
+        internal static void CheckMods(string[] requiredMods, string[] bannedMods, Action? onFinish, bool ignoreReorder = false, string restartArgs = "")
         {
             try
             {
@@ -263,8 +263,8 @@ namespace RainMeadow
                                 .Intersect(ModManager.InstalledMods.Select(mod => mod.id))
                                 .Any())
                         {
-                            RainMeadow.Debug($"Restarting game with code {restartCode}");
-                            Utils.Restart(restartCode);
+                            RainMeadow.Debug($"Restarting game with arguments {restartArgs}");
+                            Utils.Restart(restartArgs);
                         }
                         else if (modApplier.WasSuccessful())
                         {

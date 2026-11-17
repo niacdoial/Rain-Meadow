@@ -6,6 +6,7 @@ using System.Linq;
 using System.Reflection;
 using System.Text.RegularExpressions;
 using UnityEngine;
+using RainMeadow.Shared;
 
 namespace RainMeadow
 {
@@ -13,7 +14,11 @@ namespace RainMeadow
     // is a mainloopprocess so update bound to game update? worth it? idk
     public class OnlineManager : MainLoopProcess
     {
-        public static NetIO netIO;
+        public interface INetworkUpdator
+        {
+            abstract bool updateALLDomains { get; }
+        }
+
         public static OnlineManager instance;
         public static Serializer serializer = new Serializer(65536);
         public static List<ResourceSubscription> subscriptions;
@@ -24,6 +29,7 @@ namespace RainMeadow
         public static float lastReceive;
         public static OnlinePlayer mePlayer;
         public static List<OnlinePlayer> players;
+        public static Queue<OnlinePlayer> queuedSessionPlayers = new(4);
         public static Lobby lobby;
 
         public static LobbyInfo currentlyJoiningLobby;
@@ -31,25 +37,12 @@ namespace RainMeadow
 
         public OnlineManager(ProcessManager manager) : base(manager, RainMeadow.Ext_ProcessID.OnlineManager)
         {
-            // if steam installed 
-            if (SteamManager.Instance.m_bInitialized && SteamUser.BLoggedOn()) {
-                netIO = new SteamNetIO();
-            }
-            
-            if (netIO == null) {
-                netIO = new LANNetIO();
-            }
-
             instance = this;
             framesPerSecond = 20; // alternatively, run as fast as we can for the receiving stuff, but send on a lower tickrate?
             milisecondsPerFrame = 1000 / framesPerSecond;
-            MatchmakingManager.InitLobbyManager();
+            NetworkDomain.Initialize();
             LeaveLobby();
-            MatchmakingManager.OnLobbyJoined += OnlineManager_OnLobbyJoined;
-            MatchmakingManager.changedMatchMaker += (MatchmakingManager.MatchMakingDomain last, MatchmakingManager.MatchMakingDomain current) => {
-                MatchmakingManager.instances[last].LeaveLobby();
-                LeaveLobby();
-            };
+            NetworkDomain.OnLobbyJoined += OnlineManager_OnLobbyJoined;
             new StateProfiler();
             RainMeadow.Debug("OnlineManager Created");
         }
@@ -67,15 +60,48 @@ namespace RainMeadow
             }
             else
             {
-                OnlineManager.LeaveLobby();
+                // assume that lobby==null means the cleanup either has already been done,
+                // or it doesn't need to be
+                if (lobby != null) {
+                    LeaveLobby();
+                }
             }
         }
+
+        public static void AddPlayer(OnlinePlayer player)
+        {
+            players.Add(player);
+            // if (lobby != null && mePlayer == lobby.owner && lobby.bannedUsers.list.Contains(player.id))
+            // {
+            //     BanHammer.BanUser(player);
+            //     ChatLogManager.LogSystemMessage((player.id.GetPersonaName()) + " " + Utils.Translate("tried to join the game but was kicked."));
+            //     return;
+            // }
+            // ChatLogManager.LogSystemMessage((player.id.GetPersonaName()) + " " + Utils.Translate("joined the game."));
+        }
+
+        public static void RemovePlayer(OnlinePlayer player)
+        {
+            RainMeadow.Debug($"Handling player disconnect:{player}");
+            player.hasLeft = true;
+            lobby?.OnPlayerDisconnect(player);
+            while (player.HasUnacknoledgedEvents() && OnlineManager.lobby is not null)
+            {
+                player.AbortUnacknoledgedEvents();
+                lobby?.OnPlayerDisconnect(player);
+                ForceLoadUpdate(); // process incoming data
+            }
+            RainMeadow.Debug($"Actually removing player:{player}");
+            players.Remove(player);
+            NetworkDomain.currentInstance.ForgetPlayer(player);
+            ChatLogManager.LogSystemMessage((player.id.GetPersonaName()) + " " + Utils.Translate("left the game."));
+        }
+
 
         public static void LeaveLobby()
         {
             ChatLogManager.ResetPlayerColors();
-            MatchmakingManager.currentInstance.LeaveLobby();
-            netIO?.ForgetEverything();
+            NetworkDomain.currentInstance.HandleLeavingLobby();
             lobby = null;
 
             subscriptions = new();
@@ -87,8 +113,8 @@ namespace RainMeadow
             OnlinePhysicalObject.map = new();
 
             RainMeadowModManager.Reset();
-            
-            MatchmakingManager.currentInstance.initializeMePlayer();
+
+            mePlayer = NetworkDomain.currentInstance.CreateMePlayer();
             players = new List<OnlinePlayer>() { mePlayer };
 
             instance.manager.rainWorld.progression.Destroy();
@@ -96,10 +122,43 @@ namespace RainMeadow
             instance.manager.rainWorld.progression.Update();
         }
 
+        private static void RecieveData()
+        {
+            if (OnlineManager.instance.manager.currentMainLoop is INetworkUpdator networkUpdator && networkUpdator.updateALLDomains)
+            {
+                foreach (var domain in NetworkDomain.supportedDomains)
+                {
+                    NetworkDomain.instances[domain].RecieveData();
+                }
+            }
+            else
+            {
+                NetworkDomain.currentInstance.RecieveData();
+            }
+
+            int networkBudget = 32768;
+            while (queuedSessionPlayers.Any() && networkBudget > 0)
+            {
+                OnlinePlayer p = queuedSessionPlayers.Dequeue();
+                try
+                {
+                    Buffer.BlockCopy(p.latestSessionBytes, 0, OnlineManager.serializer.buffer, 0, p.latestSessionSize);
+                    serializer.ReadData(p, p.latestSessionSize);
+                }
+                catch (Exception e)
+                {
+                    RainMeadow.Error("Error reading packet from player : " + p.id);
+                    RainMeadow.Error(e);
+                    serializer.EndRead();
+                }
+                networkBudget -= p.latestSessionSize;
+            }
+        }
+
         public override void RawUpdate(float dt)
         {
             myTimeStacker += dt * (float)framesPerSecond;
-            netIO?.Update(); // incoming data
+            RecieveData();
             lastReceive = UnityEngine.Time.realtimeSinceStartup;
 
             if (myTimeStacker >= 1f)
@@ -116,7 +175,7 @@ namespace RainMeadow
         // from a force-load situation
         public static void ForceLoadUpdate()
         {
-            netIO?.Update();
+            RecieveData();
             lastReceive = UnityEngine.Time.realtimeSinceStartup;
 
             if (UnityEngine.Time.realtimeSinceStartup > lastSend + 1f / instance.framesPerSecond)
@@ -127,48 +186,52 @@ namespace RainMeadow
 
         public override void Update()
         {
-            if (lobby != null)
+            try
             {
-                mePlayer.tick++;
-                ProcessSelfEvents();
-                ProcessDeferredEvents();
 
-                if (lobby.isActive)
+                if (lobby != null)
                 {
-                    lobby.Tick(mePlayer.tick);
+                    mePlayer.tick++;
+                    ProcessSelfEvents();
+                    ProcessDeferredEvents();
+
+                    if (lobby.isActive)
+                    {
+                        lobby.Tick(mePlayer.tick);
+                    }
+                    else if (lobby.isAvailable)
+                    {
+                        lobby.Activate();
+                    }
+
+                    foreach (OnlinePlayer player in players)
+                    {
+                        player.Update();
+                    }
+                    recentFailedComparisons.Clear();
+                    // Prepare outgoing messages
+                    foreach (var subscription in subscriptions)
+                    {
+                        subscription.Update(mePlayer.tick);
+                    }
+
+                    foreach (var feed in feeds)
+                    {
+                        feed.Update(mePlayer.tick);
+                    }
+
+                    // Outgoing messages
+                    foreach (var player in players)
+                    {
+                        SendData(player);
+                    }
+
+                    lastSend = UnityEngine.Time.realtimeSinceStartup;
                 }
-                else if (lobby.isAvailable)
-                {
-                    lobby.Activate();
-                }
-
-                foreach (OnlinePlayer player in players)
-                {
-                    player.Update();
-                }
-
-
-                recentFailedComparisons.Clear();
-                // Prepare outgoing messages
-                foreach (var subscription in subscriptions)
-                {
-                    subscription.Update(mePlayer.tick);
-                }
-
-                foreach (var feed in feeds)
-                {
-                    feed.Update(mePlayer.tick);
-                    
-                }
-
-
-                // Outgoing messages
-                foreach (var player in players)
-                {
-                    SendData(player);
-                }
-
-                lastSend = UnityEngine.Time.realtimeSinceStartup;
+            }
+            catch (Exception except)
+            {
+                RainMeadow.Error("Exception during network frame " + except.ToString());
             }
         }
 
@@ -179,19 +242,21 @@ namespace RainMeadow
 
             if (toPlayer.needsAck || toPlayer.OutgoingEvents.Count > 0 || toPlayer.OutgoingStates.Count > 0)
             {
-                netIO?.SendSessionData(toPlayer);
+                NetworkDomain.currentInstance?.SendSessionData(toPlayer);
             }
         }
 
-        public static void SendCustomData(OnlinePlayer toPlayer, CustomPacket customPacket, NetIO.SendType sendType)
+
+
+        public static void SendCustomData(OnlinePlayer toPlayer, string key, byte[] data, NetworkDomain.PacketReliability sendType, bool boxed = false)
         {
             if (toPlayer.isMe)
                 return;
             if (!lobby.clientSettings.TryGetValue(toPlayer, out var settings) || !settings.TryGetData<CustomClientSettings>(out var customSettings))
                 return;
-            if (!customSettings.keys.Contains(customPacket.key))
+            if (!customSettings.keys.Contains(key))
                 return;
-            netIO?.SendCustomData(toPlayer, customPacket, sendType);
+            NetworkDomain.currentInstance?.SendCustomData(toPlayer, key, data, sendType, boxed);
         }
 
         public void ProcessSelfEvents()
@@ -339,7 +404,7 @@ namespace RainMeadow
         public static void AddFeed(OnlineResource resource, OnlineEntity oe)
         {
             feeds.Add(new EntityFeed(resource, oe));
-            
+
         }
 
         public static void RemoveFeed(OnlineResource resource, OnlineEntity oe)
@@ -376,16 +441,59 @@ namespace RainMeadow
             return null;
         }
 
-        public static void QuitWithError(string v)
+        public static void QuitWithError(string v, bool urgent = false)
         {
             RainMeadow.Error(v);
-            if (lobby != null && instance.manager.upcomingProcess != ProcessManager.ProcessID.MainMenu)
+            if (lobby != null)
             {
-                instance.manager.upcomingProcess = null;
-                instance.manager.RequestMainProcessSwitch(ProcessManager.ProcessID.MainMenu);
-                instance.manager.ShowDialog(new Menu.DialogNotify(v, Utils.Translate("Leaving Lobby"), new Vector2(240, 320), instance.manager, () => { }));
-                LeaveLobby();
-                throw new Exception(v);
+                var manager = RWCustom.Custom.rainWorld.processManager;
+                try
+                {
+                    if (manager.currentMainLoop is RainWorldGame game && manager.upcomingProcess is null)
+                    {
+                        if (manager.musicPlayer != null)
+                        {
+                            manager.musicPlayer.DeathEvent();
+                        }
+
+                        game.ExitGame(asDeath: false, asQuit: true);
+                    }
+                }
+                catch (Exception except)
+                {
+                    RainMeadow.Error(except);
+                }
+
+                try
+                {
+                    LeaveLobby();
+                }
+                catch (Exception except)
+                {
+                    RainMeadow.Error(except);
+                }
+
+                manager.RequestMainProcessSwitch(RainMeadow.Ext_ProcessID.LobbySelectMenu);
+                if (urgent)
+                {
+                    manager.PreSwitchMainProcess(RainMeadow.Ext_ProcessID.LobbySelectMenu);
+                    manager.finalizeModsStep = 0;
+                    manager.finalizeModsDelay = 0;
+                    manager.modFinalizationDone = false;
+                    manager.processAfterModFinalization = RainMeadow.Ext_ProcessID.LobbySelectMenu;
+                    manager.upcomingProcess = null;
+                }
+
+                manager.ShowDialog(new Menu.DialogNotify(v, manager, () => { }));
+                if (RPCEvent.currentRPCEvent is null) // rpc will return normally.
+                {
+                    throw new Exception(v);
+                }
+            }
+            else if (currentlyJoiningLobby is not null)
+            {
+                NetworkDomain.AbortJoinLobby(v);
+                return;
             }
         }
     }

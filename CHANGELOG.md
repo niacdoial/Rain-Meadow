@@ -1,3 +1,10 @@
+# Upcoming Release
+
+## Engine:
+- Added Router multiplayer mode, to allow worldwide Steam-GOG crossplay (currently only works if a player is hosting the server)
+- Made both Router and LAN modes encrypted (there likely are still holes but it's a start)
+
+
 # Release 1.13.1
 ## General
 - Fixed Hunter_Illness IL Hook

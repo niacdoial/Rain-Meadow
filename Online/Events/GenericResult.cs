@@ -23,6 +23,14 @@
 
             public override EventTypeId eventType => EventTypeId.GenericResultOk;
         }
+
+        public class LackPerm : GenericResult
+        {
+            public LackPerm() { }
+            public LackPerm(ResolvableEvent resolvableEvent) : base((OnlineEvent)resolvableEvent) { }
+            public override EventTypeId eventType => EventTypeId.GenericResultLackPerm;
+        }
+
         public class Fail : GenericResult
         {
             public Fail() { }

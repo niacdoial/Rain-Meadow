@@ -1066,7 +1066,7 @@ namespace RainMeadow
                         self.headingLabel.text = self.Translate("<TEAMNAME> WIN!")
                             .Replace(
                                 "<TEAMNAME>",
-                                MatchmakingManager.currentInstance.FilterTeamName(
+                                NetworkDomain.currentInstance.FilterTeamName(
                                     tb.teamNames[tb.winningTeam].ToUpper()
                                 )
                             );
@@ -2723,7 +2723,7 @@ namespace RainMeadow
                             )
                             {
                                 self.playerNameLabel.text +=
-                                    $" -- {MatchmakingManager.currentInstance.FilterTeamName(team.teamNames[td.team].ToUpper())}";
+                                    $" -- {NetworkDomain.currentInstance.FilterTeamName(team.teamNames[td.team].ToUpper())}";
                             }
                         }
                     }
@@ -2884,7 +2884,7 @@ namespace RainMeadow
                         self.headingLabel.text = self.Translate("<TEAMNAME> WIN!")
                             .Replace(
                                 "<TEAMNAME>",
-                                MatchmakingManager.currentInstance.FilterTeamName(
+                                NetworkDomain.currentInstance.FilterTeamName(
                                     tb.teamNames[tb.winningTeam].ToUpper()
                                 )
                             );
@@ -3292,4 +3292,3 @@ namespace RainMeadow
         }
     }
 }
-

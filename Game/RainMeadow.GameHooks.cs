@@ -21,7 +21,7 @@ namespace RainMeadow
             On.RainWorldGame.ctor += RainWorldGame_ctor;
             IL.RainWorldGame.ctor += RainWorldGame_ctor2;
             On.StoryGameSession.ctor += StoryGameSession_ctor;
-            IL.OverWorld.ctor += Overworld_ctor; 
+            IL.OverWorld.ctor += Overworld_ctor;
             On.RainWorldGame.RawUpdate += RainWorldGame_RawUpdate;
             On.RainWorldGame.ShutDownProcess += RainWorldGame_ShutDownProcess;
             IL.ShortcutHandler.SuckInCreature += ShortcutHandler_SuckInCreature;
@@ -132,7 +132,7 @@ namespace RainMeadow
                 }
             }
         }
-        
+
         private void Overworld_ctor(ILContext context)
         {
             try
@@ -146,7 +146,7 @@ namespace RainMeadow
                     if (OnlineManager.lobby != null)
                     {
                         if (OnlineManager.lobby.overworld.isActive) OnlineManager.lobby.overworld.Deactivate();
-                        
+
                         OnlineManager.lobby.overworld.BindOverworld(self);
                         OnlineManager.lobby.overworld.Needed();
                         while (!OnlineManager.lobby.overworld.isAvailable)
@@ -402,7 +402,7 @@ namespace RainMeadow
             }
             if (OnlineManager.lobby != null)
             {
-                self.devToolsLabel.text = self.devToolsLabel.text + $" | Rain Meadow {RainMeadow.MeadowVersionStr} ({MatchmakingManager.currentDomain.value})";
+                self.devToolsLabel.text = self.devToolsLabel.text + $" | Rain Meadow {RainMeadow.MeadowVersionStr} ({NetworkDomain.currentDomain.value})";
             }
         }
 
@@ -581,7 +581,7 @@ namespace RainMeadow
                 OnlineManager.lobby.overworld.NotNeeded();
                 if (self.manager.upcomingProcess != ProcessManager.ProcessID.MainMenu) // quit directly, otherwise wait release
                 {
-                    while (OnlineManager.lobby.overworld.isAvailable)
+                    while (OnlineManager.lobby is not null && OnlineManager.lobby.overworld.isAvailable)
                     {
                         OnlineManager.ForceLoadUpdate();
                     }

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using RainMeadow.Shared;
 
 namespace RainMeadow
 {
@@ -246,6 +247,11 @@ namespace RainMeadow
             for (uint ie = 0; ie < ne; ie++)
             {
                 OnlineManager.ProcessIncomingEvent(ReadEvent());
+                if (OnlineManager.lobby is null)
+                {
+                    EndRead();
+                    return;
+                }
             }
 
             uint ns = BeginReadStates();
@@ -254,6 +260,11 @@ namespace RainMeadow
             for (uint ist = 0; ist < ns; ist++)
             {
                 OnlineManager.ProcessIncomingState(ReadState());
+                if (OnlineManager.lobby is null)
+                {
+                    EndRead();
+                    return;
+                }
             }
 
             EndRead();
@@ -676,7 +687,7 @@ namespace RainMeadow
                 ids = new(count);
                 for (int i = 0; i < count; i++)
                 {
-                    MeadowPlayerId s = MatchmakingManager.currentInstance.GetEmptyId();
+                    MeadowPlayerId s = NetworkDomain.currentInstance.GetEmptyId();
                     s.CustomSerialize(this);
                     ids.Add(s);
                 }

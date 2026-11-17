@@ -77,7 +77,7 @@ namespace RainMeadow.UI.Components
         public void AddMessage(string user, string message)
         {
             if (!(OnlineManager.lobby?.gameMode?.mutedPlayers.Contains(user) == false)) return;
-            MatchmakingManager.currentInstance.FilterMessage(ref message);
+            NetworkDomain.currentInstance.FilterMessage(ref message);
             if (RainMeadow.rainMeadowOptions.ChatPing.Value && !string.IsNullOrEmpty(user) && user != OnlineManager.mePlayer.id.GetPersonaName() && message.IndexOf(OnlineManager.mePlayer.id.DisplayName, StringComparison.OrdinalIgnoreCase) >= 0)
             {
                 menu.manager.menuMic.PlaySound(RainMeadow.Ext_SoundID.RM_Slugcat_Call, 0, 1f, 0f);

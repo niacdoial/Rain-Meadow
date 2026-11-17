@@ -1,4 +1,5 @@
 using HarmonyLib;
+using Menu;
 using Menu.Remix.MixedUI;
 using Menu.Remix.MixedUI.ValueTypes;
 using Newtonsoft.Json.Linq;
@@ -7,6 +8,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Threading.Tasks;
 using UnityEngine;
 namespace RainMeadow;
 
@@ -71,8 +73,10 @@ public class RainMeadowOptions : OptionInterface
     public readonly Configurable<int> ShowPingLocation, ChatInactivityTimer;
 
     public readonly Configurable<string> LanUserName;
+    public readonly Configurable<bool> RouterExposeIP;
     public readonly Configurable<int> UdpTimeout;
     public readonly Configurable<int> UdpHeartbeat;
+    public readonly Configurable<int> UdpMaxPacketsPerUpdate;
     public readonly Configurable<bool> DisableMeadowPauseAnimation;
     public readonly Configurable<bool> StopMovementWhileSpectateOverlayActive;
 
@@ -119,7 +123,7 @@ public class RainMeadowOptions : OptionInterface
     private UIelement[] GeneralUIArrPlayerOptions;
     private UIelement[] OnlineArenaSettings;
     private UIelement[] OnlineStorySettings;
-    private UIelement[] OnlineLANSettings;
+    private UIelement[] OnlineNetworkSettings;
     private UIelement[] OnlineAdvancedSettings;
     private UIelement[] OnlineGameplay;
 
@@ -198,8 +202,10 @@ public class RainMeadowOptions : OptionInterface
         LobbyMusic = config.Bind("MeadowLobbyMusic", "default"); // Happy One Year, Meadow
 
         LanUserName = config.Bind("LanUserName", "");
+        RouterExposeIP = config.Bind("RouterExposeIP", false);
         UdpTimeout = config.Bind("UdpTimeout", 3000);
-        UdpHeartbeat = config.Bind("UdpHeartbeat", 500);
+        UdpHeartbeat = config.Bind("UdpHeartbeat", 50);
+        UdpMaxPacketsPerUpdate = config.Bind("UdpMaxPacketsPerUpdate", 4);
 
         DisableMeadowPauseAnimation = config.Bind("DisableMeadowPauseAnimation", false);
         StopMovementWhileSpectateOverlayActive = config.Bind("StopMovementWhileSpectateOverlayActive", false);
@@ -244,12 +250,12 @@ public class RainMeadowOptions : OptionInterface
             OpTab meadowTab = new OpTab(this, Translate("Meadow"));
             OpTab arenaTab = new OpTab(this, Translate("Arena"));
             OpTab storyTab = new OpTab(this, Translate("Story"));
-            OpTab lanTab = new OpTab(this, Translate("LAN"));
+            OpTab networkTab = new OpTab(this, Translate("Network"));
             OpTab onlineTab = new OpTab(this, Translate("Gameplay"));
 
 
 
-            Tabs = new OpTab[] { opTab, meadowTab, arenaTab, storyTab, lanTab, onlineTab };
+            Tabs = new OpTab[] { opTab, meadowTab, arenaTab, storyTab, networkTab, onlineTab };
 
             List<UIelement> meadowCheats;
             OpTextBox meadowCheatBox;
@@ -416,7 +422,7 @@ public class RainMeadowOptions : OptionInterface
     }
 
         };
-            if (!MatchmakingManager.instances.Values.OfType<MatchmakingManager>().Any(x => x.IsDev(OnlineManager.mePlayer.id)))
+            if (!NetworkDomain.instances.Values.OfType<NetworkDomain>().Any(x => x.IsDev(OnlineManager.mePlayer.id)))
             {
                 GeneralUIArrPlayerOptions.Skip(GeneralUIArrPlayerOptions.IndexOf(devOptions)).Take(3).Do(e => e.Hidden = true);
             }
@@ -545,27 +551,35 @@ public class RainMeadowOptions : OptionInterface
                 for (int i = 0; i < arenaPotentialSpoilerSettings.Length; i++) arenaPotentialSpoilerSettings[i].Show();
             };
 
-            OnlineLANSettings = new UIelement[7]
+            OnlineNetworkSettings = new UIelement[]
             {
-                new OpLabel(10f, 550f, Translate("LAN"), bigText: true),
+                new OpLabel(10f, 550f, Translate("Network"), bigText: true),
                 new OpLabel(10f, 505, Translate("Username"), bigText: false),
                 new OpTextBox(LanUserName, new Vector2(10f, 480), 160f)
                 {
                     accept = OpTextBox.Accept.StringASCII
                 },
-                new OpLabel(10f, 455, Translate("UDP timeout (ms)"), bigText: false),
-                new OpTextBox(UdpTimeout, new Vector2(10f, 420), 160f)
+                new OpCheckBox(RouterExposeIP, new Vector2(10, 455)),
+                new OpLabel(40f, 455, Translate("Expose IP address to other players"), bigText: false),
+
+                new OpLabel(10f, 420, Translate("UDP timeout (ms)"), bigText: false),
+                new OpTextBox(UdpTimeout, new Vector2(10f, 395), 160f)
                 {
                     accept = OpTextBox.Accept.Int
                 },
-                new OpLabel(10f, 395, Translate("UDP heartbeat (ms)"), bigText: false),
-                new OpTextBox(UdpHeartbeat, new Vector2(10f, 370), 160f)
+                new OpLabel(10f, 370, Translate("UDP heartbeat (ms)"), bigText: false),
+                new OpTextBox(UdpHeartbeat, new Vector2(10f, 345), 160f)
                 {
                     accept = OpTextBox.Accept.Int
-                }
+                },
+                new OpLabel(10f, 320, Translate("Max packets per update loop"), bigText: false),
+                new OpTextBox(UdpMaxPacketsPerUpdate, new Vector2(10f, 295), 160f)
+                {
+                    accept = OpTextBox.Accept.Int
+                },
 
-        };
-            lanTab.AddItems(OnlineLANSettings);
+            };
+            networkTab.AddItems(OnlineNetworkSettings);
         }
 
         catch (Exception ex)

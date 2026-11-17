@@ -1,5 +1,6 @@
 using System.IO;
 using MonoMod.Utils;
+using RainMeadow.Shared;
 
 namespace RainMeadow
 {
@@ -16,29 +17,18 @@ namespace RainMeadow
         public override void Process()
         {
             RainMeadow.DebugMe();
-            if (OnlineManager.lobby != null && MatchmakingManager.currentDomain == MatchmakingManager.MatchMakingDomain.LAN)
+            if (OnlineManager.lobby != null && NetworkDomain.currentDomain == NetworkDomain.NetworkDomainType.LAN)
             {
-                var matchmaker = (LANMatchmakingManager)MatchmakingManager.instances[MatchmakingManager.MatchMakingDomain.LAN];
+                var processingPlayer = NetworkDomain.LAN?.GetPlayerLAN(processingPeer, true);
 
-                if (LanUserName.Length > 0) {
+                if (LanUserName.Length > 0)
+                {
                     processingPlayer.id.name = LanUserName;
                 }
 
                 // Tell everyone else about them
                 RainMeadow.Debug("Telling client they got in.");
-                matchmaker.AcknoledgeLANPlayer(processingPlayer);
-
-                // Tell them they are in
-                OnlineManager.netIO.SendP2P(processingPlayer, new JoinLobbyPacket(
-                    matchmaker.maxplayercount,
-                    "LAN Lobby",
-                    OnlineManager.lobby.hasPassword,
-                    OnlineManager.lobby.gameModeType.value,
-                    OnlineManager.players.Count,
-                    RainMeadowModManager.ModArrayToString(RainMeadowModManager.GetRequiredMods()),
-                    RainMeadowModManager.ModArrayToString(RainMeadowModManager.GetBannedMods())
-                ), NetIO.SendType.Reliable);
-
+                NetworkDomain.LAN?.AcknoledgeLANPlayer(processingPlayer);
             }
         }
 

@@ -251,7 +251,7 @@ namespace RainMeadow
                         }
                         msg += coinBoast;
                     }
-                    MatchmakingManager.currentInstance.SendChatMessage(msg);
+                    NetworkDomain.currentInstance.SendChatMessage(msg);
                     foreach (var player in OnlineManager.players)
                     {
                         player.InvokeRPC(RPCs.UpdateUsernameTemporarily, msg);
@@ -780,7 +780,7 @@ namespace RainMeadow
         }
 
         // input blocker for the sake of dev tools/other outside processes that make use of input keys
-        // thanks to SlimeCubed's dev console 
+        // thanks to SlimeCubed's dev console
         public static void ShouldCapture(bool shouldCapture)
         {
             if (shouldCapture && !blockInput)
