@@ -176,7 +176,7 @@ namespace RainMeadow.Arena.ArenaOnlineGameModes.TeamBattle
                 return nonSpecificText;
             }
 
-            string filteredTeamName = MatchmakingManager.currentInstance.FilterTeamName(
+            string filteredTeamName = NetworkDomain.currentInstance.FilterTeamName(
                 bestTeamName.ToUpper()
             );
 

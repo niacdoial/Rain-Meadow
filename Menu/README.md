@@ -131,7 +131,7 @@ Use a primary constructor if that's all the class needs.
 1. overridden fields/properties, in the same ordering and spacing as above
 1. constructor(s)
 1. class methods, all methods should have empty lines above and below them (including constructor and the methods below) unless it's the last item in the class
-1. hook classes, such as those used to subscribe to `MatchmakingManager` hooks
+1. hook classes, such as those used to subscribe to `NetworkDomain` (was: `MatchmakingManager`) hooks
 1. interface implementation methods
 1. overridden classes, ending with `Update()`, `GrafUpdate()`, and `ShutDownProcess()`.
 1. enums, surrounded by empty lines

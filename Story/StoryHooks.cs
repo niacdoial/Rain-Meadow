@@ -1389,7 +1389,7 @@ namespace RainMeadow
                 self.AddPart(new SpectatorHud(self, cam));
                 self.AddPart(new Pointing(self));
 
-                if (MatchmakingManager.currentInstance.canSendChatMessages
+                if (NetworkDomain.currentInstance.canSendChatMessages
                     && RMOverlayHUDMenu.TryGetOverlay(out var overlayHUD))
                 {
                     if (overlayHUD.chatHud is null) overlayHUD.AddChatHUD(cam);

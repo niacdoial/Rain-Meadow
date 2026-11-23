@@ -259,7 +259,7 @@ namespace RainMeadow
                         }
                         msg += coinBoast;
                     }
-                    MatchmakingManager.currentInstance.SendChatMessage(msg);
+                    NetworkDomain.currentInstance.SendChatMessage(msg);
                     foreach (var player in OnlineManager.players)
                     {
                         player.InvokeRPC(RPCs.UpdateUsernameTemporarily, msg);

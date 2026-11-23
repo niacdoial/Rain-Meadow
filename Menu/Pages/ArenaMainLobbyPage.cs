@@ -127,7 +127,7 @@ public class ArenaMainLobbyPage : PositionedMenuObject, IDynamicBindHandler
         Container.AddChild(chatLobbyStateDivider);
 
         BuildPlayerDisplay();
-        MatchmakingManager.OnPlayerListReceived += OnlineManager_OnPlayerListReceived;
+        NetworkDomain.OnPlayerListReceived += OnlineManager_OnPlayerListReceived;
         arenaInfoButton = new(
             menu,
             this,
@@ -205,7 +205,7 @@ public class ArenaMainLobbyPage : PositionedMenuObject, IDynamicBindHandler
         playerDisplayer.CallForRefresh();
     }
 
-    public void OnlineManager_OnPlayerListReceived(PlayerInfo[] players)
+    public void OnlineManager_OnPlayerListReceived(MeadowPlayerId[] players)
     {
         RainMeadow.DebugMe();
         playerDisplayer?.UpdatePlayerList([

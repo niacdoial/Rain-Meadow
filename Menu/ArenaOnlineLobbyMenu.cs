@@ -621,7 +621,7 @@ public class ArenaOnlineLobbyMenu : SmartMenu
             return Translate("Join Team \"<TEAMNAME>\"")
                 .Replace(
                     "<TEAMNAME>",
-                    MatchmakingManager.currentInstance.FilterTeamName(teamBtn.teamName)
+                    NetworkDomain.currentInstance.FilterTeamName(teamBtn.teamName)
                 );
         if (
             selectedObject

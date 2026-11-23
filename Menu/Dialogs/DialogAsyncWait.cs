@@ -1,13 +1,16 @@
 ﻿using Menu;
+using System;
 using System.Collections.Generic;
+using System.Threading;
 using UnityEngine;
 
 namespace RainMeadow
 {
     public class DialogAsyncWait : Dialog
     {
-        public DialogAsyncWait(Menu.Menu menu, string description, Vector2 size)
-            : base(description, size, menu.manager)
+        public DialogAsyncWait(Menu.Menu menu, string description, Vector2 size) : this(menu.manager, description, size) { }
+        public DialogAsyncWait(ProcessManager manager, string description, Vector2 size)
+            : base(description, size, manager)
         {
             loadingSpinner = new AtlasAnimator(0, new Vector2((float)((int)(pos.x + size.x / 2f)) - HorizontalMoveToGetCentered(manager), (float)((int)(pos.y + size.y / 2f - 32f))), "sleep", "sleep", 20, true, false);
             loadingSpinner.animSpeed = 0.25f;

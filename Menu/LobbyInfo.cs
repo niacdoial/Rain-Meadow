@@ -1,32 +1,33 @@
-﻿namespace RainMeadow;
+﻿using System;
+// using System.Net;
+using RainMeadow.Shared.Models;
+namespace RainMeadow;
 
 // abstracted for displaying lobby data
-public abstract class LobbyInfo(
+public abstract class LobbyInfo (
     string name,
-    string mode,
     int playerCount,
-    bool hasPassword,
-    int? maxPlayerCount,
-    string highImpactMods = "",
-    string bannedMods = "",
-    string activeTimeline = "",
-    bool whitelistMode = false
-)
+    LobbyParameters parameters
+)// : IEquatable<LobbyInfo>
 {
-    public string name = name,
-        mode = mode,
-        requiredMods = highImpactMods,
-        bannedMods = bannedMods;
-    public string activeTimeline = activeTimeline;
-    public int playerCount = playerCount,
-        maxPlayerCount = maxPlayerCount ?? 0;
-    public bool hasPassword = hasPassword,
-        pinned,
-        whitelistMode = whitelistMode;
+    public string name = name;
 
-    public abstract MatchmakingManager.MatchMakingDomain domain { get; }
-    protected abstract object[] JoinCodeArgs { get; }
+    public int playerCount = playerCount;
+    public LobbyParameters parameters = parameters;
+    public string mode => parameters.Mode;
+    public bool hasPassword => parameters.PasswordProtected;
+    public int maxPlayerCount => parameters.MaxPlayers;
+    public string requiredMods => parameters.Mods;
+    public string bannedMods => parameters.BannedMods;
+    // public bool pinned => parameters.Pinned;
+    public bool pinned = false;  // FIXME does ANYTHING write to this?
+    public string activeTimeline => parameters.ActiveTimeline;
+    public bool whitelistMode => parameters.WhitelistMode;
+
+    
+    public abstract NetworkDomain.NetworkDomainType domain { get; }
+    public abstract string directJoinCode { get; }
 
     public string GetLobbyJoinCode(string? password = null)
-        => MatchmakingManager.instances[domain].FormatJoinCode(password, JoinCodeArgs);
+        => NetworkDomain.instances[domain].FormatJoinCode(password, directJoinCode);
 }

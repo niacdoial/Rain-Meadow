@@ -28,8 +28,7 @@ class LobbySelectNetworkPanel : PositionedMenuObject
             new Vector2(160f, 30f),
             menu.Translate("Directly connect to a local IP")
         );
-        directConnectButton.buttonBehav.greyedOut =
-            MatchmakingManager.currentDomain == MatchmakingManager.MatchMakingDomain.LAN;
+        directConnectButton.buttonBehav.greyedOut = NetworkDomain.currentInstance.canDirectConnect;
         directConnectButton.OnClick += (btn) => OnDirectConnectButtonClick?.Invoke();
 
         ProperlyAlignedMenuLabel domainLabel = new(
@@ -42,13 +41,13 @@ class LobbySelectNetworkPanel : PositionedMenuObject
         );
 
         OpComboBox2 domainComboBox = new(
-            new Configurable<MatchmakingManager.MatchMakingDomain>(
-                MatchmakingManager.currentDomain
+            new Configurable<NetworkDomain.NetworkDomainType>(
+                NetworkDomain.currentDomain
             ),
             new Vector2(20, 385),
             125f,
             [
-                .. MatchmakingManager.supported_matchmakers.Select(x => new ListItem(
+                .. NetworkDomain.supportedDomains.Select(x => new ListItem(
                     x.value,
                     menu.Translate(x.value)
                 )),
@@ -56,7 +55,7 @@ class LobbySelectNetworkPanel : PositionedMenuObject
         );
         domainComboBox.OnChange += () =>
         {
-            MatchmakingManager.currentDomain = new MatchmakingManager.MatchMakingDomain(
+            NetworkDomain.currentDomain = new NetworkDomain.NetworkDomainType(
                 domainComboBox.value,
                 false
             );
@@ -70,7 +69,7 @@ class LobbySelectNetworkPanel : PositionedMenuObject
     public override void Update()
     {
         base.Update();
-        directConnectButton.buttonBehav.greyedOut =
-            MatchmakingManager.currentDomain != MatchmakingManager.MatchMakingDomain.LAN;
+        // FIXME: as above: this looks wrong
+        directConnectButton.buttonBehav.greyedOut = NetworkDomain.currentInstance.canDirectConnect;
     }
 }

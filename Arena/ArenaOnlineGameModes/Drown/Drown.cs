@@ -478,7 +478,7 @@ namespace RainMeadow
                             return nonSpecificText;
                         }
 
-                        string displayName = MatchmakingManager.currentInstance.FilterTeamName(
+                        string displayName = NetworkDomain.currentInstance.FilterTeamName(
                             onlinePlayer.id.DisplayName
                         );
 

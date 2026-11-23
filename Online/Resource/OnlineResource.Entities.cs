@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using RainMeadow.Shared;
 
 namespace RainMeadow
 {
@@ -282,12 +283,12 @@ namespace RainMeadow
         public void EntityLeftResource(OnlineEntity oe)
         {
             RainMeadow.Debug($"{oe} : {this}");
-            
+
             if (oe.primaryResource == this && !registeredEntities.ContainsKey(oe.id)) throw new InvalidProgrammerException("wasn't registered in resource");
             if (!joinedEntities.ContainsKey(oe.id)) throw new InvalidProgrammerException("wasn't joined in resource");
             registeredEntities.Remove(oe.id);
             joinedEntities.Remove(oe.id);
-            activeEntities.Remove(oe); 
+            activeEntities.Remove(oe);
 
             EntitiesModified();
 
@@ -330,7 +331,8 @@ namespace RainMeadow
             RainMeadow.Debug($"{oe} : {this} : to {newOwner}");
             if (oe != null && entityTransferRequest.from == oe.owner && isOwner && isActive && !isReleasing)
             {
-                 OnlineManager.RunDeferred(() => { // deferred so we receive the incoming state first
+                OnlineManager.RunDeferred(() =>
+                { // deferred so we receive the incoming state first
                     EntityTransfered(oe, newOwner);
                 });
                 entityTransferRequest.from.QueueEvent(new GenericResult.Ok(entityTransferRequest));

@@ -5,10 +5,11 @@ using RainMeadow.UI.Dialogs;
 using RainMeadow.UI.Menus.Panels;
 using Steamworks;
 using UnityEngine;
+using RainMeadow.Shared;
 
 namespace RainMeadow.UI.Menus;
 
-public class LobbySelectMenu : SmartMenu
+public class LobbySelectMenu : SmartMenu, OnlineManager.INetworkUpdator
 {
     public LobbySelectMetadataPanel metadataPanel;
     public ProperlyAlignedMenuLabel statisticsLabel;
@@ -24,6 +25,7 @@ public class LobbySelectMenu : SmartMenu
     private int TimeoutTicks = RainMeadow.rainMeadowOptions.JoiningTimeout.Value * 40;
     private const string ERROR_Unexpected = "Something went wrong...";
     private const string ERROR_Cancelled = "Cancelled";
+    bool OnlineManager.INetworkUpdator.updateALLDomains => true;
 
     public override MenuScene.SceneID GetScene =>
         ModManager.MMF ? manager.rainWorld.options.subBackground : MenuScene.SceneID.Landscape_SU;
@@ -100,7 +102,7 @@ public class LobbySelectMenu : SmartMenu
 #pragma warning disable IDE0200
         // this forces RefreshLobbies to fetch the actual currentInstance instead of just forcefully pointing at the original currentInstance
         lobbyCardSelector.RefreshLobbies += () =>
-            MatchmakingManager.currentInstance.RequestLobbyList();
+            NetworkDomain.currentInstance.RequestLobbyList();
 #pragma warning restore IDE0200
         lobbyCardSelector.OnLobbyCardsUpdated += () =>
         {
@@ -171,7 +173,7 @@ public class LobbySelectMenu : SmartMenu
         networkPanel.OnDomainChanged += () =>
         {
             lobbyCardSelector.ClearLobbyCards();
-            MatchmakingManager.currentInstance.RequestLobbyList();
+            NetworkDomain.currentInstance.RequestLobbyList();
         };
         networkTab.AddObjects(networkPanel);
         tabContainer.AddTab(networkTab, Translate("Network"));
@@ -193,20 +195,20 @@ public class LobbySelectMenu : SmartMenu
             manager.musicPlayer?.MenuRequestsSong(song, 1, 0);
 
         // Lobby machine go!
-        MatchmakingManager.OnLobbyListReceived += OnLobbyListReceived;
-        MatchmakingManager.OnLobbyJoined += OnLobbyJoined;
+        NetworkDomain.OnLobbyListReceived += OnLobbyListReceived;
+        NetworkDomain.OnLobbyJoined += OnLobbyJoined;
 
         if (
-            MatchmakingManager.supported_matchmakers.Contains(
-                MatchmakingManager.MatchMakingDomain.Steam
+            NetworkDomain.supportedDomains.Contains(
+                NetworkDomain.NetworkDomainType.Steam
             )
         )
             SteamNetworkingUtils.InitRelayNetworkAccess();
-        MatchmakingManager.currentInstance.RequestLobbyList();
+        NetworkDomain.currentInstance.RequestLobbyList();
 
-        if (MatchmakingManager.ConsumePendingJoinCode(out var joinCode))
+        if (NetworkDomain.ConsumePendingJoinCode(out var joinCode))
         {
-            if (MatchmakingManager.TryParseJoinCode(joinCode, out _, out var pendingLobbyInfo, out var joinPassword)
+            if (NetworkDomain.TryParseJoinCode(joinCode, out _, out var pendingLobbyInfo, out var joinPassword)
                 && pendingLobbyInfo != null)
                 RequestJoinLobby(pendingLobbyInfo, joinPassword);
             else
@@ -228,7 +230,7 @@ public class LobbySelectMenu : SmartMenu
 
     public void JoinLobbyChecks(LobbyInfo lobbyInfo)
     {
-        MatchmakingManager.MAX_LOBBY = lobbyInfo.maxPlayerCount;
+        NetworkDomain.MAX_LOBBY = lobbyInfo.maxPlayerCount;
         if (lobbyInfo.maxPlayerCount <= lobbyInfo.playerCount)
         {
             manager.ShowDialog(
@@ -270,49 +272,54 @@ public class LobbySelectMenu : SmartMenu
                 this,
                 Translate("Joining lobby..."),
                 UIUtils.DIALOG_SIZE,
-                (_) => MatchmakingManager.currentInstance.JoinLobby(false, ERROR_Cancelled)
+                (_) => NetworkDomain.currentInstance.JoinLobby(false, ERROR_Cancelled)
             )
         );
         joiningTimeoutCount = 0;
         joinResolved = false;
         lastJoinAttempt = lobbyInfo;
-        MatchmakingManager.lastJoinFailWasWrongPassword = false;
-        MatchmakingManager.currentInstance.RequestJoinLobby(lobbyInfo, password);
+        NetworkDomain.lastJoinFailWasWrongPassword = false;
+        NetworkDomain.currentInstance.RequestJoinLobby(lobbyInfo, password);
     }
 
-    public void DirectConnect(string ip, string? password)
+    public void DirectConnect(NetworkDomain.NetworkDomainType domain, string ip, string? password)
     {
-        IPEndPoint? endpoint = UDPPeerManager.GetEndPointByName(ip);
+        SecuredPeerId? endpoint = SecuredPeerId.GetPeerIdByName(ip);
         if (endpoint == null)
         {
+            var msg = "Invalid Address, Direct Connection Address format should be:\n";
+            if (domain == NetworkDomain.NetworkDomainType.LAN)
+            {
+                msg = msg + "xxx.xxx.xxx.xxx:port or public_key@xxx.xxx.xxx.xxx:port";
+            }
+            else if (domain == NetworkDomain.NetworkDomainType.Router)
+            {
+                msg = msg + "public_key@xxx.xxx.xxx.xxx:port";
+            }
+            else
+            {
+                msg = msg + "xxx.xxx.xxx.xxx:port (LAN only) or\npublic_key@xxx.xxx.xxx.xxx:port (LAN/Router)";
+            }
             manager.ShowDialog(
                 new NotifyDialog(
                     manager,
-                    "Invalid Address, IP Address format should be xxx.xxx.xxx.xxx:port",
+                    msg,
                     UIUtils.DIALOG_SIZE
                 )
             );
             return;
         }
 
-        LANMatchmakingManager.LANLobbyInfo fakeLobbyInfo = new(
-            endpoint,
-            "Direct Connection",
-            "Meadow",
-            0,
-            true,
-            2
-        );
+        LobbyInfo fakeLobbyInfo = NetworkDomain.instances[domain].GenerateDCLobbyInfo(ip);
 
-        if (UDPPeerManager.isEndpointLocal(endpoint))
+        if (domain == NetworkDomain.NetworkDomainType.LAN && !endpoint.IsNetworkLocal())
         {
+            NotLocalDialog notLocalDialog = new(manager);
+            notLocalDialog.OnConfirm += () => RequestJoinLobby(fakeLobbyInfo, password);
+            manager.ShowDialog(notLocalDialog);
+        } else {
             RequestJoinLobby(fakeLobbyInfo, password);
-            return;
         }
-
-        NotLocalDialog notLocalDialog = new(manager);
-        notLocalDialog.OnConfirm += () => RequestJoinLobby(fakeLobbyInfo, password);
-        manager.ShowDialog(notLocalDialog);
     }
 
     public void OnLobbyListReceived(bool ok, LobbyInfo[] lobbies)
@@ -340,9 +347,9 @@ public class LobbySelectMenu : SmartMenu
         string errorMessage = "Failed to join lobby:<LINE>" + error;
         RainMeadow.Error(errorMessage);
 
-        if (MatchmakingManager.lastJoinFailWasWrongPassword && lastJoinAttempt is LobbyInfo retryLobby)
+        if (NetworkDomain.lastJoinFailWasWrongPassword && lastJoinAttempt is LobbyInfo retryLobby)
         {
-            MatchmakingManager.lastJoinFailWasWrongPassword = false;
+            NetworkDomain.lastJoinFailWasWrongPassword = false;
             InputDialog passwordDialog = new(manager, "Password Required", UIUtils.DIALOG_SIZE);
             passwordDialog.OnConfirm += (password) => RequestJoinLobby(retryLobby, password);
             manager.ShowDialog(passwordDialog);
@@ -410,7 +417,7 @@ public class LobbySelectMenu : SmartMenu
                     else
                     {
                         RainMeadow.Error($"No process running? What's happening? Timing it out! (enumChecked <{OnlineManager.lobby.enumsChecked}>, isRequesting <{OnlineManager.lobby.isRequesting}>, isAvailable <{OnlineManager.lobby.isAvailable}>)");
-                        MatchmakingManager.currentInstance.JoinLobby(false, ERROR_Unexpected);
+                        NetworkDomain.currentInstance.JoinLobby(false, ERROR_Unexpected);
                     }
                 }
             }
@@ -420,8 +427,8 @@ public class LobbySelectMenu : SmartMenu
     public override void ShutDownProcess()
     {
         RainMeadow.DebugMe();
-        MatchmakingManager.OnLobbyListReceived -= OnLobbyListReceived;
-        MatchmakingManager.OnLobbyJoined -= OnLobbyJoined;
+        NetworkDomain.OnLobbyListReceived -= OnLobbyListReceived;
+        NetworkDomain.OnLobbyJoined -= OnLobbyJoined;
         base.ShutDownProcess();
     }
 }

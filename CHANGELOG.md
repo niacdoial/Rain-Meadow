@@ -1,3 +1,16 @@
+# Upcoming Release
+
+## Engine:
+- Added Router multiplayer mode, to allow worldwide Steam-GOG crossplay (currently only works if a player is hosting the server)
+- Made both Router and LAN modes use encryption for authentication/handshake and chat. (there likely are still holes but it's a start)
+- General overhaul of the `MatchmakingManager/NetIO` layer into a unified `NetworkDomain` Layer
+
+### Modders:
+- ⚠️ `MatchmakingManager` class was renamed into `NetworkDomain`, though the old name is still available for compatibility's sake.
+  Most hooks should behave as expected, but the massive under-the-hood changes mean that some things may have broken.
+
+
+
 # Release 1.16.1
 
 ## General

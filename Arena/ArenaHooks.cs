@@ -3061,7 +3061,7 @@ namespace RainMeadow
                             )
                             {
                                 self.playerNameLabel.text +=
-                                    $" -- {MatchmakingManager.currentInstance.FilterTeamName(teamBattle.teamNames[td.team].ToUpper())}";
+                                    $" -- {NetworkDomain.currentInstance.FilterTeamName(teamBattle.teamNames[td.team].ToUpper())}";
                             }
 
                         }

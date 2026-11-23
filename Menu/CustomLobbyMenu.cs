@@ -1,5 +1,6 @@
 ﻿using Menu;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 
 namespace RainMeadow
@@ -8,7 +9,7 @@ namespace RainMeadow
     {
         public List<FSprite> sprites;
         public ProperlyAlignedMenuLabel[] playerLabels = new ProperlyAlignedMenuLabel[0];
-        public PlayerInfo[] players;
+        public MeadowPlayerId[] players;
         public float scroll;
         public float scrollTo;
         public Vector2 btns = new Vector2(350, 50);
@@ -44,15 +45,15 @@ namespace RainMeadow
             downButton.OnClick += (_) => scrollTo += 1f;
 
             // cards
-            List<PlayerInfo> players = new List<PlayerInfo>();
+            List<MeadowPlayerId> players = new List<MeadowPlayerId>();
             foreach (OnlinePlayer player in OnlineManager.players)
             {
-                players.Add(new PlayerInfo(() => player.id.OpenProfileLink(), player.id.name));
+                players.AddRange(OnlineManager.players.Select(x => x.id));
             }
             this.players = players.ToArray();
             CreatePlayerCards();
 
-            MatchmakingManager.OnPlayerListReceived += OnlineManager_OnPlayerListReceived;
+            NetworkDomain.OnPlayerListReceived += OnlineManager_OnPlayerListReceived;
         }
 
         public override void Update()
@@ -94,9 +95,9 @@ namespace RainMeadow
 
         public class PlayerInfoCard : ProperlyAlignedMenuLabel
         {
-            public PlayerInfo playerInfo;
+            public MeadowPlayerId playerInfo;
             public int playerIndex;
-            public PlayerInfoCard(Menu.Menu menu, MenuObject owner, Vector2 pos, Vector2 size, int playerIndex, PlayerInfo playerInfo) : base(menu, owner, playerInfo.name, pos, size, false)
+            public PlayerInfoCard(Menu.Menu menu, MenuObject owner, Vector2 pos, Vector2 size, int playerIndex, MeadowPlayerId playerInfo) : base(menu, owner, playerInfo.name, pos, size, false)
             {
                 this.playerInfo = playerInfo;
                 this.playerIndex = playerIndex;
@@ -109,7 +110,7 @@ namespace RainMeadow
             }
         }
 
-        public void OnlineManager_OnPlayerListReceived(PlayerInfo[] players)
+        public void OnlineManager_OnPlayerListReceived(MeadowPlayerId[] players)
         {
             this.players = players;
             CreatePlayerCards();
@@ -118,7 +119,7 @@ namespace RainMeadow
         public override void ShutDownProcess()
         {
             RainMeadow.DebugMe();
-            MatchmakingManager.OnPlayerListReceived -= OnlineManager_OnPlayerListReceived;
+            NetworkDomain.OnPlayerListReceived -= OnlineManager_OnPlayerListReceived;
             if (manager.upcomingProcess != ProcessManager.ProcessID.Game)
             {
                 OnlineManager.LeaveLobby();

@@ -1,4 +1,5 @@
 using System.IO;
+using RainMeadow.Shared;
 
 namespace RainMeadow
 {
@@ -28,7 +29,9 @@ namespace RainMeadow
         public override Type type => Type.ChatMessage;
 
         public override void Process() {
-            MatchmakingManager.currentInstance.RecieveChatMessage(processingPlayer, message);
+            var matchmaker = (LANNetworkDomain)NetworkDomain.instances[NetworkDomain.NetworkDomainType.LAN];
+            var processingPlayer = matchmaker.GetPlayerLAN(processingPeer, true);
+            NetworkDomain.currentInstance.RecieveChatMessage(processingPlayer, message);
         }
     }
 }

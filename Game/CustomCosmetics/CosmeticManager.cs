@@ -321,7 +321,7 @@ namespace RainMeadow
         static public IReadOnlyList<string> AvailableCosmetics(MeadowPlayerId player)
         {
             if (cape_cache.TryGetValue(player, out var entry) && entry is not null) return entry;
-            if (player is SteamMatchmakingManager.SteamPlayerId steamid)
+            if (player is SteamNetworkDomain.SteamPlayerId steamid)
             {
                 ulong steamID = steamid.oid.GetSteamID64();
                 SHA256 Sha = SHA256.Create();
@@ -345,7 +345,7 @@ namespace RainMeadow
             if (available_skins_cache.TryGetValue(player, out var ret)) return ret;
 
             var skins = new List<string>();
-            if (player == OnlineManager.mePlayer.id? MatchmakingManager.instances.Values.Any(x => x.IsDev(player)) : MatchmakingManager.currentInstance.IsDev(player)) skins.Add("cosmic");
+            if (player == OnlineManager.mePlayer.id? NetworkDomain.instances.Values.Any(x => x.IsDev(player)) : NetworkDomain.currentInstance.IsDev(player)) skins.Add("cosmic");
             if (SpecialEvents.AprilFoolsEvent.IsActive)
             {
                 skins.Add("rainbow");

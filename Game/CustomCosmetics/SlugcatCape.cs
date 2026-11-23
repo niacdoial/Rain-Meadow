@@ -145,7 +145,7 @@ namespace RainMeadow
             {
                 normalized.x = (float)playerGFX.player.flipDirection * 0.05f;
 
-                // simplification of sin(acos(x)) 
+                // simplification of sin(acos(x))
                 normalized.y = Mathf.Sqrt(1 - (normalized.x * normalized.x)) * Math.Sign(normalized.y);
             }
 

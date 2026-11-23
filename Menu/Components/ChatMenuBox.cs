@@ -92,7 +92,7 @@ namespace RainMeadow.UI.Components
 
             if (ChatLogManager.ShouldMuteMessageFromUser(user)) return;
 
-            MatchmakingManager.currentInstance.FilterMessage(ref message);
+            NetworkDomain.currentInstance.FilterMessage(ref message);
             if (ChatLogManager.ShouldPingFromMessage(user, message))
             {
                 menu.manager.menuMic.PlaySound(RainMeadow.Ext_SoundID.RM_Slugcat_Call, 0, 1f, 1.2f);

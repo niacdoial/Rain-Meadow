@@ -1,0 +1,3 @@
+[submodule "MeadowSharedCode"]
+	path = MeadowSharedCode
+	url = https://github.com/invalidunits/Rain-Meadow-Shared-Code

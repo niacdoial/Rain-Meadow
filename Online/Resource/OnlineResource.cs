@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using RainMeadow.Shared;
 
 namespace RainMeadow
 {
@@ -140,7 +141,7 @@ namespace RainMeadow
             {
                 if (latestState is ResourceWithSubresourcesState withSubresources && withSubresources.subleaseState.list.Count != subresources.Count)
                 {
-                    OnlineManager.QuitWithError("subresources missmatch");
+                    OnlineManager.QuitWithError("subresources missmatch", true);
                     return;
                 }
                 latestState.ReadTo(this);
@@ -460,7 +461,7 @@ namespace RainMeadow
             if (this is Lobby lobby && owner == player) // lobby owner has left
             {
                 RainMeadow.Debug($"Lobby owner {player} left!!!");
-                NewOwner(MatchmakingManager.currentInstance.GetLobbyOwner());
+                NewOwner(NetworkDomain.currentInstance.GetLobbyOwner());
             }
 
             // first transfer recursivelly, then remove recursivelly
@@ -498,7 +499,7 @@ namespace RainMeadow
             if (!isSupervisor) throw new InvalidProgrammerException("not supervisor");
             OnlinePlayer newOwner;
 
-            newOwner = MatchmakingManager.currentInstance.BestTransferCandidate(this, participants);
+            newOwner = NetworkDomain.currentInstance.BestTransferCandidate(this, participants);
 
             if (newOwner != owner)
             {

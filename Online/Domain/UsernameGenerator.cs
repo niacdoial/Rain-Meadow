@@ -3,7 +3,6 @@ using System;
 using System.Collections.Generic;
 using System.Security.Cryptography;
 using System.Text;
-using static RainMeadow.SteamMatchmakingManager;
 
 namespace RainMeadow
 {
@@ -14,38 +13,39 @@ namespace RainMeadow
 
         private static readonly string[] Adjectives =
         {
-            "brave", 
-            "quick", 
-            "silent", 
-            "happy", 
-            "angry", 
-            "noble", 
-            "sly", 
-            "curious", 
-            "wise", 
-            "bold", 
-            "fearful", 
-            "sad", 
-            "aloof", 
-            "red", 
+            "brave",
+            "quick",
+            "silent",
+            "happy",
+            "angry",
+            "noble",
+            "sly",
+            "curious",
+            "wise",
+            "bold",
+            "fearful",
+            "sad",
+            "aloof",
+            "red",
             "cyan",
             "big",
             "small",
-            "sky"
+            "sky",
+            "ancient"
         };
 
         private static readonly string[] Nouns =
         {
-            "slugcat", 
-            "vulture", 
-            "lizard", 
-            "scavenger", 
-            "guardian", 
-            "noodlefly", 
-            "pearl", 
-            "rainworld", 
-            "shelter", 
-            "iterator", 
+            "slugcat",
+            "vulture",
+            "lizard",
+            "scavenger",
+            "guardian",
+            "noodlefly",
+            "pearl",
+            "Citizen",
+            "shelter",
+            "iterator",
             "centipede",
             "spider",
             "yeek",
@@ -71,11 +71,11 @@ namespace RainMeadow
         /// <returns>A randomized username if you have StreamerMode enabled and are playing via Steam, otherwise MeadowPlayerId.name</returns>
         public static string StreamerModeName(string name)
         {
-            if (RainMeadow.rainMeadowOptions.StreamerMode.Value == RainMeadowOptions.StreamMode.None) 
+            if (RainMeadow.rainMeadowOptions.StreamerMode.Value == RainMeadowOptions.StreamMode.None)
                 return name;
             if (RainMeadow.rainMeadowOptions.StreamerMode.Value == RainMeadowOptions.StreamMode.Me && name != OnlineManager.mePlayer.id.name)
                 return name;
-            if (cache.ContainsKey(name)) 
+            if (cache.ContainsKey(name))
                 return cache[name];
             using (SHA1 sha1  = SHA1.Create())
             {

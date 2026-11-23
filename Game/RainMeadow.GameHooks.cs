@@ -479,7 +479,7 @@ namespace RainMeadow
             if (OnlineManager.lobby != null)
             {
                 string cl = OnlineManager.CheatsAllowed ? "" : "\n" + Utils.Translate("Cheats are disabled in this lobby.");
-                self.devToolsLabel.text = self.devToolsLabel.text + $" | Rain Meadow {RainMeadow.MeadowVersionStr} ({MatchmakingManager.currentDomain.value}){cl}";
+                self.devToolsLabel.text = self.devToolsLabel.text + $" | Rain Meadow {RainMeadow.MeadowVersionStr} ({NetworkDomain.currentDomain.value}){cl}";
             }
         }
 
@@ -500,7 +500,7 @@ namespace RainMeadow
                 if (OnlineManager.lobby != null)
                 {
                     RainMeadow.Info("Leaving lobby on application quit");
-                    MatchmakingManager.currentInstance.LeaveLobby();
+                    OnlineManager.LeaveLobby();
                 }
             }
             catch (Exception e)
@@ -672,7 +672,7 @@ namespace RainMeadow
                 }
                 if (self.manager.upcomingProcess != ProcessManager.ProcessID.MainMenu) // quit directly, otherwise wait release
                 {
-                    while (OnlineManager.lobby.overworld.isAvailable)
+                    while (OnlineManager.lobby is not null && OnlineManager.lobby.overworld.isAvailable)
                     {
                         OnlineManager.ForceLoadUpdate();
                     }

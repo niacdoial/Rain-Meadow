@@ -402,7 +402,7 @@ namespace RainMeadow.UI.Components
                 string name = teamBattleMode.teamNames[actualTeamIndex];
                 Color color = teamBattleMode.teamColors[actualTeamIndex];
                 teamBtn.teamColor = color;
-                teamBtn.teamName = MatchmakingManager.currentInstance.FilterTeamName(
+                teamBtn.teamName = NetworkDomain.currentInstance.FilterTeamName(
                     teamBattleMode.teamNames[actualTeamIndex]
                 );
                 teamBtn.buttonBehav.greyedOut = teamColorPickers.Any(x => x.currentlyPicking);

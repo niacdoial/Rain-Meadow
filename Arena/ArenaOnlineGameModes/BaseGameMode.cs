@@ -621,7 +621,7 @@ namespace RainMeadow
         {
             self.AddPart(new HUD.TextPrompt(self));
 
-            if (MatchmakingManager.currentInstance.canSendChatMessages
+            if (NetworkDomain.currentInstance.canSendChatMessages
                 && RMOverlayHUDMenu.TryGetOverlay(out var overlayHUD))
             {
                 if (overlayHUD.chatHud is null) overlayHUD.AddChatHUD(session.game.cameras[0]);
@@ -1885,7 +1885,7 @@ namespace RainMeadow
                 return nonSpecificText;
             }
 
-            string displayName = MatchmakingManager.currentInstance.FilterTeamName(onlinePlayer.id.DisplayName);
+            string displayName = NetworkDomain.currentInstance.FilterTeamName(onlinePlayer.id.DisplayName);
 
             return resultMenu.Translate("<USERNAME> WINS!")
                 .Replace("<USERNAME>", displayName);

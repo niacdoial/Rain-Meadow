@@ -19,7 +19,7 @@ namespace RainMeadow
     {
         override public Texture2D texture => RainMeadow.nightsky;
         override public Texture2D glowtexture => RainMeadow.nightskyGlow;
-        override public bool Available(OnlineEntity entity) => MatchmakingManager.currentInstance.IsDev(entity.owner.id);
+        override public bool Available(OnlineEntity entity) => NetworkDomain.currentInstance.IsDev(entity.owner.id);
     }
 
     public class CoinSkin : OverlaySkin
@@ -42,7 +42,7 @@ namespace RainMeadow
                 return new CoinSkin();
             }
 
-            if (RainMeadow.rainMeadowOptions.DevNightskySkin.Value && MatchmakingManager.currentInstance.IsDev(entity.owner.id))
+            if (RainMeadow.rainMeadowOptions.DevNightskySkin.Value && NetworkDomain.currentInstance.IsDev(entity.owner.id))
             {
                 return new NightSkySkin();
             }

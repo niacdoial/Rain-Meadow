@@ -81,7 +81,7 @@ namespace RainMeadow
             if (OnlineManager.lobby == null) return;
             if (ChatLogManager.ShouldMuteMessageFromUser(user)) return;
 
-            MatchmakingManager.currentInstance.FilterMessage(ref message);
+            NetworkDomain.currentInstance.FilterMessage(ref message);
             if (ChatLogManager.ShouldPingFromMessage(user, message))
             {
                 camera.virtualMicrophone.PlaySound(RainMeadow.Ext_SoundID.RM_Slugcat_Call, 0, 1f, 1.2f);
@@ -162,6 +162,7 @@ namespace RainMeadow
             chatInputOverlay?.GrafUpdate(timeStacker);
 
         }
+
         public void ShutDownChatLog()
         {
             RainMeadow.DebugMe();

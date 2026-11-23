@@ -378,11 +378,12 @@ namespace RainMeadow
                     if (OnlineManager.lobby is null)
                     {
                         RainMeadow.Error($"{from} failed security check for RPC {handler.summary}, lobby does not exist.");
-                        from.QueueEvent(new GenericResult.Error(this));
+                        from.QueueEvent(new GenericResult.LackPerm(this));
                         return;
                     }
 
                     securityResource = OnlineManager.lobby;
+                    securityOwner = OnlineManager.lobby.owner;
                 }
 
                 
@@ -398,7 +399,7 @@ namespace RainMeadow
                         if (handler.security == RPCSecurity.InResource && entity.currentlyJoinedResource is null)
                         {
                             RainMeadow.Error($"{from} failed security check for RPC {handler.summary}, entity is not in any resources.");
-                            from.QueueEvent(new GenericResult.Error(this));
+                            from.QueueEvent(new GenericResult.LackPerm(this));
                             return;
                         }
 
@@ -407,23 +408,26 @@ namespace RainMeadow
                     }
                     else
                     {
-                        RainMeadow.Error($"{from} failed security check for RPC {handler.summary}, target is not an OnlineResource or OnlineEntity.");
-                        from.QueueEvent(new GenericResult.Error(this));
-                        return;
+                        // RainMeadow.Error($"{from} failed security check for RPC {handler.summary}, target is not an OnlineResource or OnlineEntity.");
+                        // from.QueueEvent(new GenericResult.LackPerm(this));
+                        // return;
+
+                        securityResource = OnlineManager.lobby;
+                        securityOwner = OnlineManager.lobby.owner;
                     }   
                 }
                 
                 if (handler.security == RPCSecurity.Owner && (securityOwner is null || securityOwner != from))
                 {
                     RainMeadow.Error($"{from} failed security check for RPC {handler.summary}, {from} is NOT the owner of {target.ToString()}.");
-                    from.QueueEvent(new GenericResult.Error(this));
+                    from.QueueEvent(new GenericResult.LackPerm(this));
                     return;
                 }
 
                 if (securityResource is not null && !securityResource.participants.Contains(from))
                 {
                     RainMeadow.Error($"{from} failed security check for RPC {handler.summary}, {from} is NOT a participant of {securityResource.ToString()}");
-                    from.QueueEvent(new GenericResult.Error(this));
+                    from.QueueEvent(new GenericResult.LackPerm(this));
                     return;
                 }
 
@@ -465,6 +469,20 @@ namespace RainMeadow
         {
             try
             {
+                switch (genericResult)
+                {
+                    case GenericResult.Fail:
+                        RainMeadow.Error($"{this} failed to complete.");
+                        break;
+                    case GenericResult.LackPerm:
+                        RainMeadow.Error($"{this} failed due to insufficient permissions.");
+                        break;
+                    case GenericResult.Error:
+                        RainMeadow.Error($"{this} encountered an error.");
+                        break;
+                }
+
+
                 this.OnResolve?.Invoke(genericResult);
                 this.OnResolve = null!; // Clear the subscription to not be called again.
             }

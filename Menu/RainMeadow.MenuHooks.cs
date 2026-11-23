@@ -796,6 +796,7 @@ namespace RainMeadow
             });
         }
 
+
         private void ProcessManager_RequestMainProcessSwitch_ProcessID(On.ProcessManager.orig_RequestMainProcessSwitch_ProcessID orig, ProcessManager self, ProcessManager.ProcessID ID)
         {
             if (OnlineManager.lobby?.gameMode is OnlineGameMode gameMode and not MeadowGameMode)
@@ -844,13 +845,13 @@ namespace RainMeadow
                     var args = System.Environment.GetCommandLineArgs();
                     var code = string.Join(" ", args);
 
-                    if (MatchmakingManager.TryParseJoinCode(code, out var domain, out _, out _)
-                        && MatchmakingManager.supported_matchmakers.Contains(domain))
+                    if (NetworkDomain.TryParseJoinCode(code, out var domain, out _, out _)
+                        && NetworkDomain.supportedDomains.Contains(domain))
                     {
                         RainMeadow.Info($"Rejoining lobby from the command line: {domain}");
-                        MatchmakingManager.pendingJoinCode = code;
-                        if (MatchmakingManager.currentDomain != domain)
-                            MatchmakingManager.currentDomain = domain;
+                        NetworkDomain.pendingJoinCode = code;
+                        if (NetworkDomain.currentDomain != domain)
+                            NetworkDomain.currentDomain = domain;
                         self.RequestMainProcessSwitch(Ext_ProcessID.LobbySelectMenu);
                     }
                 }
@@ -884,7 +885,6 @@ namespace RainMeadow
         }
 
         private bool showed_no_steam_warning = false;
-
         private void MainMenu_ctor(On.Menu.MainMenu.orig_ctor orig, MainMenu self, ProcessManager manager, bool showRegionSpecificBkg)
         {
             orig(self, manager, showRegionSpecificBkg);
@@ -903,7 +903,7 @@ namespace RainMeadow
             var meadowButton = new SimpleButton(self, self.pages[0], self.Translate("MEADOW"), "MEADOW", Vector2.zero, new Vector2(Menu.MainMenu.GetButtonWidth(self.CurrLang), 30f));
             self.AddMainMenuButton(meadowButton, () =>
             {
-                if (!(OnlineManager.netIO is SteamNetIO) && !showed_no_steam_warning)
+                if (!NetworkDomain.supportedDomains.Contains(NetworkDomain.NetworkDomainType.Steam) && !showed_no_steam_warning)
                 {
                     showed_no_steam_warning = true;
                     self.manager.ShowDialog(new DialogNotify(self.LongTranslate("Steam is not currently available. Some features of Rain Meadow have been disabled."), self.manager,

@@ -117,8 +117,8 @@ namespace RainMeadow
                 storyGameMode.requireCampaignSlugcat = false;
                 storyGameMode.saveToDisk = true;
 
-                if (MatchmakingManager.currentInstance is SteamMatchmakingManager steamMatchmakingManager)
-                    SteamMatchmaking.SetLobbyData(steamMatchmakingManager.lobbyID, MatchmakingManager.CAMPAIGN_KEY, "");
+                if (NetworkDomain.currentInstance is SteamNetworkDomain steamNetworkDomain)
+                    SteamMatchmaking.SetLobbyData(steamNetworkDomain.lobbyID, NetworkDomain.CAMPAIGN_KEY, "");
             }
             else
             {
@@ -137,7 +137,7 @@ namespace RainMeadow
             slugcatPageIndex = indexFromColor(storyGameMode.currentCampaign);
             UpdateSelectedSlugcatInMiscProg();
 
-            MatchmakingManager.OnPlayerListReceived += OnlineManager_OnPlayerListReceived;
+            NetworkDomain.OnPlayerListReceived += OnlineManager_OnPlayerListReceived;
 
             ChatTextBox.OnShutDownRequest += ResetChatInput;
             ChatLogManager.MessageLogged += OnMessageLogged;
@@ -289,8 +289,8 @@ namespace RainMeadow
             manager.rainWorld.progression.ClearOutSaveStateFromMemory();
             manager.RequestMainProcessSwitch(ProcessManager.ProcessID.Game);
 
-            if (MatchmakingManager.currentInstance is SteamMatchmakingManager steamMatchmakingManager)
-                SteamMatchmaking.SetLobbyData(steamMatchmakingManager.lobbyID, MatchmakingManager.CAMPAIGN_KEY, storyGameMode.currentCampaign.value);
+            if (NetworkDomain.currentInstance is SteamNetworkDomain steamNetworkDomain)
+                SteamMatchmaking.SetLobbyData(steamNetworkDomain.lobbyID, NetworkDomain.CAMPAIGN_KEY, storyGameMode.currentCampaign.value);
         }
         public override void Update()
         {
@@ -523,7 +523,7 @@ namespace RainMeadow
 
         }
 
-        private void OnlineManager_OnPlayerListReceived(PlayerInfo[] players)
+        private void OnlineManager_OnPlayerListReceived(MeadowPlayerId[] players)
         {
             if (RainMeadow.isStoryMode(out var _))
             {
@@ -655,11 +655,18 @@ namespace RainMeadow
             pages[0].subObjects.Add(lobbyLabel);
 
             var invite = new SimplerButton(this, pages[0], Translate("Invite Friends"), new(nextButton.pos.x + 80f, 50f), new(110, 35));
-            invite.OnClick += (_) =>
+            if (NetworkDomain.currentInstance.canOpenInvitations)
             {
-                SimpleDialogBoxNotify dialogBox = new(this, pages[0], "The Steam invite feature is currently unstable, and may not work properly.\nConsider using a public lobby with a password instead.", buttonText: "OKAY");
-                MatchmakingManager.currentInstance.OpenInvitationOverlay();
-            };
+                invite.OnClick += (_) => {
+                    SimpleDialogBoxNotify dialogBox = new(this, pages[0], "The Steam invite feature is currently unstable, and may not work properly.\nConsider using a public lobby with a password instead.", buttonText: "OKAY");
+                    NetworkDomain.currentInstance.OpenInvitationOverlay();
+                };
+            }
+            else
+            {
+                invite.GetButtonBehavior.greyedOut = true;
+            }
+
             pages[0].subObjects.Add(invite);
 
             this.chatTextBoxPos = new Vector2(this.manager.rainWorld.options.ScreenSize.x * 0.001f + (1366f - this.manager.rainWorld.options.ScreenSize.x) / 2f, 0);
@@ -747,7 +754,7 @@ namespace RainMeadow
             if (OnlineManager.lobby == null) return;
             if (ChatLogManager.ShouldMuteMessageFromUser(user)) return;
 
-            MatchmakingManager.currentInstance.FilterMessage(ref message);
+            NetworkDomain.currentInstance.FilterMessage(ref message);
             if (ChatLogManager.ShouldPingFromMessage(user, message))
             {
                 manager.menuMic.PlaySound(RainMeadow.Ext_SoundID.RM_Slugcat_Call, 0f, 1f, 1.2f);

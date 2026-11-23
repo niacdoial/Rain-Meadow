@@ -5,7 +5,7 @@ using System.Linq;
 
 namespace RainMeadow
 {
-    // Lobby is tightly bound to a SteamMatchmaking Lobby, also the top-level resource
+    // Lobby is tightly bound to a NetworkDomain Lobby, also the top-level resource
     public class Lobby : OnlineResource
     {
         public OnlineGameMode gameMode;
@@ -41,6 +41,7 @@ namespace RainMeadow
         public int enumSyncAttempts = 0;
         private const int MaxJoiningAttempts = 10;
         private const string ERROR_WrongPassword = "Wrong password!";
+        private const string ERROR_Banned = "You have been banned from this Lobby!";
         private const string ERROR_TooManyAttemps = "Unable to connect to the lobby.";
         private const string ERROR_EnumListError = "Unable to get enum list.";
         private const string ERROR_Timeout = "Request Timeout!";
@@ -123,7 +124,7 @@ namespace RainMeadow
             if (requestResult is GenericResult.Fail) // I didn't send it to the right person somehow
             {
                 RainMeadow.Error("Request stopped for " + this);
-                MatchmakingManager.currentInstance.JoinLobby(false, ERROR_EnumListError);
+                NetworkDomain.currentInstance.JoinLobby(false, ERROR_EnumListError);
             }
             else if (requestResult is GenericResult.Error) // Something went wrong, I should retry
             {
@@ -131,12 +132,12 @@ namespace RainMeadow
                 if ((requestResult.referencedEvent as RPCEvent)!.aborted) // Timeout
                 {
                     RainMeadow.Error("Request timeouted for " + this);
-                    MatchmakingManager.currentInstance.JoinLobby(false, ERROR_Timeout);
+                    NetworkDomain.currentInstance.JoinLobby(false, ERROR_Timeout);
                 }
                 else if (enumSyncAttempts >= MaxJoiningAttempts) // Too many attemps
                 {
                     RainMeadow.Error($"joining request of {this} cancelled after {enumSyncAttempts} attempts");
-                    MatchmakingManager.currentInstance.JoinLobby(false, ERROR_TooManyAttemps);
+                    NetworkDomain.currentInstance.JoinLobby(false, ERROR_TooManyAttemps);
                 }
                 else
                 {
@@ -178,18 +179,30 @@ namespace RainMeadow
                 if (this.password != key)
                 {
                     request.from.QueueEvent(new GenericResult.Fail(request));
+                    NetworkDomain.currentInstance.AcceptOrRejectPlayer(request.from, false);
                     return;
                 }
             }
+
+            if (bannedUsers.list.Contains(request.from.id))
+            {
+                request.from.QueueEvent(new GenericResult.LackPerm(request));
+                NetworkDomain.currentInstance.AcceptOrRejectPlayer(request.from, false);
+                return;
+            }
+
             try
             {
                 lobbyRequestable = true;
+                NetworkDomain.currentInstance.AcceptOrRejectPlayer(request.from, true);
                 Requested(request);
             }
-            finally
+            catch
             {
                 lobbyRequestable = false;
+                throw;
             }
+            lobbyRequestable = false;
         }
 
         public void ResolveLobbyRequest(GenericResult requestResult)
@@ -199,7 +212,7 @@ namespace RainMeadow
             joiningEvent = null;
             if (requestResult is GenericResult.Ok)
             {
-                MatchmakingManager.currentInstance.JoinLobby(true);
+                NetworkDomain.currentInstance.JoinLobby(true);
                 if (string.IsNullOrEmpty(password)) password = enteredPassword; // Keep the password we've entered on hand in case lobby gets transfered to us.
                 if (!isAvailable) // this was transfered to me because the previous owner left
                 {
@@ -213,8 +226,13 @@ namespace RainMeadow
             else if (requestResult is GenericResult.Fail) // I didn't have the right key for this resource
             {
                 RainMeadow.Error("locked request for " + this);
-                MatchmakingManager.lastJoinFailWasWrongPassword = true;
-                MatchmakingManager.currentInstance.JoinLobby(false, ERROR_WrongPassword);
+                NetworkDomain.lastJoinFailWasWrongPassword = true;
+                NetworkDomain.currentInstance.JoinLobby(false, ERROR_WrongPassword);
+            }
+            else if (requestResult is GenericResult.LackPerm)
+            {
+                RainMeadow.Error("request permafailed for " + this);
+                NetworkDomain.currentInstance.JoinLobby(false, ERROR_Banned);
             }
             else if (requestResult is GenericResult.Error) // I should retry
             {
@@ -222,12 +240,12 @@ namespace RainMeadow
                 if ((requestResult.referencedEvent as RPCEvent)!.aborted) // Timeout
                 {
                     RainMeadow.Error("Request timeouted for " + this);
-                    MatchmakingManager.currentInstance.JoinLobby(false, ERROR_Timeout);
+                    NetworkDomain.currentInstance.JoinLobby(false, ERROR_Timeout);
                 }
                 else if (joiningAttempts >= MaxJoiningAttempts) // Too many attemps
                 {
                     RainMeadow.Error($"joining request of {this} cancelled after {joiningAttempts} attempts");
-                    MatchmakingManager.currentInstance.JoinLobby(false, ERROR_TooManyAttemps);
+                    NetworkDomain.currentInstance.JoinLobby(false, ERROR_TooManyAttemps);
                 }
                 else
                 {
@@ -343,7 +361,7 @@ namespace RainMeadow
                 for (int i = 0; i < players.list.Count; i++)
                 {
 
-                    if (MatchmakingManager.currentInstance.GetPlayer(players.list[i]) is OnlinePlayer p)
+                    if (NetworkDomain.currentInstance.GetPlayer(players.list[i]) is OnlinePlayer p)
                     {
                         if (p.inLobbyId != inLobbyIds.list[i]) RainMeadow.Debug($"Setting player {p} to lobbyId {inLobbyIds.list[i]}");
                         p.inLobbyId = inLobbyIds.list[i];
@@ -355,12 +373,12 @@ namespace RainMeadow
 
 
                 }
-                lobby.UpdateParticipants(players.list.Select(MatchmakingManager.currentInstance.GetPlayer).Where(p => p is not null).ToList());
+                lobby.UpdateParticipants(players.list.Select(NetworkDomain.currentInstance.GetPlayer).Where(p => p is not null).ToList());
                 if (!lobby.isOwner)
                 {
                     lobby.bannedUsers = bannedUsers != null ? new(bannedUsers.list.ToList()) : new();
                 }
-                if (lobby.bannedUsersChecked == false)
+                if (!lobby.bannedUsersChecked)
                 {
                     // Need to get the participants before we check
                     if (this.bannedUsers != null && this.bannedUsers.list.Contains(OnlineManager.mePlayer.id))
@@ -373,7 +391,6 @@ namespace RainMeadow
                         }
                         lobby.bannedUsersChecked = true;
                         return;
-
                     }
 
                     lobby.bannedUsersChecked = true;
@@ -381,7 +398,7 @@ namespace RainMeadow
 
                 if (!lobby.modsChecked)
                 {
-                    string rejoinCode = MatchmakingManager.currentInstance.GetCurrentLobbyJoinCode(lobby.password ?? lobby.enteredPassword);
+                    string rejoinCode = NetworkDomain.currentInstance.GetCurrentLobbyJoinCode(lobby.password ?? lobby.enteredPassword);
 
                     RainMeadowModManager.CheckMods(requiredmods, bannedmods, null, true, rejoinCode, whitelistmode);
 
@@ -431,6 +448,12 @@ namespace RainMeadow
                 nextId++;
                 // todo overflows and repeats (unrealistic but it's a ushort)
             }
+
+            // FIXME: dupe message? see OnlineManager.
+            ChatLogManager.LogSystemMessage(
+                (player.id.GetPersonaName()) + " " + Utils.Translate("joined the game."),
+                ChatLogManager.SystemMessageType.PlayerJoin
+            );
             base.NewParticipantImpl(player);
             gameMode.NewPlayerInLobby(player);
         }
